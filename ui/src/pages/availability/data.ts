@@ -3,7 +3,37 @@
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { api, tenantHeaders, unwrap } from "../../api/client";
 import { addDaysIso } from "./dates";
-import type { BedBar, CourseFigure, Level, LocationNode, WeekSummary, WeekSummaryRow } from "./types";
+import type { BedBar, CourseFigure, Level, LocationNode, Warning, WeekSummary, WeekSummaryRow } from "./types";
+
+// Warnings strip: api.warnings that haven't ended before the first night shown
+// (end dates are departure days, so end_date > start), earliest first. No upper
+// limit, so problems beyond the weeks on screen still show. Independent of the
+// colour basis (D14). The filter runs in the database (PostgREST query filter).
+export function useWarnings(tenant: string | null, start: string) {
+  return useQuery({
+    queryKey: ["warnings", tenant, start],
+    enabled: tenant !== null,
+    placeholderData: keepPreviousData,
+    queryFn: () =>
+      unwrap(
+        api.GET("/warnings", {
+          params: { query: { end_date: `gt.${start}`, order: "start_date,kind" } },
+          headers: tenantHeaders(tenant!),
+        }),
+      ),
+    select: (rows): Warning[] =>
+      rows.map((r) => ({
+        kind: r.kind ?? "",
+        severity: r.severity ?? "WARNING",
+        message: r.message ?? "",
+        courseId: r.course_id ?? null,
+        allocationId: r.allocation_id ?? null,
+        bedId: r.bed_id ?? null,
+        startDate: r.start_date ?? null,
+        endDate: r.end_date ?? null,
+      })),
+  });
+}
 
 // Build the tree from api.locations' flat rows; siblings by sort_order, then name.
 function buildTree(rows: Awaited<ReturnType<typeof fetchLocations>>): LocationNode[] {

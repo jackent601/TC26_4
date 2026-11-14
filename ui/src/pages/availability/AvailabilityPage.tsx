@@ -3,7 +3,8 @@
 import { useCallback, useMemo, useState } from "react";
 import { useTenant } from "../../tenant";
 import { Controls } from "./Controls";
-import { useBedBars, useCourseFigures, useLocations, useWeekSummary } from "./data";
+import { useBedBars, useCourseFigures, useLocations, useWarnings, useWeekSummary } from "./data";
+import { Legend, WarningsStrip } from "./LegendAndWarnings";
 import { addDaysIso, dayLong, dayLongYear, defaultStart, iso, mondayOf } from "./dates";
 import { useCollapsed, useViewSettings } from "./settings";
 import { TimelineGrid, type VisibleRow } from "./TimelineGrid";
@@ -20,6 +21,7 @@ export function AvailabilityPage() {
   const figures = useCourseFigures(tenant);
   const bars = useBedBars(tenant, start, settings.weeks);
   const summary = useWeekSummary(tenant, start, settings.weeks);
+  const warnings = useWarnings(tenant, start);
 
   // Rows in tree order, stopping below collapsed nodes.
   const rows = useMemo(() => {
@@ -75,6 +77,9 @@ export function AvailabilityPage() {
           onCollapseToFloors={collapseToFloors}
         />
       </header>
+
+      <Legend settings={settings} />
+      <WarningsStrip warnings={warnings.data ?? []} error={warnings.error} />
 
       {error && <p className="error">Could not load availability: {error.message}</p>}
       {!tenant || loading ? (

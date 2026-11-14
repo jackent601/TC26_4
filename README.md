@@ -178,6 +178,16 @@ From `docs/Accommodation System Requirements.xlsx`:
 | Management information | Occupancy, forecast pressure, conflicts, no-shows and overdue check-outs in one view | Should |
 | Audit/history | Record allocation and status changes and who made them | Could (prototype); required for live use |
 
+## Known limitations
+
+- **Warnings cover only three checks so far.** `api.warnings` (a view, worked out on every read) reports courses loaded above scheduled, bookings on out-of-action beds, and double bookings. The suitability rules already held as data in `core.rules` (migration 0003) are not yet evaluated:
+  - `NO_MIXED_GENDER`: occupants of different genders sharing a room;
+  - `GRADE_SUITABLE`: seniority checks, an individual's grade below a location's minimum grade;
+  - `STEP_FREE_NEEDED`: an individual who needs step-free access placed where there isn't any;
+  - `WORK_PATTERN_FLOOR`: full-time and part-time individuals sharing a floor.
+
+  These need the effective attributes of each bed (inherited down the estate) and of each individual (course defaults plus individual overrides) first. Once added, they also belong in the bar flags and in `api.fn_check_allocation`, which today checks only bookings and outages. The DEMO data already contains a case of each. Planned for the rest of phase 1 (`docs/build_plan.md`).
+
 ## Open questions
 
 - **Platform and database:** chosen for the PoC (PostgreSQL, dbmate, PostgREST, Caddy as Docker Compose services; see `docs/build_plan.md`). Production hosting is still open.

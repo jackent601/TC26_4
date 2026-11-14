@@ -38,7 +38,7 @@ Still to do in phase 1: effective attributes per bed and individual, and rule wa
 Rebuilding `docs/pages_pocs/availability.html` on the 0006 endpoints (spec: `claude_availability_page_overview.md`), in five agreed steps:
 1. **Done:** `/availability` route; data hooks keyed by tenant (`ui/src/pages/availability/data.ts`); view settings in local storage (`settings.ts`; collapsed rows per tenant); header controls (week navigation, Today, Colour by, Expand all, Collapse to floors, Settings panel).
 2. **Done:** grid (`TimelineGrid.tsx`): tree rows, night columns with week lines and weekend shading, axis that stays visible at the bottom, bars on bed rows (outage, allocation, external; on-outage outline, loaded-above-scheduled icon), busiest-night counts on collapsed rows from `fn_week_summary`. Checked in the browser on DEMO, with both bases.
-3. Legend and warnings strip (`api.warnings`).
+3. **Done:** legend (`LegendAndWarnings.tsx`; shows the user's basis and thresholds) and warnings strip (`api.warnings` that haven't ended before the first night shown, via the PostgREST filter `end_date=gt.<first night>`, no upper limit; earliest first, hidden when empty; booking warnings get their dates). Items aren't clickable yet: step 4 makes them open the course or booking.
 4. Read-only popups: location, booking, outage, week breakdown. Bars and week cells are already buttons with labels; they have no click handler yet.
 5. Selection (click a week, drag weeks and beds) and the "New allocation" popup with clashes from `fn_check_allocation`; Allocate disabled until phase 3.
 

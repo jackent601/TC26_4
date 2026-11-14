@@ -48,6 +48,18 @@ export interface BedBar {
   on_outage: boolean | null;
 }
 
+// api.warnings: worked out in the database; the UI only lists them.
+export interface Warning {
+  kind: string;
+  severity: string;
+  message: string;
+  courseId: number | null;
+  allocationId: number | null;
+  bedId: number | null;
+  startDate: string | null;
+  endDate: string | null;
+}
+
 // api.fn_week_summary (0007): beds by category on a week's busiest night,
 // one row per course for category "course".
 export interface WeekSummaryRow {
