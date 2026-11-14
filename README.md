@@ -21,6 +21,7 @@ The tool needs to:
 ├── README.md                                  This file
 ├── CLAUDE.md                                  Guidance for Claude (principles, conventions, how to run and test)
 ├── claude_handover.md                         State of work in progress, for picking up in a new session
+├── claude_availability_page_overview.md       What the availability page must do, as agreed (spec for building it)
 ├── docs/
 │   ├── Accommodation System Requirements.xlsx Agreed requirements (summarised below)
 │   ├── build_plan.md                          How the PoC is built: architecture, API design, phases

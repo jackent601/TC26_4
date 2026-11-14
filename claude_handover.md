@@ -29,6 +29,8 @@ After that: phase 1 (read functions behind the availability page), then phase 2 
 
 ## The availability page (agreed in the mockup)
 
+Full spec: `claude_availability_page_overview.md`. In short:
+
 Mockup: `docs/pages_pocs/availability.html` (open offline) and its README. Key points:
 - Tree on the left (site > building > block > floor > room > bed); one column per night; bars for allocations, external bookings, outages (hatched).
 - Course colours: allocated vs `scheduled` or `loaded` (a "Colour by" switch, D13); green at or above the green threshold, amber between, red below the red threshold.
