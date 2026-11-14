@@ -57,17 +57,19 @@ Docker Desktop needs a paid licence in larger organisations; Podman and Rancher 
 
 | | Contents | Who can use it |
 |---|---|---|
-| `core` schema | The 14 tables from `0001_schema.sql` | Owner role only |
+| `core` schema | The 15 tables from `0001_schema.sql` (including `tenants`) | `app_owner` only |
 | `api` schema | Views (reads) and functions (writes) | `api_user` |
+| `app_owner` role | Owns everything in `core` and `api`; not a superuser, cannot log in (I3) | Used only by migrations (`set local role app_owner`) |
 | `api_user` role | Login role FastAPI connects as | `usage` on `api`, `select` on its views, `execute` on its functions; nothing on `core` |
 
 - Functions in `api` are `security definer`, owned by the owner role, so they can write to `core` while `api_user` cannot.
 - FastAPI sets `app.user` for each request (`set local`); write functions read it for `audit_log.changed_by`.
-- Later, per-user roles and row-level security can be added without changing the API.
+- **Tenancy (D24):** every table has `tenant_id`; row-level security (FORCEd, so it also applies inside `api` objects) shows and accepts only the current tenant's rows. FastAPI calls `api.use_tenant(code)` at the start of each request's transaction; with no tenant selected nothing is visible. Tenants: LIVE and DEMO, more can be added.
+- Later, per-user roles (which users may use which tenants) can be added inside `api.use_tenant` without changing the API.
 
 **Migrations (D19):** dbmate, one SQL file per change in `db/migrations/`, run by the `migrate` service on every `docker compose up` (already-applied files are skipped). `0001_schema.sql` moves there and gains dbmate's `-- migrate:up` marker.
 
-**Reference and sample data:** `db/seed/reference.sql` (always loaded: `OUT_OF_ACTION` attribute type and rule, and the built-in clash rules once that's decided) and `db/seed/sample.sql` (dev only: the mockup's estate, courses and bookings).
+**Reference and demo data:** reference data (attribute types and rules) is per tenant, installed by `core.load_reference_data` in migration 0003. Demo data (D25) is built by `core.load_sample_data` in migration 0004 and only ever loaded into a demo tenant, through `api.reset_demo_data()`; `db/seed/sample.sql` (run by `scripts/db-seed.sh`) just calls it for DEMO, and the UI's "Reset demo data" will call the same function.
 
 **Tests:** pgTAP tests in `db/tests/`, run by a test-only service, `db-test` (Compose profile `test`): `docker compose --profile test run --rm db-test`. Its image (`db/test/Dockerfile`: `postgres:16` + pgTAP + `pg_prove` + dbmate) starts a throwaway in-memory PostgreSQL, applies all migrations from scratch, runs `pg_prove`, and exits with pass or fail. pgTAP is never installed in the deployed database. Every write function gets tests for its rules and warnings.
 

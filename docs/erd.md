@@ -1,9 +1,12 @@
 # Accommodation allocation MVP: v2 data model
 
-14 tables in five groups. Structure only; the full definitions, including checks and indexes, are in [`0001_schema.sql`](../src/db/migrations/0001_schema.sql).
+15 tables in six groups. Structure only; the full definitions, including checks, indexes and the tenant policies, are in [`0001_schema.sql`](../db/migrations/0001_schema.sql).
+
+**Tenancy:** every table except `TENANTS` has a `tenant_id`, and every link between tables includes it, so a row can only reference rows of its own tenant. To keep the diagram readable, `tenant_id` is not drawn on each table.
 
 | Group | Tables |
 |---|---|
+| Tenancy | `TENANTS` (e.g. LIVE, DEMO); owns every row in every other table |
 | Supply | `SITES` > `BUILDINGS` > `BLOCKS` > `FLOORS` > `ROOMS` > `BEDS`, plus `LOCATION_ATTRIBUTES` |
 | Vocabulary and rules | `ATTRIBUTE_TYPES`, `RULES` |
 | Demand | `COURSES`, `COURSE_ATTRIBUTES`, `COURSE_INDIVIDUAL_ATTRIBUTES` |
@@ -17,6 +20,14 @@
 %% LOCATION_ATTRIBUTES: each row is linked to exactly ONE of the six estate levels.
 %% AUDIT_LOG is standalone (no relationships).
 erDiagram
+    %% ---------- Tenancy: every other table has tenant_id (not drawn) ----------
+    TENANTS {
+        int     tenant_id PK
+        varchar code UK "e.g. LIVE, DEMO"
+        varchar name
+        char    is_demo "Y/N"
+    }
+
     %% ---------- Supply: estate hierarchy ----------
     SITES     ||--o{ BUILDINGS : contains
     BUILDINGS ||--o{ BLOCKS    : contains
@@ -178,6 +189,7 @@ erDiagram
 
 These are enforced by checks in the schema or by application logic, not by relationships.
 
+- **Tenancy.** Every table except `TENANTS` has `tenant_id`, defaulting to the current tenant (`app.tenant_id`). Row-level security shows and accepts only the current tenant's rows, and composite foreign keys (`tenant_id` + parent id) stop rows from linking across tenants (schema). Reference data (`ATTRIBUTE_TYPES`, `RULES`) is per tenant, so keys are `(tenant_id, attr_code)` and `(tenant_id, rule_code)`.
 - **One level per location attribute.** Each `LOCATION_ATTRIBUTES` row sets exactly one of `site_id`, `building_id`, `block_id`, `floor_id`, `room_id`, `bed_id` (schema check).
 - **Course allocation or external booking.** An `ALLOCATIONS` row has both `course_id` and `individual_no`, or neither with `source = EXTERNAL` (schema check).
 - **Individuals have no table.** `individual_no` is an anonymous number from 1 to the greater of the course's `scheduled` and `loaded`. It is not a foreign key; the range is checked by application logic.

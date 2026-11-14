@@ -31,14 +31,19 @@ The tool needs to:
 │   └── pages_pocs/                            Clickable page mockups (open the .html files in a browser)
 ├── db/
 │   ├── migrations/                            dbmate migrations, applied in order
-│   │   ├── 0001_schema.sql                    The data model as SQL: 14 tables in the core schema
+│   │   ├── 0001_schema.sql                    The data model as SQL: 15 tables in the core schema, multi-tenant
 │   │   ├── 0002_api_schema.sql                The api schema (the contract), api_access and api_user roles
-│   │   └── 0003_reference_data.sql            Starter attribute types and rules (OUT_OF_ACTION, GENDER, GRADE, ...)
+│   │   ├── 0003_reference_data.sql            Tenants (LIVE, DEMO) and their starter attribute types and rules
+│   │   └── 0004_demo.sql                      Demo data loader and api.reset_demo_data (demo tenants only)
+│   ├── seed/
+│   │   └── sample.sql                         Loads/resets the DEMO tenant's data (calls api.reset_demo_data)
 │   └── setup/
 │       └── roles.sql                          Sets api_user's password from .env (run by db-roles after each migration run)
 ├── scripts/
-│   └── db-up.sh                               Starts db, runs migrate and db-roles, shows their output and result
-├── compose.yaml                               Docker Compose services (db, migrate, db-roles; api and ui to follow)
+│   ├── db-up.sh                               Starts db, runs migrate and db-roles, shows their output and result
+│   ├── db-seed.sh                             Loads or resets the DEMO tenant's sample data
+│   └── db-reset.sh                            Wipes the local database and rebuilds it with sample data
+├── compose.yaml                               Docker Compose services (db, migrate, db-roles, db-seed; api and ui to follow)
 ├── compose.override.yaml                      Local dev extras, loaded automatically (database port on localhost)
 └── .env.example                               Settings to copy into .env
 ```
@@ -55,6 +60,8 @@ scripts/db-up.sh
 docker compose exec db psql -U accomm_owner -d accomm -c "\dt core.*"
 ```
 
+**Tenants and demo data.** The database is multi-tenant: LIVE and DEMO to start with (decisions D24, D25). Every query sees one tenant at a time, selected with `api.use_tenant('LIVE')` or `api.use_tenant('DEMO')`; with none selected nothing is visible. Sample data only ever goes into the DEMO tenant: `scripts/db-seed.sh` loads or resets it (the same `api.reset_demo_data()` the UI will call), and it refuses for any non-demo tenant. `scripts/db-reset.sh` wipes the whole local volume and rebuilds everything. Demo dates are relative to the day it is loaded: five weeks from the Monday two weeks ago, with today in the middle week.
+
 For local development the database is also published on `localhost:5432` (set `POSTGRES_PORT` in `.env` to change it). Connect any client (DBeaver, pgAdmin, VS Code, psql) with host `localhost`, the port, database `accomm`, user `accomm_owner` and the password from `.env`. It listens on localhost only. To run without the dev extras: `docker compose -f compose.yaml up`.
 
 ### File details
@@ -70,10 +77,11 @@ If the model changes, add a new migration in `db/migrations/` (or, before anythi
 
 ## Data model (MVP)
 
-14 tables in five groups. See `docs/erd.md` for the diagram.
+15 tables in six groups, multi-tenant. See `docs/erd.md` for the diagram.
 
 | Group | Tables | Purpose |
 |---|---|---|
+| Tenancy | `tenants` | LIVE, DEMO, and any added later. Every other table has `tenant_id`; row-level security shows only the current tenant's rows |
 | Supply | `sites` > `buildings` > `blocks` > `floors` > `rooms` > `beds`, plus `location_attributes` | The estate down to the bed, and dated attributes set at any level of it |
 | Vocabulary and rules | `attribute_types`, `rules` | The list of attributes and how they behave; suitability rules stored as data |
 | Demand | `courses`, `course_attributes`, `course_individual_attributes` | Courses, their default attributes, and attributes of individual (anonymous) attendees |
@@ -88,13 +96,14 @@ These were settled while simplifying an earlier, Oracle APEX-based proof of conc
 2. **The allocation is the booking.** There is no separate attendance or booking table. `allocations` carries the status (`ALLOCATED` → `BOOKED` → `CHECKED_IN` → `CHECKED_OUT`, or `NO_SHOW` / `CANCELLED`) and the check-in/out times. An individual can have several allocations, e.g. a room move mid-stay.
 3. **External bookings** (made outside the tool, e.g. in the booking system) are allocations with no course and no individual number, `source = 'EXTERNAL'`.
 4. **Location attributes apply at any level.** Each `location_attributes` row sets exactly one of `site_id` … `bed_id`, with a date range. Attributes are inherited down to beds. `attribute_types.inherit_mode` says how: `NEAREST` (the value set nearest the bed wins, so a room can override its floor) or `ANY` (applies if set at any level above, and can't be overridden).
-5. **Outages are attributes, not a separate table.** Taking somewhere out of action is a location attribute `OUT_OF_ACTION = 'Y'` with dates and the reason in `comments`. Its attribute type is `inherit_mode = ANY`, `allow_overlap = Y`, `comment_required = Y`, and a `LOCATION_BLOCKS` rule makes it block every allocation. These two reference rows need creating when the database is set up (not yet in the schema file).
+5. **Outages are attributes, not a separate table.** Taking somewhere out of action is a location attribute `OUT_OF_ACTION = 'Y'` with dates and the reason in `comments`. Its attribute type is `inherit_mode = ANY`, `allow_overlap = Y`, `comment_required = Y`, and a `LOCATION_BLOCKS` rule makes it block every allocation. Both rows are created for every tenant by migration 0003.
 6. **Rules are data.** `rules` holds suitability rules of five types: `COMPARE` (individual attribute vs location attribute, e.g. grade ≥ floor minimum), `REQUIRES` (individual flag needs location flag, e.g. step-free), `MATCH_WITHIN` (everyone in a room, floor or block shares an attribute, e.g. no mixed-gender rooms), `SOLE_USE` (individual should not share a room) and `LOCATION_BLOCKS` (location flag blocks everyone, e.g. out of action). Each has a severity: `BLOCK`, `WARNING` or `INFO`.
 7. **Warn, don't block.** Only physical impossibilities block an allocation: two people in one bed, one individual in two beds at once, or an out-of-action bed. Everything else saves and is shown as a warning.
 8. **Warnings are never stored.** Conflicts and warnings are worked out by queries every time they're shown. For the MVP there is no way to accept or dismiss a warning.
 9. **Dates are half-open.** Start is the first night; end is the departure day (exclusive). Two stays overlap when `a.start_date < b.end_date and b.start_date < a.end_date`. Use this everywhere.
 10. **Generate nights, don't store them.** Availability ("free beds per night") generates the nights for the requested period in the query (e.g. `generate_series` in PostgreSQL, a recursive query elsewhere). There is no calendar table.
 11. **Audit log is standalone** for the MVP: no foreign keys. It keeps `course_id` and `individual_no` only for looking up one individual's history.
+12. **Multi-tenant.** Every table belongs to a tenant (LIVE, DEMO, ...). Links include `tenant_id`, so rows can't cross tenants, and row-level security filters every query to the current tenant. Reference data is per tenant. See D24 and D25 in `docs/decisions.md`.
 
 ### Deliberately left out of the MVP
 

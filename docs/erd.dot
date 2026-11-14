@@ -1,11 +1,15 @@
 // Accommodation allocation PoC v2: ER diagram source.
-// Keep in line with src/db/migrations/0001_schema.sql. Rebuild the images with docs/build_erd.sh
+// Keep in line with db/migrations/0001_schema.sql. Rebuild the images with docs/build_erd.sh
 digraph ERD {
   graph [rankdir=LR, fontname="Helvetica,sans-Serif", fontsize=22, labelloc=t, pad=0.4, nodesep=0.4, ranksep=0.9,
-         label=<<b>Accommodation allocation PoC v2: entity relationship diagram</b>>];
+         label=<<b>Accommodation allocation PoC v2: entity relationship diagram (multi-tenant)</b>>];
   node  [shape=plain, fontname="Helvetica,sans-Serif", fontsize=11];
   edge  [color="#555555", fontname="Helvetica,sans-Serif", fontsize=9, fontcolor="#555555", arrowhead=none, arrowtail=crow, dir=both];
   // Edges read child -> parent; the crow's foot sits on the child (many) side.
+  subgraph cluster_tenancy {
+    label=<<b>Tenancy</b>>; fontsize=16; style="rounded,filled"; fillcolor="#fdf2f8"; color="#9d174d"; fontcolor="#9d174d";
+    tenants [label=<<table border="0" cellborder="1" cellspacing="0" cellpadding="4" color="#9d174d"><tr><td colspan="3" bgcolor="#9d174d"><font color="white"><b>TENANTS</b></font></td></tr><tr><td align="left" bgcolor="white">tenant_id</td><td align="left" bgcolor="white"><font color="#555555">int</font></td><td align="left" bgcolor="white"><font color="#9d174d">PK</font></td></tr><tr><td align="left" bgcolor="white">code</td><td align="left" bgcolor="white"><font color="#555555">varchar</font></td><td align="left" bgcolor="white"><font color="#9d174d">UK, e.g. LIVE, DEMO</font></td></tr><tr><td align="left" bgcolor="white">name</td><td align="left" bgcolor="white"><font color="#555555">varchar</font></td><td align="left" bgcolor="white"> </td></tr><tr><td align="left" bgcolor="white">is_demo</td><td align="left" bgcolor="white"><font color="#555555">char</font></td><td align="left" bgcolor="white"><font color="#9d174d">Y | N</font></td></tr><tr><td colspan="3" align="left" bgcolor="#fdf2f8"><font color="#9d174d"><i>Every other table has tenant_id (not drawn);<br align="left"/>links include it; row-level security filters by it</i></font></td></tr></table>>];
+  }
   subgraph cluster_supply {
     label=<<b>Supply</b>>; fontsize=16; style="rounded,filled"; fillcolor="#eaf2fb"; color="#2f6db5"; fontcolor="#2f6db5";
     sites [label=<<table border="0" cellborder="1" cellspacing="0" cellpadding="4" color="#2f6db5"><tr><td colspan="3" bgcolor="#2f6db5"><font color="white"><b>SITES</b></font></td></tr><tr><td align="left" bgcolor="white" port="site_id_l">site_id</td><td align="left" bgcolor="white"><font color="#555555">int</font></td><td align="left" port="site_id_r" bgcolor="white"><font color="#2f6db5">PK</font></td></tr><tr><td align="left" bgcolor="white" port="code_l">code</td><td align="left" bgcolor="white"><font color="#555555">varchar</font></td><td align="left" port="code_r" bgcolor="white"><font color="#2f6db5">UK</font></td></tr><tr><td align="left" bgcolor="white" port="name_l">name</td><td align="left" bgcolor="white"><font color="#555555">varchar</font></td><td align="left" port="name_r" bgcolor="white"> </td></tr><tr><td align="left" bgcolor="white" port="sort_order_l">sort_order</td><td align="left" bgcolor="white"><font color="#555555">int</font></td><td align="left" port="sort_order_r" bgcolor="white"> </td></tr></table>>];
