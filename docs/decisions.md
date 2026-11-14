@@ -27,6 +27,15 @@ Short entries, newest last. Earlier data-model decisions are in the README under
 | D21 | 2026-11-14 | UI is React + TypeScript built with Vite, served as static files by Caddy; API client generated from FastAPI's OpenAPI. | Complex interactive pages (grid, drag-select, forms) need a framework; typed client catches API changes. |
 | D22 | 2026-11-14 | **The data model and database functions are the core product.** (1) As much business logic as possible lives in PostgreSQL: validation, rules, warnings, availability, suggestions and audit, in the `api` schema's views and functions, kept as migration files in `db/`. (2) The back end (FastAPI) essentially calls those database functions and reads those views. It adds only what SQL can't do well, such as file parsing, solving and notifications, and that code also goes through the same views and functions. (3) The API's OpenAPI document is the contract between UI and back end. The UI's typed client is generated from it, so another back end serving the same spec (e.g. PostgREST or Oracle ORDS) could replace FastAPI, and migrating would be a minimal burden. (4) The UI (React, served by Caddy) is a presentation layer only. It displays data, collects input and shows the warnings the API returns, and makes no decisions about what is allowed. | The schema and functions hold the value and are tested in one place; the API and UI around them are replaceable as the production platform becomes clear. Consolidates D2–D4, D16 and D21. |
 
+## Implementation decisions
+
+How the solution is built and run. These can change without affecting the design decisions above.
+
+| # | Date | Decision | Why |
+|---|---|---|---|
+| I1 | 2026-11-14 | Migrations run in the official dbmate image, unchanged; a separate one-shot `db-roles` service (official `postgres:16` image) sets role passwords from `.env` after each migration run. | No custom images for migration tooling; passwords never live in migrations or git. |
+| I2 | 2026-11-14 | The deployed `db` service uses the official `postgres:16` image, unchanged. Database tests run in a test-only service, `db-test` (Compose profile `test`), whose image (`db/test/Dockerfile`: `postgres:16` + pgTAP + `pg_prove` + dbmate) starts a throwaway database, applies all migrations from scratch, runs the tests and exits. | No custom database image in deployment; pgTAP never enters the real database; every test run also proves the migrations apply cleanly to an empty database. |
+
 ## Open
 
 - Where the D11 flag lives: a severity on new built-in rows in `rules` (e.g. rule types `DOUBLE_BOOKING`, `OUT_OF_ACTION`) or a small settings table. The first reuses existing BLOCK/WARNING handling.

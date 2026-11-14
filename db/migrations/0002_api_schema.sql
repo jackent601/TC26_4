@@ -7,7 +7,7 @@
 --   api_access  group role (no login) holding the grants on the api schema
 --   api_user    login role the API service connects as; member of api_access
 -- api_user's password is set outside migrations, from .env, by
--- db/setup/roles.sql (run by the migrate service after every migration run).
+-- db/setup/roles.sql (run by the db-roles service after every migration run).
 --
 -- Views in api run with their owner's rights (the migration owner), so a view
 -- can read core tables on api_user's behalf. Functions that write will be

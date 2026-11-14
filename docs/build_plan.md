@@ -16,8 +16,9 @@ Four services, each its own container, run together with Docker Compose (D20).
 
 | Service | Image | Role | Exposed |
 |---|---|---|---|
-| `db` | `postgres:16` plus pgTAP (`db/Dockerfile`) | Tables, views, functions; data on the `pgdata` volume | Only inside the Compose network (port 5432 published in dev only) |
-| `migrate` | The `db` image (includes dbmate and psql) | Applies `db/migrations`, sets role passwords from `.env` (`db/setup/roles.sql`), then exits | No |
+| `db` | `postgres:16` (official, unchanged) | Tables, views, functions; data on the `pgdata` volume | Only inside the Compose network (port 5432 published in dev only) |
+| `migrate` | `ghcr.io/amacneil/dbmate` (official, unchanged) | Applies `db/migrations`, then exits | No |
+| `db-roles` | `postgres:16` (official, used only for `psql`) | Sets role passwords from `.env` (`db/setup/roles.sql`), then exits | No |
 | `api` | Built from `api/Dockerfile` (Python 3.12, FastAPI, uvicorn, psycopg 3) | Generic layer and custom modules | Inside the network only |
 | `ui` | Built from `ui/Dockerfile`: Node builds the React app, then `caddy:2` serves the built files (no Node at run time) | Serves the app; passes `/api/*` to `api` | Port 8080 on the host |
 
@@ -38,7 +39,7 @@ db: PostgreSQL 16 ─ core schema: tables
 migrate: dbmate ─── runs once per `up`, then exits
 ```
 
-Start-up order: `db` becomes healthy (`pg_isready`), `migrate` runs and exits successfully, then `api` starts, then `ui`. Compose handles this with `depends_on` conditions.
+Start-up order: `db` becomes healthy (`pg_isready`), `migrate` runs and exits successfully, `db-roles` runs and exits successfully, then `api` starts, then `ui`. Compose handles this with `depends_on` conditions.
 
 ```
 cp .env.example .env
@@ -68,7 +69,7 @@ Docker Desktop needs a paid licence in larger organisations; Podman and Rancher 
 
 **Reference and sample data:** `db/seed/reference.sql` (always loaded: `OUT_OF_ACTION` attribute type and rule, and the built-in clash rules once that's decided) and `db/seed/sample.sql` (dev only: the mockup's estate, courses and bookings).
 
-**Tests:** pgTAP tests in `db/tests/`, run with `docker compose exec db pg_prove ...` (pgTAP is installed in the `db` image). Every write function gets tests for its rules and warnings.
+**Tests:** pgTAP tests in `db/tests/`, run by a test-only service, `db-test` (Compose profile `test`): `docker compose --profile test run --rm db-test`. Its image (`db/test/Dockerfile`: `postgres:16` + pgTAP + `pg_prove` + dbmate) starts a throwaway in-memory PostgreSQL, applies all migrations from scratch, runs `pg_prove`, and exits with pass or fail. pgTAP is never installed in the deployed database. Every write function gets tests for its rules and warnings.
 
 ## API (FastAPI) (D16)
 
@@ -113,9 +114,10 @@ Docker Desktop needs a paid licence in larger organisations; Podman and Rancher 
 ├── compose.override.yaml      Dev extras, loaded automatically: db port on localhost; later bind mounts, auto-reload
 ├── .env.example               Ports, passwords, settings
 ├── db/
-│   ├── Dockerfile             postgres:16 + pgTAP
 │   ├── migrations/            dbmate migrations (0001_schema.sql, 0002_api.sql, ...)
 │   ├── seed/                  reference.sql, sample.sql
+│   ├── setup/                 roles.sql (role passwords from .env)
+│   ├── test/                  Dockerfile for the test-only db-test image
 │   └── tests/                 pgTAP tests
 ├── api/
 │   ├── Dockerfile

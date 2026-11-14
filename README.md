@@ -30,13 +30,12 @@ The tool needs to:
 │   ├── erd.svg                                The same ER diagram as a scalable image
 │   └── pages_pocs/                            Clickable page mockups (open the .html files in a browser)
 ├── db/
-│   ├── Dockerfile                             PostgreSQL 16 + pgTAP + dbmate (used by db and migrate)
 │   ├── migrations/                            dbmate migrations, applied in order
 │   │   ├── 0001_schema.sql                    The data model as SQL: 14 tables in the core schema
 │   │   └── 0002_api_schema.sql                The api schema (the contract), api_access and api_user roles
 │   └── setup/
-│       └── roles.sql                          Sets api_user's password from .env after each migration run
-├── compose.yaml                               Docker Compose services (db, migrate; api and ui to follow)
+│       └── roles.sql                          Sets api_user's password from .env (run by db-roles after each migration run)
+├── compose.yaml                               Docker Compose services (db, migrate, db-roles; api and ui to follow)
 ├── compose.override.yaml                      Local dev extras, loaded automatically (database port on localhost)
 └── .env.example                               Settings to copy into .env
 ```
@@ -47,7 +46,7 @@ Needs Docker (or Podman / Rancher Desktop).
 
 ```
 cp .env.example .env          # then change the passwords
-docker compose up --build db migrate  # starts PostgreSQL, applies migrations, sets role passwords
+docker compose up db migrate db-roles  # PostgreSQL, then migrations, then role passwords
 docker compose exec db psql -U accomm_owner -d accomm -c "\dt core.*"
 ```
 

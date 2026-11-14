@@ -3,8 +3,7 @@ name: accomm
 
 services:
   db:
-    build: ./db
-    image: accomm-db:local
+    image: postgres:16
     environment:
       POSTGRES_DB: ${POSTGRES_DB:-accomm}
       POSTGRES_USER: ${POSTGRES_USER:-accomm_owner}
@@ -17,10 +16,9 @@ services:
       timeout: 3s
       retries: 30
 
-  # Applies migrations (dbmate), then sets role passwords from .env, then exits.
+  # Applies migrations in db/migrations, then exits. Official dbmate image, unchanged.
   migrate:
-    build: ./db
-    image: accomm-db:local
+    image: ghcr.io/amacneil/dbmate:2.38.1
     depends_on:
       db:
         condition: service_healthy
@@ -28,12 +26,28 @@ services:
       DATABASE_URL: postgres://${POSTGRES_USER:-accomm_owner}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB:-accomm}?sslmode=disable
       DBMATE_MIGRATIONS_DIR: /db/migrations
       DBMATE_NO_DUMP_SCHEMA: "true"
+    volumes:
+      - ./db/migrations:/db/migrations:ro
+    command: ["--wait", "up"]
+
+  # Sets role passwords from .env (db/setup/roles.sql), then exits.
+  # Official postgres image, used only for psql. Runs after every migrate.
+  db-roles:
+    image: postgres:16
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+    environment:
+      PGHOST: db
+      PGDATABASE: ${POSTGRES_DB:-accomm}
+      PGUSER: ${POSTGRES_USER:-accomm_owner}
+      PGPASSWORD: ${POSTGRES_PASSWORD}
       API_DB_PASSWORD: ${API_DB_PASSWORD:?Set API_DB_PASSWORD in .env}
     volumes:
-      - ./db:/db:ro
+      - ./db/setup:/db/setup:ro
     entrypoint: ["sh", "-c"]
     command:
-      - dbmate --wait up && psql "$$DATABASE_URL" -q -v api_password="$$API_DB_PASSWORD" -f /db/setup/roles.sql && echo "Roles updated."
+      - psql -q -v api_password="$$API_DB_PASSWORD" -f /db/setup/roles.sql && echo "Roles updated."
 
 volumes:
   pgdata:
