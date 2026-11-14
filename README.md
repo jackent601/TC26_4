@@ -21,6 +21,7 @@ The tool needs to:
 ├── README.md                                  This file
 ├── docs/
 │   ├── Accommodation System Requirements.xlsx Agreed requirements (summarised below)
+│   ├── decisions.md                           Short log of PoC design decisions
 │   ├── erd.md                                 Data model: Mermaid ER diagram plus the rules the diagram can't show
 │   ├── erd.png                                The same ER diagram as an image
 │   └── erd.svg                                The same ER diagram as a scalable image
@@ -33,6 +34,7 @@ The tool needs to:
 ### File details
 
 - **`docs/Accommodation System Requirements.xlsx`**: one sheet, ten requirements, each with minimum behaviour, a demonstration test and a priority. Summarised in [Requirements](#requirements).
+- **`docs/decisions.md`**: short log of PoC design decisions (where logic lives, database choice, open points). Add an entry when something is settled.
 - **`docs/erd.md`**: the main description of the data model. A table of the five groups of tables, the full ER diagram as Mermaid (shows in GitHub, GitLab and VS Code), and a list of rules enforced by checks or application logic rather than relationships.
 - **`docs/erd.png`, `docs/erd.svg`**: the same model drawn with Graphviz, grouped and coloured by area (Supply blue, Demand green, Vocabulary purple, Allocation orange, Audit grey). Use the SVG to zoom.
 - **`src/db/migrations/0001_schema.sql`**: the source of truth for the model. Standard SQL that has been loaded and tested on PostgreSQL 16. Notes at the top explain the small changes needed for SQL Server, MySQL or SQLite (identity columns). Structure only: no data, views, triggers or functions.
