@@ -1,7 +1,7 @@
 // Read-only popups (phase 2, step 4). Everything shown comes from data the page
 // already has, except the outage popup's affected bookings (fn_check_allocation).
 // Edit forms come with the write API (phase 3).
-import { useEffect, useRef, type ReactNode } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import { format, parseISO } from "date-fns";
 import { useClashes } from "./data";
 import { dayIndex, dayLong, ddmm } from "./dates";
@@ -35,6 +35,7 @@ export function PopupView({ popup, data, onOpen, onClose }: Props) {
     case "week": return <WeekPopup nodeKey={popup.key} weekStart={popup.weekStart} data={data} onOpen={onOpen} onClose={onClose} />;
     case "course": return <CoursePopup courseId={popup.courseId} data={data} onClose={onClose} />;
     case "warning": return <WarningPopup warning={popup.warning} data={data} onOpen={onOpen} onClose={onClose} />;
+    case "new": return <NewAllocationPopup bedKeys={popup.bedKeys} from={popup.from} to={popup.to} data={data} onClose={onClose} />;
   }
 }
 
@@ -339,6 +340,57 @@ function WarningPopup({ warning: w, data, onOpen, onClose }: { warning: Warning;
         ...(w.bedId !== null ? ([["Bed", pathOf(data.nodes, `bed:${w.bedId}`)]] as [string, ReactNode][]) : []),
         ...(w.startDate && w.endDate ? ([["Nights", stay(w.startDate, w.endDate)]] as [string, ReactNode][]) : []),
       ]} />
+    </Dialog>
+  );
+}
+
+// A selection from the grid (D8-D10): the beds, editable exact dates, and every
+// clash on those beds from the database (fn_check_allocation). Clashes warn by
+// default (D11). Saving needs the write API (phase 3), so Allocate is disabled.
+function NewAllocationPopup({ bedKeys, from, to, data, onClose }: {
+  bedKeys: string[]; from: string; to: string; data: PopupData; onClose: () => void;
+}) {
+  const [first, setFirst] = useState(from);
+  const [departure, setDeparture] = useState(to);
+  const valid = first !== "" && departure !== "" && departure > first;
+
+  const beds = bedKeys.map((k) => data.nodes.get(k)).filter((n): n is LocationNode => n !== undefined);
+  const bedName = (n: LocationNode) => {
+    const room = n.parentKey ? data.nodes.get(n.parentKey) : undefined;
+    return room ? `${room.name} ${n.name}` : n.name;
+  };
+  const byId = new Map(beds.map((b) => [b.id, b]));
+  const clashes = useClashes(data.tenant, beds.map((b) => b.id), first, departure, valid);
+  const list = clashes.data ?? [];
+
+  return (
+    <Dialog kind="New allocation" title={`${beds.length} ${beds.length === 1 ? "bed" : "beds"}`} onClose={onClose}
+            actions={<button type="button" className="btn primary" disabled title="Saving comes with the write API (phase 3)">Allocate</button>}>
+      <Facts rows={[["Beds", beds.map(bedName).join(", ")]]} />
+      <div className="dates">
+        <label>First night<input type="date" value={first} onChange={(e) => setFirst(e.target.value)} /></label>
+        <label>Departure<input type="date" value={departure} onChange={(e) => setDeparture(e.target.value)} /></label>
+      </div>
+      {valid ? <p className="summary">{stay(first, departure)}</p> : <p className="clash bad">Departure must be after the first night.</p>}
+      {valid && (clashes.isPending ? <p className="summary">Checking for clashes…</p> :
+        clashes.error ? <p className="clash bad">Could not check clashes: {clashes.error.message}</p> :
+        list.length === 0 ? <p className="clash ok">No clashes on these beds for these nights.</p> : (
+          <div className="clash bad">
+            <strong>{list.length} {list.length === 1 ? "clash" : "clashes"}</strong> (allowed with a warning, D11)
+            <ul className="av-list">
+              {list.map((c, i) => {
+                const bed = byId.get(c.bed_id);
+                return (
+                  <li key={i}>
+                    {bed ? bedName(bed) : `Bed ${c.bed_id}`}: {c.kind === "BOOKING" ? c.ref : `out of action, ${c.ref}`} ·{" "}
+                    {ddmm(c.start_date)}–{ddmm(c.end_date)}
+                  </li>
+                );
+              })}
+            </ul>
+          </div>
+        ))}
+      <Later what="Choosing the course and individuals to allocate" />
     </Dialog>
   );
 }

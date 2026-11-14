@@ -83,7 +83,9 @@ export type Popup =
   | { kind: "outage"; bar: BedBar }
   | { kind: "week"; key: string; weekStart: string }
   | { kind: "course"; courseId: number }
-  | { kind: "warning"; warning: Warning };
+  | { kind: "warning"; warning: Warning }
+  // A selection of beds and nights (to = departure day, exclusive).
+  | { kind: "new"; bedKeys: string[]; from: string; to: string };
 
 // api.fn_week_summary (0007): beds by category on a week's busiest night,
 // one row per course for category "course".
