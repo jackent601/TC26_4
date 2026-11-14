@@ -10,8 +10,10 @@ select is((select count(*)::int from pg_class c join pg_namespace n on n.oid = c
             where n.nspname = 'core' and c.relkind = 'r' and c.relname <> 'tenants'
               and not (c.relrowsecurity and c.relforcerowsecurity)), 0,
           'row-level security is enabled and forced on every tenant table');
-select is((select count(*)::int from information_schema.columns
-            where table_schema = 'core' and column_name = 'tenant_id' and table_name <> 'tenants'), 14,
+select is((select count(*)::int from information_schema.columns c
+             join information_schema.tables t using (table_schema, table_name)
+            where c.table_schema = 'core' and c.column_name = 'tenant_id' and c.table_name <> 'tenants'
+              and t.table_type = 'BASE TABLE'), 14,
           'every table except tenants has tenant_id');
 
 -- Give DEMO some data.

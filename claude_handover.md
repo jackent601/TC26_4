@@ -7,7 +7,8 @@ Context from a long Claude session (in the Claude app, writing to this folder re
 - **Branch:** `postgrest` (branched from `master` after D26). It swaps the FastAPI API for the official PostgREST image (D27).
 - **Done:** step 1 (database) and the API.
   - Migrations 0001–0005: multi-tenant core model (15 tables, row-level security), `api` schema and roles, per-tenant reference data, demo data loader and `api.reset_demo_data`, PostgREST pre-request hook.
-  - pgTAP: 5 files, 48 checks, plus a rollback/re-apply check; all passing in the session's PostgreSQL 16.
+  - Migration 0006: availability read API (see below).
+  - pgTAP: 6 files, 83 checks, plus a rollback/re-apply check; all passing.
   - PostgREST v14.18 tested against the database (tenants, errors, health check, CORS, OpenAPI).
 - FastAPI leftovers removed and the PostgREST switch committed; PostgREST v14.18 runs on the user's machine (DEMO health shows 23 beds). `postgrest` is not merged into `master` yet.
 
@@ -19,9 +20,22 @@ Context from a long Claude session (in the Claude app, writing to this folder re
 - Checked in this session: build passes; `/`, deep links and `/api/health` through Caddy; LIVE and DEMO switch in the browser; reset refused for LIVE; dev server proxy. "Reset demo data" was not clicked in the browser.
 - Not done: locking down PostgREST's CORS. The `api-docs` page (port 8081) calls the API from another origin, so it needs CORS or a route through Caddy first.
 
-## Next step: phase 1 read API (`0006_availability_read.sql`)
+## Phase 1 read API: `0006_availability_read.sql` (built, not yet committed)
 
-Proposed SQL is in `claude_availability_page_overview.md`. Agreed changes: add `sort_order` to `api.locations`; keep `DOUBLE_BOOKING` severity hard-coded until D11 is decided; `fn_week_summary` raises P0001 unless `p_basis` is `scheduled` or `loaded`; pgTAP checks that LIVE sees nothing through each new object; keep the `fn_` prefix on functions (`reset_demo_data` is a special case). Then phase 2 (availability page in React). See `docs/build_plan.md`.
+Based on the SQL in `claude_availability_page_overview.md`, with the agreed changes:
+- `api.locations` reads each level's table (empty locations show, `bed_count` 0) and has `sort_order`; beds are numbered by code within their room.
+- Functions are PL/pgSQL so they can validate: P0001 for `p_to <= p_from`, `p_weeks` outside 1–52, `p_basis` other than `scheduled`/`loaded`, red threshold above green. They also filter by tenant explicitly.
+- `DOUBLE_BOOKING` severity is hard-coded WARNING until D11 is decided. Messages name the booking: "SAF-14 #3 is double-booked (Room 101 bed A)".
+- The `fn_` prefix stays on functions (`reset_demo_data` is a special case).
+- Tests (`db/tests/006_availability_read.sql`, 35 checks) assert as the test superuser: pgTAP lives in `public`, which `api_user` can't use, and row-level security still applies through `app_owner`. One check calls every endpoint as `api_user`. `002_tenancy` now counts base tables only (the helper views have `tenant_id`).
+- `fn_week_summary` breaks ties on the earliest night; on the demo data, week 2's busiest night is night 7, not 10 (BK-4519 overlaps it).
+- Contract snapshot and `ui/src/api/schema.d.ts` regenerated.
+
+Still to do in phase 1: effective attributes per bed and individual, and rule warnings (gender, grade, step-free, work pattern) in `api.warnings` and as a flag on bars.
+
+## Next step: phase 2, the availability page in React
+
+Rebuild `docs/pages_pocs/availability.html` on these endpoints (spec: `claude_availability_page_overview.md`). See `docs/build_plan.md`.
 
 ## The availability page (agreed in the mockup)
 

@@ -38,11 +38,12 @@ The tool needs to:
 │   │   ├── 0002_api_schema.sql                The api schema (the contract), api_access and api_user roles
 │   │   ├── 0003_reference_data.sql            Tenants (LIVE, DEMO) and their starter attribute types and rules
 │   │   ├── 0004_demo.sql                      Demo data loader and api.reset_demo_data (demo tenants only)
-│   │   └── 0005_postgrest.sql                 PostgREST request hook (X-Tenant, X-User) and API descriptions
+│   │   ├── 0005_postgrest.sql                 PostgREST request hook (X-Tenant, X-User) and API descriptions
+│   │   └── 0006_availability_read.sql         Read API for the availability page: locations, course figures, bars, week summary, warnings, clash check
 │   ├── test/
 │   │   ├── Dockerfile                         Test-only image: PostgreSQL 16 + pgTAP + pg_prove + dbmate
 │   │   └── run-tests.sh                       Throwaway database, migrations, tests, rollback check
-│   ├── tests/                                 pgTAP tests (schemas and roles, tenancy, reference data, demo reset, PostgREST hook)
+│   ├── tests/                                 pgTAP tests (schemas and roles, tenancy, reference data, demo reset, PostgREST hook, availability read API)
 │   ├── api-contract.txt                       Snapshot of the API contract: the api schema's views and functions
 │   └── setup/
 │       ├── roles.sql                          Sets api_user's password from .env; tells PostgREST to reload (run by db-roles)
