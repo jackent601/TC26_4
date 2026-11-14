@@ -129,7 +129,9 @@ erDiagram
         int     site_id FK "optional"
         date    start_date
         date    end_date
-        int     est_attendees "individuals are numbered 1..est_attendees"
+        int     scheduled "planned attendees"
+        int     loaded "registered attendees, updated as they come in"
+        timestamp loaded_at "when loaded was last updated"
         varchar status "REQUESTED | CONFIRMED | CANCELLED"
         varchar notes
     }
@@ -140,7 +142,7 @@ erDiagram
     }
     COURSE_INDIVIDUAL_ATTRIBUTES {
         int     course_id PK,FK
-        int     individual_no PK "anonymous, 1..est_attendees"
+        int     individual_no PK "anonymous, 1..greatest(scheduled, loaded)"
         varchar attr_code PK,FK
         varchar attr_value "overrides the course default"
     }
@@ -178,9 +180,10 @@ These are enforced by checks in the schema or by application logic, not by relat
 
 - **One level per location attribute.** Each `LOCATION_ATTRIBUTES` row sets exactly one of `site_id`, `building_id`, `block_id`, `floor_id`, `room_id`, `bed_id` (schema check).
 - **Course allocation or external booking.** An `ALLOCATIONS` row has both `course_id` and `individual_no`, or neither with `source = EXTERNAL` (schema check).
-- **Individuals have no table.** `individual_no` is an anonymous number from 1 to the course's `est_attendees`. It is not a foreign key; the range is checked by application logic.
+- **Individuals have no table.** `individual_no` is an anonymous number from 1 to the greater of the course's `scheduled` and `loaded`. It is not a foreign key; the range is checked by application logic.
 - **Outages are attributes.** An outage is a location attribute with `attr_code = OUT_OF_ACTION`, value `Y`, and the reason in `comments`. Its attribute type uses `inherit_mode = ANY`, so it applies to every bed below the level it is set on and cannot be overridden.
 - **Attribute behaviour.** `allow_overlap` and `comment_required` on `ATTRIBUTE_TYPES` are enforced by application logic.
 - **Rule attributes.** `LOCATION_BLOCKS` rules have no `individual_attr`; `COMPARE` and `REQUIRES` need both attributes; `MATCH_WITHIN` and `SOLE_USE` need `individual_attr` (schema check).
 - **Dates.** Start is the first night and end is the departure day (exclusive), so two stays overlap when `a.start_date < b.end_date and b.start_date < a.end_date`.
+- **Scheduled vs loaded.** `scheduled` is the planned headcount; `loaded` is how many have registered and changes over time. A course with `loaded > scheduled` raises a warning.
 - **Warnings are not stored.** Conflicts and warnings are computed by queries each time; there is no table for them in the MVP.

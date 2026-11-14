@@ -1,0 +1,527 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Availability view (mockup)</title>
+<style>
+  * { box-sizing: border-box; }
+  body { margin: 0; font-family: Inter, "Segoe UI", system-ui, -apple-system, sans-serif; background: #F7F8FA; color: #1F2933; }
+  button, input, select { font: inherit; }
+  button:focus-visible, input:focus-visible, select:focus-visible, summary:focus-visible { outline: 2px solid #1D4ED8; outline-offset: 1px; }
+  .page { min-height: 100vh; padding: 24px 28px 40px; display: flex; flex-direction: column; gap: 16px; }
+  header { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 16px; }
+  h1 { margin: 0; font-size: 22px; font-weight: 600; letter-spacing: -0.01em; }
+  .sub { margin: 4px 0 0; font-size: 13px; color: #52606D; }
+  .controls { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; position: relative; }
+  .btn { height: 40px; padding: 0 14px; border: 1px solid #CBD2D9; border-radius: 6px; background: #FFFFFF; font-size: 13px; font-weight: 500; color: #1F2933; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; }
+  .btn.icon { width: 40px; padding: 0; }
+  .btn.primary { background: #1F2933; color: #FFFFFF; border-color: #1F2933; }
+  .btn:disabled { background: #E4E7EB; color: #52606D; border-color: #E4E7EB; cursor: not-allowed; }
+  .range { font-size: 13px; font-weight: 500; min-width: 210px; text-align: center; }
+  details.settings { position: relative; }
+  details.settings summary { list-style: none; }
+  details.settings summary::-webkit-details-marker { display: none; }
+  .settings-panel { position: absolute; right: 0; top: 46px; z-index: 20; width: 300px; background: #FFFFFF; border: 1px solid #CBD2D9; border-radius: 8px; box-shadow: 0 8px 24px rgba(15,23,42,0.15); padding: 14px; display: grid; gap: 10px; font-size: 13px; }
+  .settings-panel label { display: grid; grid-template-columns: 1fr 110px; align-items: center; gap: 8px; color: #323F4B; }
+  .settings-panel input[type=number], .settings-panel select { height: 32px; padding: 0 8px; border: 1px solid #9AA5B1; border-radius: 6px; width: 100%; }
+  .settings-panel .check { grid-template-columns: 1fr auto; }
+  .settings-panel h2 { margin: 0; font-size: 11px; font-weight: 600; color: #52606D; text-transform: uppercase; letter-spacing: 0.05em; }
+  .seg { display: inline-flex; border: 1px solid #CBD2D9; border-radius: 6px; overflow: hidden; height: 40px; }
+  .seg span { display: flex; align-items: center; padding: 0 10px; font-size: 12px; color: #52606D; background: #F7F8FA; border-right: 1px solid #CBD2D9; }
+  .seg button { border: 0; background: #FFFFFF; padding: 0 12px; font-size: 13px; font-weight: 500; color: #1F2933; cursor: pointer; }
+  .seg button[aria-pressed="true"] { background: #1F2933; color: #FFFFFF; }
+  .warnings { border: 1px solid #F5C2BE; background: #FEF3F2; border-radius: 8px; padding: 10px 14px; display: flex; flex-wrap: wrap; align-items: center; gap: 6px 16px; font-size: 13px; color: #7A1610; }
+  .warnings strong { font-weight: 600; }
+  .warnings button { border: 0; background: transparent; padding: 2px 0; font-size: 13px; color: #7A1610; text-decoration: underline; cursor: pointer; display: inline-flex; align-items: center; gap: 5px; }
+  .legend { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 20px; font-size: 12px; color: #323F4B; }
+  .legend span.item { display: inline-flex; align-items: center; gap: 6px; }
+  .sw { display: inline-block; width: 12px; height: 12px; border-radius: 3px; flex: none; }
+  .scroll { border: 1px solid #CBD2D9; border-radius: 8px; background: #FFFFFF; overflow: auto; max-height: 680px; }
+  .grid { position: relative; user-select: none; }
+  .row { display: flex; height: 32px; border-bottom: 1px solid #E4E7EB; }
+  .label { position: sticky; left: 0; z-index: 3; width: 300px; flex: none; display: flex; align-items: center; gap: 4px; padding-right: 10px; border-right: 1px solid #CBD2D9; }
+  .toggle { width: 22px; height: 22px; flex: none; display: flex; align-items: center; justify-content: center; border: 0; border-radius: 4px; background: transparent; color: #323F4B; cursor: pointer; padding: 0; }
+  .toggle svg { transition: transform 120ms; }
+  .spacer { width: 22px; flex: none; }
+  .name { border: 0; background: transparent; padding: 4px; border-radius: 4px; cursor: pointer; text-align: left; font-size: 13px; color: #1F2933; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; flex: 1 1 auto; }
+  .name:hover { background: rgba(0,0,0,0.05); }
+  .meta { font-size: 10px; color: #52606D; text-transform: uppercase; letter-spacing: 0.04em; flex: none; }
+  .body { position: relative; flex: none; height: 31px; }
+  .add { position: absolute; inset: 0; width: 100%; height: 100%; background: transparent; border: 0; padding: 0; cursor: cell; z-index: 0; touch-action: none; }
+  .bar { position: absolute; top: 5px; height: 22px; border-radius: 4px; font-size: 11px; font-weight: 500; line-height: 1; padding: 0 6px; overflow: hidden; white-space: nowrap; text-align: left; cursor: pointer; display: flex; align-items: center; gap: 4px; }
+  .bar span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
+  .sel { position: absolute; top: 3px; height: 26px; background: rgba(29,78,216,0.14); border: 2px dashed #1D4ED8; border-radius: 4px; z-index: 3; pointer-events: none; display: flex; align-items: center; padding-left: 8px; font-size: 11px; font-weight: 600; color: #1E3A8A; white-space: nowrap; overflow: visible; }
+  .weeks { display: flex; height: 100%; }
+  .week { height: 100%; flex: none; display: flex; align-items: center; gap: 7px; padding: 0 6px; border: 0; border-right: 1px solid #CBD2D9; background: transparent; cursor: pointer; overflow: hidden; }
+  .week:hover { background: rgba(29,78,216,0.06); }
+  .chip { display: inline-flex; align-items: center; gap: 3px; font-size: 11px; font-weight: 500; color: #1F2933; }
+  .axis { display: flex; height: 34px; position: sticky; bottom: 0; z-index: 4; background: #FFFFFF; border-top: 1px solid #9AA5B1; }
+  .axis .label { z-index: 5; background: #FFFFFF; padding: 0 12px; font-size: 11px; font-weight: 500; color: #52606D; text-transform: uppercase; letter-spacing: 0.04em; }
+  .tick { position: absolute; top: 0; height: 100%; border-left: 1px solid #52606D; padding: 8px 0 0 5px; font-size: 11px; font-weight: 500; color: #323F4B; white-space: nowrap; }
+  .foot { margin: 0; font-size: 12px; color: #52606D; }
+  .overlay { position: fixed; inset: 0; background: rgba(15,23,42,0.35); display: flex; align-items: center; justify-content: center; z-index: 50; padding: 16px; }
+  .dialog { background: #FFFFFF; border-radius: 10px; width: 100%; max-width: 460px; box-shadow: 0 12px 40px rgba(15,23,42,0.25); padding: 20px 22px; display: flex; flex-direction: column; gap: 14px; max-height: calc(100vh - 32px); overflow: auto; }
+  .dialog .kind { font-size: 11px; font-weight: 500; color: #52606D; text-transform: uppercase; letter-spacing: 0.05em; }
+  .dialog h2 { margin: 2px 0 0; font-size: 18px; font-weight: 600; }
+  .dialog dl { margin: 0; display: grid; grid-template-columns: 140px minmax(0, 1fr); gap: 8px 12px; font-size: 13px; }
+  .dialog dt { color: #52606D; }
+  .dialog dd { margin: 0; }
+  .dates { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+  .dates label { display: flex; flex-direction: column; gap: 4px; font-size: 12px; font-weight: 500; color: #323F4B; }
+  .dates input { height: 40px; padding: 0 10px; border: 1px solid #9AA5B1; border-radius: 6px; font-size: 13px; color: #1F2933; }
+  .summary { margin: 0; font-size: 13px; font-weight: 500; }
+  .clash { margin: 0; font-size: 13px; padding: 8px 10px; border-radius: 6px; }
+  .clash.bad { background: #FDECEA; color: #7A1610; }
+  .clash.ok { background: #E9F6EE; color: #14532D; }
+  .placeholder { border: 1px dashed #9AA5B1; border-radius: 8px; padding: 14px; font-size: 13px; color: #52606D; background: #F7F8FA; }
+  .actions { display: flex; justify-content: flex-end; gap: 8px; }
+  .x { width: 36px; height: 36px; display: flex; align-items: center; justify-content: center; border: 0; border-radius: 6px; background: #F0F2F5; color: #1F2933; cursor: pointer; flex: none; }
+</style>
+</head>
+<body>
+<div class="page">
+  <header>
+    <div>
+      <h1>Availability</h1>
+      <p class="sub">Click a row or booking to edit. Click an empty week on a bed to allocate it, or drag across weeks and down across beds to allocate a group.</p>
+    </div>
+    <div class="controls">
+      <button class="btn icon" id="prev" aria-label="Previous week"><svg width="14" height="14" viewBox="0 0 14 14" aria-hidden="true"><path d="M9 2.5 L4.5 7 L9 11.5" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+      <span class="range" id="range" aria-live="polite"></span>
+      <button class="btn icon" id="next" aria-label="Next week"><svg width="14" height="14" viewBox="0 0 14 14" aria-hidden="true"><path d="M5 2.5 L9.5 7 L5 11.5" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+      <div class="seg" role="group" aria-label="Colour courses by">
+        <span>Colour by</span>
+        <button id="basis-scheduled" aria-pressed="true">Scheduled</button>
+        <button id="basis-loaded" aria-pressed="false">Loaded</button>
+      </div>
+      <button class="btn" id="expand">Expand all</button>
+      <button class="btn" id="collapse">Collapse to floors</button>
+      <details class="settings">
+        <summary class="btn">Settings</summary>
+        <form class="settings-panel" id="settings" onsubmit="return false">
+          <h2>Timeline</h2>
+          <label>Weeks shown <input type="number" name="weeks" min="3" max="10" value="6"></label>
+          <label>Day width (px) <input type="number" name="dayW" min="14" max="36" value="22"></label>
+          <h2>Course thresholds</h2>
+          <label>Green at or above (%) <input type="number" name="greenAt" min="50" max="150" value="100"></label>
+          <label>Red below (%) <input type="number" name="redBelow" min="0" max="100" value="80"></label>
+          <h2>Week blocks</h2>
+          <label>Departure day <select name="weekDeparture"><option>Sunday</option><option>Monday</option></select></label>
+          <h2>Rules</h2>
+          <label class="check">Allow clashes (with a warning) <input type="checkbox" name="allowClashes" checked></label>
+        </form>
+      </details>
+    </div>
+  </header>
+  <div class="legend" id="legend"></div>
+  <div class="warnings" id="warnings" role="region" aria-label="Warnings"></div>
+  <div class="scroll"><div class="grid" id="grid"></div></div>
+  <p class="foot">Mockup with made-up sample data. Nothing is saved; edit forms are placeholders.</p>
+</div>
+<div id="modal-root"></div>
+
+<script>
+'use strict';
+// ---------- Dates (day index 0 = Mon 16 Nov 2026; half-open ranges) ----------
+var BASE = Date.UTC(2026, 10, 16), DAYMS = 86400000;
+var WD = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+function dd(d) { var t = new Date(BASE + d * DAYMS); return String(t.getUTCDate()).padStart(2, '0') + '/' + String(t.getUTCMonth() + 1).padStart(2, '0'); }
+function dlong(d) { return WD[((d % 7) + 7) % 7] + ' ' + dd(d); }
+function yr(d) { return new Date(BASE + d * DAYMS).getUTCFullYear(); }
+function isoOf(d) { return new Date(BASE + d * DAYMS).toISOString().slice(0, 10); }
+function dayOfIso(s) { var t = Date.parse(s + 'T00:00:00Z'); return isNaN(t) ? null : Math.round((t - BASE) / DAYMS); }
+function esc(s) { return String(s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
+
+// ---------- Sample estate ----------
+var RAW = { id: 'S:NC', level: 'Site', name: 'North Camp', children: [
+  { id: 'BU:HH', level: 'Building', name: 'Hartley House', children: [
+    { id: 'BL:A', level: 'Block', name: 'Block A', children: [
+      { id: 'F:A1', level: 'Floor', name: 'Floor 1', rooms: [['101', 2], ['102', 2], ['103', 1], ['104', 2]] },
+      { id: 'F:A2', level: 'Floor', name: 'Floor 2', rooms: [['201', 2], ['202', 2], ['203', 2], ['204', 1]] },
+      { id: 'F:A3', level: 'Floor', name: 'Floor 3', rooms: [['301', 2], ['302', 2], ['303', 1]] }
+    ] },
+    { id: 'BL:B', level: 'Block', name: 'Block B', children: [
+      { id: 'F:B1', level: 'Floor', name: 'Floor 1', rooms: [['B101', 2], ['B102', 2]] }
+    ] }
+  ] }
+] };
+function build(n, parent) {
+  var node = { id: n.id, level: n.level, name: n.name, parent: parent, children: [] };
+  if (n.rooms) {
+    node.children = n.rooms.map(function (r) {
+      var room = { id: 'R:' + r[0], level: 'Room', name: 'Room ' + r[0], parent: node, children: [] };
+      for (var i = 0; i < r[1]; i++) { var L = 'ab'[i]; room.children.push({ id: 'B:' + r[0] + L, bed: r[0] + L, level: 'Bed', name: 'Bed ' + L.toUpperCase(), parent: room, children: [] }); }
+      return room;
+    });
+  } else if (n.children) node.children = n.children.map(function (c) { return build(c, node); });
+  return node;
+}
+var ROOT = build(RAW, null), NODES = {}, BEDS = [];
+(function walk(n) { NODES[n.id] = n; if (n.level === 'Bed') BEDS.push(n); n.children.forEach(walk); })(ROOT);
+function bedsUnder(n) { if (n.level === 'Bed') return [n]; var out = []; n.children.forEach(function (c) { out = out.concat(bedsUnder(c)); }); return out; }
+function ancestorIds(n) { var a = []; for (var p = n; p; p = p.parent) a.push(p.id); return a; }
+function pathOf(n) { var a = []; for (var p = n; p; p = p.parent) a.unshift(p.name); return a.join(' › '); }
+
+// ---------- Sample demand, allocations and outages ----------
+var COURSES = {
+  'LDR-01': { code: 'LDR-01', name: 'Leadership Foundation', start: 0, end: 5, scheduled: 6, loaded: 6, loadedAt: 'Thu 12/11' },
+  'SAF-14': { code: 'SAF-14', name: 'Site Safety', start: 7, end: 12, scheduled: 8, loaded: 7, loadedAt: 'Fri 13/11' },
+  'TEC-07': { code: 'TEC-07', name: 'Technical Refresher', start: 14, end: 26, scheduled: 10, loaded: 12, loadedAt: 'Fri 13/11' },
+  'INT-22': { code: 'INT-22', name: 'Induction', start: 28, end: 33, scheduled: 4, loaded: 3, loadedAt: 'Wed 11/11' }
+};
+var ALLOCS = [], aid = 1;
+function addCourse(code, beds, status) { var c = COURSES[code]; beds.forEach(function (b, i) { ALLOCS.push({ id: aid++, course: code, ind: i + 1, bed: b, start: c.start, end: c.end, status: status }); }); }
+addCourse('LDR-01', ['101a', '101b', '102a', '102b', '103a', '104a'], 'BOOKED');
+addCourse('SAF-14', ['201a', '201b', '202a', '202b', '204a', '101a', '101b'], 'ALLOCATED');
+addCourse('TEC-07', ['301a', '301b', '302a', '302b', '303a'], 'ALLOCATED');
+addCourse('INT-22', ['101a', '101b', '102a', '102b'], 'ALLOCATED');
+[['BK-4471', 'Visiting assessors', '104b', 2, 9], ['BK-4502', 'Contractor', '202a', 16, 23], ['BK-4519', 'Regional team', 'B101a', 3, 10], ['BK-4530', 'Regional team', 'B101a', 22, 25]].forEach(function (x) {
+  ALLOCS.push({ id: aid++, course: null, ref: x[0], extName: x[1], bed: x[2], start: x[3], end: x[4], status: 'BOOKED' });
+});
+var OUTAGES = [
+  { id: 1, node: 'R:203', start: 10, end: 20, reason: 'Heating failure' },
+  { id: 2, node: 'F:B1', start: 21, end: 28, reason: 'Fire alarm upgrade' }
+];
+var INDIVIDUALS = {};
+ALLOCS.forEach(function (a) { if (a.course) { INDIVIDUALS[a.course] = INDIVIDUALS[a.course] || {}; INDIVIDUALS[a.course][a.ind] = true; } });
+function allocatedCount(code) { return Object.keys(INDIVIDUALS[code] || {}).length; }
+var BED_OUT = {};
+BEDS.forEach(function (b) { var anc = ancestorIds(b); BED_OUT[b.bed] = OUTAGES.filter(function (o) { return anc.indexOf(o.node) >= 0; }); });
+
+// ---------- Look ----------
+var ST = {
+  free: { sw: 'background:#FFFFFF;border:1px solid #7B8794' },
+  out: { bar: 'background:repeating-linear-gradient(135deg,#EEF0F3 0 5px,#C5CBD3 5px 7px);color:#1F2933;border:1px solid #9AA5B1;', sw: 'background:repeating-linear-gradient(135deg,#EEF0F3 0 2px,#7B8794 2px 3px);border:1px solid #7B8794' },
+  green: { bar: 'background:#CDEBD6;color:#14532D;border:1px solid #2F855A;', sw: 'background:#CDEBD6;border:1px solid #2F855A' },
+  amber: { bar: 'background:#FFC98A;color:#5C2C00;border:1px solid #C05621;', sw: 'background:#FFC98A;border:1px solid #C05621' },
+  red: { bar: 'background:#B42318;color:#FFFFFF;border:1px solid #7A1610;', sw: 'background:#B42318;border:1px solid #7A1610' },
+  ext: { bar: 'background:#E8EDF5;color:#1E293B;border:1px dashed #475569;', sw: 'background:#E8EDF5;border:1px dashed #475569' }
+};
+var ORDER = ['free', 'out', 'green', 'amber', 'red', 'ext'];
+var NAMES = { free: 'free', out: 'out of action', green: 'green', amber: 'amber', red: 'red', ext: 'external' };
+var ROWBG = { Site: '#E9EDF2', Building: '#EEF1F5', Block: '#F2F4F7', Floor: '#F5F7FA', Room: '#FAFBFC', Bed: '#FFFFFF' };
+var OVER = '<svg width="12" height="12" viewBox="0 0 12 12" aria-hidden="true" style="flex:none"><circle cx="6" cy="6" r="5.2" fill="#FFFFFF" stroke="#4C1D95" stroke-width="1.2"/><path d="M6 8.8 V3.6 M3.9 5.6 L6 3.5 L8.1 5.6" fill="none" stroke="#4C1D95" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+var WARN = '<svg width="12" height="12" viewBox="0 0 12 12" aria-hidden="true" style="flex:none"><path d="M6 1 L11 10.5 H1 Z" fill="#FFF4E5" stroke="#7A1610" stroke-width="1.2" stroke-linejoin="round"/><path d="M6 4.5 V7.2 M6 8.6 V8.9" stroke="#7A1610" stroke-width="1.3" stroke-linecap="round"/></svg>';
+var CHEV = '<svg width="12" height="12" viewBox="0 0 12 12" aria-hidden="true" style="transform:rotate(ROTdeg)"><path d="M4 2 L8 6 L4 10" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+var LABEL_W = 300, ROW_H = 32;
+
+// ---------- State ----------
+var S = { basis: 'scheduled', weeks: 6, dayW: 22, greenAt: 100, redBelow: 80, weekDeparture: 'Sunday', allowClashes: true };
+var state = { offset: 0, collapsed: new Set(['F:A3', 'BL:B']), drag: null, modal: null };
+var ctx = {}; // values from the last render, used by event handlers
+
+function depLen() { return S.weekDeparture === 'Monday' ? 7 : 6; }
+function basisOf(code) { var c = COURSES[code]; return S.basis === 'loaded' ? c.loaded : c.scheduled; }
+function isOver(code) { var c = COURSES[code]; return c.loaded > c.scheduled; }
+function colour(code) { var b = basisOf(code); var p = b > 0 ? allocatedCount(code) / b * 100 : 100; return p >= S.greenAt ? 'green' : (p < S.redBelow ? 'red' : 'amber'); }
+function stateAt(bed, d) {
+  if (BED_OUT[bed.bed].some(function (o) { return o.start <= d && d < o.end; })) return 'out';
+  var a = ALLOCS.find(function (x) { return x.bed === bed.bed && x.start <= d && d < x.end; });
+  if (!a) return 'free';
+  return a.course ? colour(a.course) : 'ext';
+}
+function weekSummary(n, ws) {
+  var beds = bedsUnder(n), best = null;
+  for (var d = ws; d < ws + 7; d++) {
+    var c = { free: 0, out: 0, green: 0, amber: 0, red: 0, ext: 0 };
+    beds.forEach(function (b) { c[stateAt(b, d)]++; });
+    if (!best || c.free < best.c.free) best = { d: d, c: c };
+  }
+  return best;
+}
+
+// ---------- Render grid ----------
+function render() {
+  var s0 = state.offset * 7, nDays = S.weeks * 7, s1 = s0 + nDays, dayW = S.dayW, bodyW = nDays * dayW;
+  var grid = 'background-image:repeating-linear-gradient(90deg,transparent 0 ' + (7 * dayW - 1) + 'px,#CBD2D9 ' + (7 * dayW - 1) + 'px ' + (7 * dayW) + 'px),repeating-linear-gradient(90deg,transparent 0 ' + (dayW - 1) + 'px,#EEF0F3 ' + (dayW - 1) + 'px ' + dayW + 'px),repeating-linear-gradient(90deg,transparent 0 ' + (5 * dayW) + 'px,#F5F6F8 ' + (5 * dayW) + 'px ' + (7 * dayW) + 'px);';
+  var rowNodes = [], html = [];
+  var dg = state.drag, ra = dg ? Math.min(dg.r0, dg.r1) : -1, rb = dg ? Math.max(dg.r0, dg.r1) : -1;
+  var labelDone = false;
+
+  (function visit(n, depth) {
+    var idx = rowNodes.length; rowNodes.push(n);
+    var isBed = n.level === 'Bed', isCol = !isBed && state.collapsed.has(n.id), beds = bedsUnder(n);
+    var weight = isBed ? 400 : (n.level === 'Room' ? 500 : 600);
+    var h = '<div class="row" data-idx="' + idx + '">';
+    h += '<div class="label" style="padding-left:' + (8 + depth * 16) + 'px;background:' + ROWBG[n.level] + '">';
+    if (isBed) h += '<span class="spacer"></span>';
+    else h += '<button class="toggle" data-act="toggle" data-id="' + n.id + '" aria-expanded="' + !isCol + '" aria-label="' + (isCol ? 'Expand ' : 'Collapse ') + esc(n.name) + '">' + CHEV.replace('ROT', isCol ? 0 : 90) + '</button>';
+    h += '<button class="name" data-act="node" data-id="' + n.id + '" style="font-weight:' + weight + '">' + esc(n.name) + '</button>';
+    if (!isBed) h += '<span class="meta">' + n.level + ' · ' + beds.length + (beds.length === 1 ? ' bed' : ' beds') + '</span>';
+    h += '</div>';
+    h += '<div class="body" style="width:' + bodyW + 'px;' + (isBed || isCol ? grid : 'background:' + ROWBG[n.level] + ';') + '">';
+    if (isBed) {
+      h += '<button class="add" data-idx="' + idx + '" aria-label="New allocation on ' + esc(pathOf(n)) + '"></button>';
+      BED_OUT[n.bed].filter(function (o) { return o.start < s1 && o.end > s0; }).forEach(function (o) {
+        var a = Math.max(o.start, s0), b = Math.min(o.end, s1), lvl = NODES[o.node].level;
+        var label = 'Out of action' + (lvl !== 'Bed' ? ' (' + lvl.toLowerCase() + ')' : '');
+        var aria = label + ': ' + o.reason + ', ' + dd(o.start) + ' to ' + dd(o.end);
+        h += '<button class="bar" data-act="outage" data-id="' + o.id + '" title="' + esc(aria) + '" aria-label="' + esc(aria) + '" style="z-index:1;left:' + ((a - s0) * dayW + 1) + 'px;width:' + ((b - a) * dayW - 2) + 'px;' + ST.out.bar + '"><span>' + esc(label) + '</span></button>';
+      });
+      ALLOCS.filter(function (x) { return x.bed === n.bed && x.start < s1 && x.end > s0; }).forEach(function (x) {
+        var a = Math.max(x.start, s0), b = Math.min(x.end, s1), col = x.course ? colour(x.course) : 'ext';
+        var conflict = BED_OUT[n.bed].some(function (o) { return o.start < x.end && x.start < o.end; });
+        var over = !!x.course && isOver(x.course);
+        var label = x.course ? x.course + ' #' + x.ind + ' · ' + allocatedCount(x.course) + '/' + basisOf(x.course) : x.ref + ' · ' + x.extName;
+        var aria = label + ', ' + dd(x.start) + ' to ' + dd(x.end) + (conflict ? ', clashes with an outage' : '') + (over ? ', course loaded above scheduled' : '');
+        h += '<button class="bar" data-act="alloc" data-id="' + x.id + '" data-bed="' + n.id + '" title="' + esc(aria) + '" aria-label="' + esc(aria) + '" style="z-index:2;left:' + ((a - s0) * dayW + 1) + 'px;width:' + ((b - a) * dayW - 2) + 'px;' + ST[col].bar + (conflict ? 'outline:2px solid #B42318;outline-offset:1px;' : '') + '">' + (conflict ? WARN : '') + (over ? OVER : '') + '<span>' + esc(label) + '</span></button>';
+      });
+      if (dg && idx >= ra && idx <= rb) {
+        var wa = Math.min(dg.w0, dg.w1), wb = Math.max(dg.w0, dg.w1), nw = wb - wa + 1, lbl = '';
+        if (!labelDone) {
+          var nb = 0; // counted after the walk; placeholder filled below
+          lbl = '%%SEL%%'; labelDone = true;
+        }
+        h += '<div class="sel" style="left:' + (wa * 7 * dayW) + 'px;width:' + (nw * 7 * dayW) + 'px">' + lbl + '</div>';
+      }
+    }
+    if (isCol) {
+      h += '<div class="weeks">';
+      for (var w = 0; w < S.weeks; w++) {
+        var ws = s0 + w * 7, best = weekSummary(n, ws);
+        var keys = ORDER.filter(function (k) { return best.c[k] > 0; });
+        var aria = n.name + ', week of ' + dd(ws) + ', limiting night ' + dlong(best.d) + ': ' + keys.map(function (k) { return best.c[k] + ' ' + NAMES[k]; }).join(', ');
+        h += '<button class="week" data-act="week" data-id="' + n.id + '" data-ws="' + ws + '" style="width:' + (7 * dayW) + 'px" title="' + esc(aria) + '" aria-label="' + esc(aria) + '">';
+        keys.forEach(function (k) { h += '<span class="chip"><span class="sw" style="' + ST[k].sw + '"></span>' + best.c[k] + '</span>'; });
+        h += '</button>';
+      }
+      h += '</div>';
+    }
+    h += '</div></div>';
+    html.push(h);
+    if (!isCol) n.children.forEach(function (c) { visit(c, depth + 1); });
+  })(ROOT, 0);
+
+  // Axis
+  var ax = '<div class="axis" style="width:' + (LABEL_W + bodyW) + 'px"><div class="label">Week commencing</div><div style="position:relative;flex:none;height:100%;width:' + bodyW + 'px">';
+  for (var i = 0; i < S.weeks; i++) ax += '<div class="tick" style="left:' + (i * 7 * dayW) + 'px">' + dd(s0 + i * 7) + '</div>';
+  ax += '</div></div>';
+
+  var out = html.join('') + ax;
+  if (dg) {
+    var nbeds = rowNodes.slice(ra, rb + 1).filter(function (x) { return x.level === 'Bed'; }).length;
+    var wa2 = Math.min(dg.w0, dg.w1), wb2 = Math.max(dg.w0, dg.w1), nw2 = wb2 - wa2 + 1;
+    out = out.replace('%%SEL%%', nbeds + (nbeds === 1 ? ' bed' : ' beds') + ' · ' + nw2 + (nw2 === 1 ? ' week' : ' weeks') + ' · ' + dd(s0 + wa2 * 7) + ' – ' + dd(s0 + wb2 * 7 + depLen()));
+  }
+  var gridEl = document.getElementById('grid');
+  gridEl.style.width = (LABEL_W + bodyW) + 'px';
+  gridEl.innerHTML = out;
+
+  document.getElementById('range').textContent = dlong(s0) + ' – ' + dlong(s1 - 1) + ' ' + yr(s1 - 1);
+  document.getElementById('legend').innerHTML = [
+    ['free', 'Free'], ['out', 'Out of action'],
+    ['green', 'Allocated ≥ ' + S.greenAt + '% of ' + S.basis], ['amber', 'Allocated ' + S.redBelow + '–' + S.greenAt + '% of ' + S.basis],
+    ['red', 'Allocated < ' + S.redBelow + '% of ' + S.basis], ['ext', 'External booking']
+  ].map(function (x) { return '<span class="item"><span class="sw" style="' + ST[x[0]].sw + '"></span>' + esc(x[1]) + '</span>'; }).join('') +
+    '<span class="item">' + WARN + 'Booking clashes with an outage</span>' +
+    '<span class="item">' + OVER + 'Course loaded above scheduled</span>';
+  ['scheduled', 'loaded'].forEach(function (b) { document.getElementById('basis-' + b).setAttribute('aria-pressed', String(S.basis === b)); });
+  renderWarnings();
+
+  ctx = { s0: s0, nDays: nDays, dayW: dayW, rowNodes: rowNodes };
+}
+
+// ---------- Popups ----------
+function openModal(m) { m.returnFocus = document.activeElement; state.modal = m; renderModal(); var b = document.querySelector('.dialog .x'); if (b) b.focus(); }
+function closeModal() { var r = state.modal && state.modal.returnFocus; state.modal = null; renderModal(); if (r && document.body.contains(r)) r.focus(); }
+
+function openNode(n) {
+  var outs = OUTAGES.filter(function (o) { return ancestorIds(NODES[o.node]).indexOf(n.id) >= 0 || ancestorIds(n).indexOf(o.node) >= 0; });
+  openModal({ kind: n.level, title: n.name, lines: [
+    ['Location', pathOf(n)], ['Beds', String(bedsUnder(n).length)],
+    ['Outages', outs.length ? outs.map(function (o) { return o.reason + ' (' + NODES[o.node].name + ', ' + dd(o.start) + '–' + dd(o.end) + ')'; }).join('; ') : 'None']
+  ], editHint: 'location details and dated attributes, including taking it out of action.' });
+}
+function openAlloc(a, bed) {
+  var conflict = BED_OUT[bed.bed].some(function (o) { return o.start < a.end && a.start < o.end; });
+  var nights = dlong(a.start) + ' to departure ' + dlong(a.end) + ' (' + (a.end - a.start) + ' nights)';
+  var lines;
+  if (a.course) {
+    var c = COURSES[a.course];
+    lines = [['Course', c.code + ' ' + c.name], ['Individual', '#' + a.ind], ['Bed', pathOf(bed)], ['Nights', nights], ['Status', a.status]].concat(courseLines(a.course));
+  } else {
+    lines = [['Reference', a.ref], ['Name', a.extName], ['Bed', pathOf(bed)], ['Nights', nights], ['Status', a.status], ['Source', 'External booking system']];
+  }
+  if (conflict) lines.push(['Conflict', 'Bed is out of action for part of this stay']);
+  openModal({ kind: a.course ? 'Allocation' : 'External booking', title: a.course ? a.course + ' · individual #' + a.ind : a.ref, lines: lines, editHint: 'move bed or dates, change status, check in/out, cancel.' });
+}
+function courseLines(code) {
+  var c = COURSES[code], n = allocatedCount(code), b = basisOf(code);
+  var lines = [['Scheduled', String(c.scheduled)], ['Loaded', c.loaded + ' (updated ' + c.loadedAt + ')'],
+    ['Allocated', n + ' of ' + b + ' ' + S.basis + ' (' + (b ? Math.round(n / b * 100) : 100) + '%), ' + colour(code)]];
+  if (isOver(code)) lines.push(['Warning', 'Loaded is ' + (c.loaded - c.scheduled) + ' above scheduled']);
+  return lines;
+}
+function openCourse(code) {
+  var c = COURSES[code];
+  openModal({ kind: 'Course', title: c.code + ' ' + c.name, lines: [['Dates', dlong(c.start) + ' to departure ' + dlong(c.end)]].concat(courseLines(code)),
+    editHint: 'course details, scheduled number, update loaded.' });
+}
+function renderWarnings() {
+  var items = [];
+  Object.keys(COURSES).forEach(function (k) {
+    var c = COURSES[k];
+    if (isOver(k)) items.push('<button data-wcourse="' + k + '">' + OVER + esc(k + ': ' + c.loaded + ' loaded vs ' + c.scheduled + ' scheduled') + '</button>');
+  });
+  ALLOCS.forEach(function (a) {
+    var bed = BEDS.find(function (b) { return b.bed === a.bed; });
+    if (BED_OUT[a.bed].some(function (o) { return o.start < a.end && a.start < o.end; }))
+      items.push('<button data-walloc="' + a.id + '">' + WARN + esc((a.course ? a.course + ' #' + a.ind : a.ref) + ' is in an out-of-action bed (' + bed.parent.name + ' ' + bed.name + ', ' + dd(a.start) + ')') + '</button>');
+  });
+  var el = document.getElementById('warnings');
+  el.style.display = items.length ? '' : 'none';
+  el.innerHTML = '<strong>' + items.length + (items.length === 1 ? ' warning' : ' warnings') + '</strong>' + items.join('');
+}
+function openOutage(o) {
+  var node = NODES[o.node], beds = bedsUnder(node).map(function (b) { return b.bed; });
+  var hit = ALLOCS.filter(function (a) { return beds.indexOf(a.bed) >= 0 && a.start < o.end && o.start < a.end; });
+  openModal({ kind: 'Outage', title: o.reason, lines: [
+    ['Set on', node.level + ': ' + pathOf(node)], ['Dates', dlong(o.start) + ' to ' + dlong(o.end) + ' (exclusive)'], ['Beds affected', String(beds.length)],
+    ['Bookings affected', hit.length ? hit.map(function (a) { return a.course ? a.course + ' #' + a.ind : a.ref; }).join(', ') : 'None']
+  ], editHint: 'change dates or reason, end the outage, rehouse affected bookings.' });
+}
+function openWeek(n, ws) {
+  var best = weekSummary(n, ws);
+  var lines = [['Location', pathOf(n)], ['Week commencing', dlong(ws)], ['Limiting night', dlong(best.d) + ' (fewest free beds)']];
+  ORDER.forEach(function (k) { lines.push([NAMES[k].charAt(0).toUpperCase() + NAMES[k].slice(1), String(best.c[k])]); });
+  openModal({ kind: n.level + ' summary', title: n.name, lines: lines, editHint: 'drill into this week, bulk outage or bulk allocate.' });
+}
+function openNew(beds, a, b) {
+  var names = beds.map(function (x) { return x.parent.name + ' ' + x.name.replace('Bed ', ''); });
+  var shown = names.length > 8 ? names.slice(0, 8).join(', ') + ' +' + (names.length - 8) + ' more' : names.join(', ');
+  openModal({ kind: 'New allocation', isNew: true, beds: beds.map(function (x) { return x.bed; }),
+    title: beds.length === 1 ? pathOf(beds[0]) : beds.length + ' beds', from: isoOf(a), to: isoOf(b),
+    lines: [[beds.length === 1 ? 'Bed' : 'Beds (' + beds.length + ')', shown]],
+    editHint: 'choose the course and which individuals go in these beds, or mark as an external booking.' });
+}
+
+function renderModal() {
+  var root = document.getElementById('modal-root'), m = state.modal;
+  if (!m) { root.innerHTML = ''; return; }
+  var h = '<div class="overlay" data-act="overlay"><div class="dialog" role="dialog" aria-modal="true" aria-labelledby="dlg-title">';
+  h += '<div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px"><div><div class="kind">' + esc(m.kind) + '</div><h2 id="dlg-title">' + esc(m.title) + '</h2></div>';
+  h += '<button class="x" data-act="close" aria-label="Close"><svg width="12" height="12" viewBox="0 0 12 12" aria-hidden="true"><path d="M2 2 L10 10 M10 2 L2 10" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg></button></div>';
+  h += '<dl>' + m.lines.map(function (l) { return '<dt>' + esc(l[0]) + '</dt><dd>' + esc(l[1]) + '</dd>'; }).join('') + '</dl>';
+  var blocked = false, saveLabel = '';
+  if (m.isNew) {
+    h += '<div class="dates"><label for="alloc-from">First night<input id="alloc-from" type="date" value="' + m.from + '"></label>';
+    h += '<label for="alloc-to">Departure day<input id="alloc-to" type="date" value="' + m.to + '"></label></div>';
+    var fd = dayOfIso(m.from), td = dayOfIso(m.to);
+    saveLabel = m.beds.length === 1 ? 'Allocate' : 'Allocate ' + m.beds.length + ' beds';
+    if (fd === null || td === null || td <= fd) {
+      h += '<p class="summary">Departure day must be after the first night.</p>';
+      blocked = true;
+    } else {
+      var nights = td - fd, extra = depLen() === 6 ? 1 : 0;
+      var weekBlock = ((fd % 7) + 7) % 7 === 0 && (nights + extra) % 7 === 0, nwk = Math.round((nights + extra) / 7);
+      h += '<p class="summary">' + nights + (nights === 1 ? ' night' : ' nights') + ': ' + dlong(fd) + ' to departure ' + dlong(td) + (weekBlock ? ' (' + nwk + (nwk === 1 ? ' week block)' : ' week blocks)') : '') + '</p>';
+      var clashes = [];
+      m.beds.forEach(function (code) {
+        var label = code.slice(0, -1) + code.slice(-1).toUpperCase();
+        BED_OUT[code].forEach(function (o) { if (o.start < td && fd < o.end) clashes.push(label + ': out of action ' + dd(o.start) + '–' + dd(o.end)); });
+        ALLOCS.forEach(function (x) { if (x.bed === code && x.start < td && fd < x.end) clashes.push(label + ': ' + (x.course ? x.course + ' #' + x.ind : x.ref) + ' ' + dd(x.start) + '–' + dd(x.end)); });
+      });
+      blocked = clashes.length > 0 && !S.allowClashes;
+      var word = m.beds.length === 1 ? 'this bed' : 'these beds', txt;
+      if (!clashes.length) txt = 'No clashes: ' + word + (m.beds.length === 1 ? ' is' : ' are') + ' free for every night in this range.';
+      else if (blocked) txt = 'Not allowed (clashes are set to block): ' + clashes.join('; ');
+      else txt = 'Warning, clashes on ' + word + ': ' + clashes.join('; ') + '. You can still allocate.';
+      h += '<p class="clash ' + (clashes.length ? 'bad' : 'ok') + '" role="status">' + esc(txt) + '</p>';
+    }
+  }
+  h += '<div class="placeholder">Edit form to come: ' + esc(m.editHint) + '</div>';
+  h += '<div class="actions"><button class="btn" data-act="close">Close</button>';
+  if (m.isNew) h += '<button class="btn primary" data-act="save"' + (blocked ? ' disabled' : '') + '>' + esc(saveLabel) + '</button>';
+  h += '</div></div></div>';
+  root.innerHTML = h;
+}
+
+// ---------- Events ----------
+document.getElementById('grid').addEventListener('click', function (e) {
+  var add = e.target.closest('.add');
+  if (add) { if (e.detail === 0) openNew([ctx.rowNodes[+add.dataset.idx]], ctx.s0, ctx.s0 + depLen()); return; }
+  var el = e.target.closest('[data-act]'); if (!el) return;
+  var act = el.dataset.act, id = el.dataset.id;
+  if (act === 'toggle') { if (state.collapsed.has(id)) state.collapsed.delete(id); else state.collapsed.add(id); render(); var t = document.querySelector('[data-act="toggle"][data-id="' + id + '"]'); if (t) t.focus(); }
+  else if (act === 'node') openNode(NODES[id]);
+  else if (act === 'alloc') openAlloc(ALLOCS.find(function (a) { return a.id === +id; }), NODES[el.dataset.bed]);
+  else if (act === 'outage') openOutage(OUTAGES.find(function (o) { return o.id === +id; }));
+  else if (act === 'week') openWeek(NODES[id], +el.dataset.ws);
+});
+
+// Drag to select: whole weeks across, bed rows down
+function cellAt(e) {
+  var r = document.getElementById('grid').getBoundingClientRect();
+  var w = Math.max(0, Math.min(S.weeks - 1, Math.floor((e.clientX - r.left - LABEL_W) / (7 * ctx.dayW))));
+  var row = Math.max(0, Math.min(ctx.rowNodes.length - 1, Math.floor((e.clientY - r.top) / ROW_H)));
+  return { w: w, row: row };
+}
+function onMove(e) {
+  if (!state.drag) return;
+  var c = cellAt(e);
+  if (c.w !== state.drag.w1 || c.row !== state.drag.r1) { state.drag.w1 = c.w; state.drag.r1 = c.row; render(); }
+}
+function onUp() {
+  window.removeEventListener('pointermove', onMove);
+  window.removeEventListener('pointerup', onUp);
+  var dg = state.drag; if (!dg) return;
+  state.drag = null;
+  var a = Math.min(dg.w0, dg.w1), b = Math.max(dg.w0, dg.w1);
+  var beds = ctx.rowNodes.slice(Math.min(dg.r0, dg.r1), Math.max(dg.r0, dg.r1) + 1).filter(function (x) { return x.level === 'Bed'; });
+  render();
+  if (beds.length) openNew(beds, ctx.s0 + a * 7, ctx.s0 + b * 7 + depLen());
+}
+document.getElementById('grid').addEventListener('pointerdown', function (e) {
+  var add = e.target.closest('.add');
+  if (!add || e.button !== 0) return;
+  e.preventDefault();
+  var c = cellAt(e), idx = +add.dataset.idx;
+  state.drag = { r0: idx, r1: idx, w0: c.w, w1: c.w };
+  render();
+  window.addEventListener('pointermove', onMove);
+  window.addEventListener('pointerup', onUp);
+});
+
+document.getElementById('modal-root').addEventListener('click', function (e) {
+  var el = e.target.closest('[data-act]');
+  if (!el) return;
+  if (el.dataset.act === 'overlay' && e.target !== el) return;
+  if (el.dataset.act === 'close' || el.dataset.act === 'overlay' || el.dataset.act === 'save') closeModal();
+});
+document.getElementById('modal-root').addEventListener('change', function (e) {
+  if (!state.modal) return;
+  if (e.target.id === 'alloc-from') state.modal.from = e.target.value;
+  else if (e.target.id === 'alloc-to') state.modal.to = e.target.value;
+  else return;
+  var id = e.target.id; renderModal(); var el = document.getElementById(id); if (el) el.focus();
+});
+document.addEventListener('keydown', function (e) { if (e.key === 'Escape' && state.modal) closeModal(); });
+
+document.getElementById('warnings').addEventListener('click', function (e) {
+  var b = e.target.closest('button'); if (!b) return;
+  if (b.dataset.wcourse) openCourse(b.dataset.wcourse);
+  else if (b.dataset.walloc) { var a = ALLOCS.find(function (x) { return x.id === +b.dataset.walloc; }); openAlloc(a, BEDS.find(function (x) { return x.bed === a.bed; })); }
+});
+['scheduled', 'loaded'].forEach(function (b) {
+  document.getElementById('basis-' + b).addEventListener('click', function () { S.basis = b; render(); renderModal(); });
+});
+document.getElementById('prev').addEventListener('click', function () { state.offset--; render(); });
+document.getElementById('next').addEventListener('click', function () { state.offset++; render(); });
+document.getElementById('expand').addEventListener('click', function () { state.collapsed = new Set(); render(); });
+document.getElementById('collapse').addEventListener('click', function () {
+  state.collapsed = new Set(Object.keys(NODES).filter(function (k) { return NODES[k].level === 'Floor'; })); render();
+});
+document.getElementById('settings').addEventListener('change', function (e) {
+  var f = e.currentTarget.elements;
+  function num(name, lo, hi, dflt) { var v = parseInt(f[name].value, 10); return isNaN(v) ? dflt : Math.max(lo, Math.min(hi, v)); }
+  S.weeks = num('weeks', 3, 10, 6); S.dayW = num('dayW', 14, 36, 22);
+  S.greenAt = num('greenAt', 50, 150, 100); S.redBelow = num('redBelow', 0, 100, 80);
+  S.weekDeparture = f.weekDeparture.value; S.allowClashes = f.allowClashes.checked;
+  render(); renderModal();
+});
+
+render();
+</script>
+</body>
+</html>

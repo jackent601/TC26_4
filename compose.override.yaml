@@ -1,0 +1,8 @@
+# Local development extras. Docker Compose loads this file automatically
+# alongside compose.yaml. For a production-like run without it:
+#   docker compose -f compose.yaml up
+services:
+  db:
+    ports:
+      # Localhost only, so the database is not reachable from other machines.
+      - "127.0.0.1:${POSTGRES_PORT:-5432}:5432"

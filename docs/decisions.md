@@ -1,0 +1,34 @@
+# Decisions log
+
+Short entries, newest last. Earlier data-model decisions are in the README under "Key design decisions".
+
+| # | Date | Decision | Why |
+|---|---|---|---|
+| D1 | 2026-11-14 | Purpose of this phase: build a PoC app. | Production platform and deployment are unknown. |
+| D2 | 2026-11-14 | Business logic and request handling live in the database; the UI/engine is a thin interface to database functions. | Keeps the logic portable to whatever production uses. |
+| D3 | 2026-11-14 | Reads go through views or table functions (e.g. `v_allocation_warnings`, `fn_availability`). The UI only selects from these. | One place for query logic; any front end can use it. |
+| D4 | 2026-11-14 | Writes go through functions or procedures (e.g. `allocate`, `set_status`), never direct table writes. Each one checks BLOCK rules, applies the app-logic rules from the README, writes `audit_log` and returns current warnings. | Validation and audit can't be bypassed; the UI gets warnings in one call. |
+| D5 | 2026-11-14 | PoC database: PostgreSQL. | Schema already tested on PG16. |
+| D6 | 2026-11-14 | Views in standard SQL where possible; write functions in PL/pgSQL, accepting a porting cost if production uses another database. | Logic in the database ties us to one dialect; keeping that to the write side limits the cost. |
+| D7 | 2026-11-14 | UI layer not yet chosen (options: PostgREST, small FastAPI/Node app). | Not needed until the database API exists. |
+| D8 | 2026-11-14 | Availability view: new allocations default to whole weeks (click = one week, drag = several); the popup lets the user change to exact dates. | Most stays are week-based; exact dates remain possible. |
+| D9 | 2026-11-14 | A week block is Monday to Sunday: first night Monday, departure Sunday (6 nights). | Agreed with the team. |
+| D10 | 2026-11-14 | Availability view supports group selection: drag across weeks and down across beds; one popup allocates all selected beds. | Courses are allocated as groups. |
+| D11 | 2026-11-14 | Double booking and allocating into an outage are allowed with a warning by default; a configuration flag can make them block. Changes README key decision 7, which had these as hard blocks. | Lets the team overbook knowingly; stricter sites can switch it on. |
+| D12 | 2026-11-14 | `courses.est_attendees` replaced by `scheduled` (planned) and `loaded` (registered, updated over time, with `loaded_at`). Individuals are numbered 1..greatest(scheduled, loaded). | The team tracks both numbers; registrations can exceed the plan. |
+| D13 | 2026-11-14 | Availability view colours courses by allocated vs either scheduled or loaded, chosen by a filter. | Early on only scheduled is known; later loaded is more accurate. |
+| D14 | 2026-11-14 | Global warning for any course with loaded > scheduled, shown regardless of the colour filter. | Over-subscription needs action (more beds or a capped course). |
+| D15 | 2026-11-14 | PoC runs as one Docker image holding PostgreSQL, the FastAPI app and Caddy (serving the UI); layers stay separate in code and can be split into three containers later. | One thing to run and hand over, real PostgreSQL, no lock-in to a host. |
+| D16 | 2026-11-14 | API layer is FastAPI: a generic layer maps `/api/<view>` and `/api/rpc/<function>` to the `api` schema (PostgREST-style URLs), plus custom modules for complex processing. Supersedes D7. | One extendable service; endpoints stay thin; UI could move to PostgREST/ORDS later. |
+| D17 | 2026-11-14 | Tables live in a `core` schema; the `api` schema (views and `security definer` functions) is the only thing the API role can reach. | The `api` schema is the contract; validation and audit can't be bypassed. |
+| D18 | 2026-11-14 | Suggestions: input view `v_candidate_beds`, output applied through `apply_suggestions`. Greedy search in SQL first; an OR-Tools solver may replace it behind the same endpoint. | Rules stay in SQL; the solver only advises. |
+| D19 | 2026-11-14 | Migrations with dbmate; database tests with pgTAP. | Light, single-binary tooling; rules tested where they live. |
+| D20 | 2026-11-14 | Four separate services under Docker Compose: `db` (PostgreSQL + pgTAP), `migrate` (dbmate, runs then exits), `api` (FastAPI), `ui` (Caddy serving static pages and proxying `/api`). Only `ui` is exposed. Supersedes D15. | Clear separation from the start; each service can move or scale independently. |
+| D21 | 2026-11-14 | UI is React + TypeScript built with Vite, served as static files by Caddy; API client generated from FastAPI's OpenAPI. | Complex interactive pages (grid, drag-select, forms) need a framework; typed client catches API changes. |
+| D22 | 2026-11-14 | **The data model and database functions are the core product.** (1) As much business logic as possible lives in PostgreSQL: validation, rules, warnings, availability, suggestions and audit, in the `api` schema's views and functions, kept as migration files in `db/`. (2) The back end (FastAPI) essentially calls those database functions and reads those views. It adds only what SQL can't do well, such as file parsing, solving and notifications, and that code also goes through the same views and functions. (3) The API's OpenAPI document is the contract between UI and back end. The UI's typed client is generated from it, so another back end serving the same spec (e.g. PostgREST or Oracle ORDS) could replace FastAPI, and migrating would be a minimal burden. (4) The UI (React, served by Caddy) is a presentation layer only. It displays data, collects input and shows the warnings the API returns, and makes no decisions about what is allowed. | The schema and functions hold the value and are tested in one place; the API and UI around them are replaceable as the production platform becomes clear. Consolidates D2–D4, D16 and D21. |
+
+## Open
+
+- Where the D11 flag lives: a severity on new built-in rows in `rules` (e.g. rule types `DOUBLE_BOOKING`, `OUT_OF_ACTION`) or a small settings table. The first reuses existing BLOCK/WARNING handling.
+
+- Status order: requirements sheet says Booked → Allocated; README/schema say ALLOCATED → BOOKED. Confirm with the team.

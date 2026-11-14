@@ -12,7 +12,7 @@ The tool needs to:
 - handle attributes at all accommodation levels, most notables attribute type OUTAGE which denies users from allocating to any affected room
 - visualise all of this
 
-**Status: design stage.** The data model for the MVP is agreed (below). Nothing is built yet. The application, queries and business logic are to be written from scratch; the platform and database are not yet chosen, so keep everything database-neutral.
+**Status: design stage, build starting.** The data model for the MVP is agreed (below) and the PoC platform is chosen (`docs/build_plan.md`). Business logic goes in the database; keep table structure standard SQL where possible.
 
 ## Repository layout
 
@@ -21,25 +21,48 @@ The tool needs to:
 ├── README.md                                  This file
 ├── docs/
 │   ├── Accommodation System Requirements.xlsx Agreed requirements (summarised below)
+│   ├── build_plan.md                          How the PoC is built: architecture, API design, phases
 │   ├── decisions.md                           Short log of PoC design decisions
+│   ├── erd.dot                                ER diagram source (Graphviz); erd.png and erd.svg are built from it
+│   ├── build_erd.sh                           Rebuilds erd.png and erd.svg from erd.dot
 │   ├── erd.md                                 Data model: Mermaid ER diagram plus the rules the diagram can't show
 │   ├── erd.png                                The same ER diagram as an image
-│   └── erd.svg                                The same ER diagram as a scalable image
-└── src/
-    └── db/
-        └── migrations/
-            └── 0001_schema.sql                The data model as SQL: 14 tables, keys, relationships, checks, indexes
+│   ├── erd.svg                                The same ER diagram as a scalable image
+│   └── pages_pocs/                            Clickable page mockups (open the .html files in a browser)
+├── db/
+│   ├── Dockerfile                             PostgreSQL 16 + pgTAP + dbmate (used by db and migrate)
+│   ├── migrations/                            dbmate migrations, applied in order
+│   │   ├── 0001_schema.sql                    The data model as SQL: 14 tables in the core schema
+│   │   └── 0002_api_schema.sql                The api schema (the contract), api_access and api_user roles
+│   └── setup/
+│       └── roles.sql                          Sets api_user's password from .env after each migration run
+├── compose.yaml                               Docker Compose services (db, migrate; api and ui to follow)
+├── compose.override.yaml                      Local dev extras, loaded automatically (database port on localhost)
+└── .env.example                               Settings to copy into .env
 ```
+
+## Running it
+
+Needs Docker (or Podman / Rancher Desktop).
+
+```
+cp .env.example .env          # then change the passwords
+docker compose up --build db migrate  # starts PostgreSQL, applies migrations, sets role passwords
+docker compose exec db psql -U accomm_owner -d accomm -c "\dt core.*"
+```
+
+For local development the database is also published on `localhost:5432` (set `POSTGRES_PORT` in `.env` to change it). Connect any client (DBeaver, pgAdmin, VS Code, psql) with host `localhost`, the port, database `accomm`, user `accomm_owner` and the password from `.env`. It listens on localhost only. To run without the dev extras: `docker compose -f compose.yaml up`.
 
 ### File details
 
 - **`docs/Accommodation System Requirements.xlsx`**: one sheet, ten requirements, each with minimum behaviour, a demonstration test and a priority. Summarised in [Requirements](#requirements).
 - **`docs/decisions.md`**: short log of PoC design decisions (where logic lives, database choice, open points). Add an entry when something is settled.
 - **`docs/erd.md`**: the main description of the data model. A table of the five groups of tables, the full ER diagram as Mermaid (shows in GitHub, GitLab and VS Code), and a list of rules enforced by checks or application logic rather than relationships.
-- **`docs/erd.png`, `docs/erd.svg`**: the same model drawn with Graphviz, grouped and coloured by area (Supply blue, Demand green, Vocabulary purple, Allocation orange, Audit grey). Use the SVG to zoom.
-- **`src/db/migrations/0001_schema.sql`**: the source of truth for the model. Standard SQL that has been loaded and tested on PostgreSQL 16. Notes at the top explain the small changes needed for SQL Server, MySQL or SQLite (identity columns). Structure only: no data, views, triggers or functions.
+- **`docs/erd.dot`**: Graphviz source for the diagram images. Rebuild them with `sh docs/build_erd.sh` (needs Graphviz installed).
+- **`docs/erd.png`, `docs/erd.svg`**: the same model drawn with Graphviz from `erd.dot`, grouped and coloured by area (Supply blue, Demand green, Vocabulary purple, Allocation orange, Audit grey). Use the SVG to zoom.
+- **`db/migrations/0001_schema.sql`**: the source of truth for the model. Standard SQL that has been loaded and tested on PostgreSQL 16. Notes at the top explain the small changes needed for SQL Server, MySQL or SQLite (identity columns). Structure only: no data, views, triggers or functions.
 
-If the model changes, update `0001_schema.sql` first (or add a new migration), then bring `erd.md` and the images into line.
+If the model changes, add a new migration in `db/migrations/` (or, before anything is deployed, edit `0001_schema.sql`), then bring `erd.md` and `erd.dot` into line and rebuild the images with `sh docs/build_erd.sh`.
 
 ## Data model (MVP)
 
@@ -57,7 +80,7 @@ If the model changes, update `0001_schema.sql` first (or add a new migration), t
 
 These were settled while simplifying an earlier, Oracle APEX-based proof of concept. Keep them unless there's a reason to revisit.
 
-1. **No named individuals.** There is no people table. A course's attendees are anonymous and numbered 1 to `est_attendees` (`individual_no`). Their attributes (e.g. individual 3 is female, needs step-free access) live in `course_individual_attributes` and override the course defaults in `course_attributes`.
+1. **No named individuals.** There is no people table. A course's attendees are anonymous and numbered 1 to the greater of `scheduled` and `loaded` (`individual_no`). `scheduled` is the planned headcount; `loaded` is the number actually registered, updated as registrations come in. Their attributes (e.g. individual 3 is female, needs step-free access) live in `course_individual_attributes` and override the course defaults in `course_attributes`.
 2. **The allocation is the booking.** There is no separate attendance or booking table. `allocations` carries the status (`ALLOCATED` → `BOOKED` → `CHECKED_IN` → `CHECKED_OUT`, or `NO_SHOW` / `CANCELLED`) and the check-in/out times. An individual can have several allocations, e.g. a room move mid-stay.
 3. **External bookings** (made outside the tool, e.g. in the booking system) are allocations with no course and no individual number, `source = 'EXTERNAL'`.
 4. **Location attributes apply at any level.** Each `location_attributes` row sets exactly one of `site_id` … `bed_id`, with a date range. Attributes are inherited down to beds. `attribute_types.inherit_mode` says how: `NEAREST` (the value set nearest the bed wins, so a room can override its floor) or `ANY` (applies if set at any level above, and can't be overridden).
@@ -80,11 +103,12 @@ These were settled while simplifying an earlier, Oracle APEX-based proof of conc
 
 ### Enforced in application logic, not the schema
 
-- `individual_no` is between 1 and the course's `est_attendees` (it isn't a foreign key, as individuals have no table).
+- `individual_no` is between 1 and the greater of the course's `scheduled` and `loaded` (it isn't a foreign key, as individuals have no table).
 - `attribute_types.allow_overlap = 'N'`: no two rows for the same attribute and location with overlapping dates.
 - `attribute_types.comment_required = 'Y'`: every row of that attribute has a comment.
 - Status transitions on `allocations` follow the order above.
 - Writing to `audit_log` when allocations change.
+- Warning when a course has `loaded > scheduled` (over-subscribed).
 
 ## Requirements
 
@@ -105,7 +129,7 @@ From `docs/Accommodation System Requirements.xlsx`:
 
 ## Open questions
 
-- **Platform and database:** not chosen. Oracle APEX was the earlier proof of concept; the model is now database-neutral.
+- **Platform and database:** chosen for the PoC (PostgreSQL, dbmate, FastAPI, Caddy as Docker Compose services; see `docs/build_plan.md`). Production hosting is still open.
 - **Booking system export:** what format it comes in, and whether it has room IDs and references we can match on. This decides how import and reconciliation work.
 - **External bookings:** do they carry attributes such as gender? If not, rooms they occupy will show "missing information" warnings.
 - **Ownership:** who maintains the attribute list and the rules once they're written down?
@@ -113,7 +137,9 @@ From `docs/Accommodation System Requirements.xlsx`:
 
 ## Suggested next steps
 
-1. Choose the platform and database.
+See [`docs/build_plan.md`](docs/build_plan.md) for the build phases. Platform chosen: PostgreSQL, dbmate, FastAPI and a Caddy-served UI as four Docker Compose services (decisions D16–D20).
+
+1. ~~Choose the platform and database.~~ Done.
 2. Add the `OUT_OF_ACTION` reference data (attribute type and rule) as a migration or seed script.
 3. Write the core queries: effective attributes per bed and per individual, conflicts and warnings, and availability by night.
 4. Build the course, allocation, conflicts and arrivals screens, then import.

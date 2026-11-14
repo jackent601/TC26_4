@@ -1,0 +1,559 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Availability view</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+body{margin:0;font-family:Inter,system-ui,sans-serif}
+a{color:#1D4ED8}a:hover{color:#1E3A8A}
+button:focus-visible{outline:2px solid #1D4ED8;outline-offset:1px}
+</style>
+</helmet>
+<div style="box-sizing: border-box; min-height: 100vh; padding: 24px 28px 40px; background: #F7F8FA; color: #1F2933; font-family: Inter, system-ui, sans-serif; display: flex; flex-direction: column; gap: 16px">
+
+  <header style="display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 16px">
+    <div style="display: flex; flex-direction: column; gap: 4px">
+      <h1 style="margin: 0; font-size: 22px; font-weight: 600; letter-spacing: -0.01em">Availability</h1>
+      <p style="margin: 0; font-size: 13px; color: #52606D">Beds by night across the estate. Click a row or booking to edit. Click an empty week on a bed to allocate it, or drag across weeks and down across beds to allocate a group.</p>
+    </div>
+    <div style="display: flex; flex-wrap: wrap; align-items: center; gap: 8px">
+      <button aria-label="Previous week" onClick="{{prev}}" style="width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; border: 1px solid #CBD2D9; border-radius: 6px; background: #FFFFFF; color: #1F2933; cursor: pointer">
+        <svg width="14" height="14" viewBox="0 0 14 14" aria-hidden="true"><path d="M9 2.5 L4.5 7 L9 11.5" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"></path></svg>
+      </button>
+      <span style="font-size: 13px; font-weight: 500; min-width: 210px; text-align: center">{{rangeLabel}}</span>
+      <button aria-label="Next week" onClick="{{next}}" style="width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; border: 1px solid #CBD2D9; border-radius: 6px; background: #FFFFFF; color: #1F2933; cursor: pointer">
+        <svg width="14" height="14" viewBox="0 0 14 14" aria-hidden="true"><path d="M5 2.5 L9.5 7 L5 11.5" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"></path></svg>
+      </button>
+      <div role="group" aria-label="Colour courses by" style="display: inline-flex; height: 40px; border: 1px solid #CBD2D9; border-radius: 6px; overflow: hidden">
+        <span style="display: flex; align-items: center; padding: 0 10px; font-size: 12px; color: #52606D; background: #F7F8FA; border-right: 1px solid #CBD2D9">Colour by</span>
+        <button aria-pressed="{{basisSched.pressed}}" onClick="{{basisSched.pick}}" style="{{basisSched.style}}">Scheduled</button>
+        <button aria-pressed="{{basisLoaded.pressed}}" onClick="{{basisLoaded.pick}}" style="{{basisLoaded.style}}">Loaded</button>
+      </div>
+      <button onClick="{{expandAll}}" style="height: 40px; padding: 0 14px; border: 1px solid #CBD2D9; border-radius: 6px; background: #FFFFFF; font: 500 13px Inter, sans-serif; color: #1F2933; cursor: pointer">Expand all</button>
+      <button onClick="{{collapseFloors}}" style="height: 40px; padding: 0 14px; border: 1px solid #CBD2D9; border-radius: 6px; background: #FFFFFF; font: 500 13px Inter, sans-serif; color: #1F2933; cursor: pointer">Collapse to floors</button>
+    </div>
+  </header>
+
+  <div style="display: flex; flex-wrap: wrap; align-items: center; gap: 8px 20px; font-size: 12px; color: #323F4B">
+    <sc-for list="{{legend}}" as="lg" hint-placeholder-count="6">
+      <span style="display: inline-flex; align-items: center; gap: 6px"><span style="{{lg.sw}}"></span>{{lg.label}}</span>
+    </sc-for>
+    <span style="display: inline-flex; align-items: center; gap: 6px">
+      <svg width="12" height="12" viewBox="0 0 12 12" aria-hidden="true"><path d="M6 1 L11 10.5 H1 Z" fill="#FFF4E5" stroke="#7A1610" stroke-width="1.2" stroke-linejoin="round"></path><path d="M6 4.5 V7.2 M6 8.6 V8.9" stroke="#7A1610" stroke-width="1.3" stroke-linecap="round"></path></svg>
+      Booking clashes with an outage
+    </span>
+    <span style="display: inline-flex; align-items: center; gap: 6px"><svg width="12" height="12" viewBox="0 0 12 12" aria-hidden="true" style="flex: none"><circle cx="6" cy="6" r="5.2" fill="#FFFFFF" stroke="#4C1D95" stroke-width="1.2"></circle><path d="M6 8.8 V3.6 M3.9 5.6 L6 3.5 L8.1 5.6" fill="none" stroke="#4C1D95" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"></path></svg>
+      Course loaded above scheduled
+    </span>
+  </div>
+
+  <sc-if value="{{hasWarnings}}" hint-placeholder-val="{{true}}">
+    <div role="region" aria-label="Warnings" style="border: 1px solid #F5C2BE; background: #FEF3F2; border-radius: 8px; padding: 10px 14px; display: flex; flex-wrap: wrap; align-items: center; gap: 6px 16px; font-size: 13px; color: #7A1610">
+      <strong style="font-weight: 600">{{warningsTitle}}</strong>
+      <sc-for list="{{warnings}}" as="wn" hint-placeholder-count="2">
+        <button onClick="{{wn.click}}" style="border: 0; background: transparent; padding: 2px 0; font: 400 13px Inter, sans-serif; color: #7A1610; text-decoration: underline; cursor: pointer; display: inline-flex; align-items: center; gap: 5px">
+          <sc-if value="{{wn.isOver}}" hint-placeholder-val="{{true}}"><svg width="12" height="12" viewBox="0 0 12 12" aria-hidden="true" style="flex: none"><circle cx="6" cy="6" r="5.2" fill="#FFFFFF" stroke="#4C1D95" stroke-width="1.2"></circle><path d="M6 8.8 V3.6 M3.9 5.6 L6 3.5 L8.1 5.6" fill="none" stroke="#4C1D95" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"></path></svg></sc-if>
+          <sc-if value="{{wn.isClash}}" hint-placeholder-val="{{false}}"><svg width="12" height="12" viewBox="0 0 12 12" aria-hidden="true" style="flex: none"><path d="M6 1 L11 10.5 H1 Z" fill="#FFF4E5" stroke="#7A1610" stroke-width="1.2" stroke-linejoin="round"></path><path d="M6 4.5 V7.2 M6 8.6 V8.9" stroke="#7A1610" stroke-width="1.3" stroke-linecap="round"></path></svg></sc-if>
+          {{wn.text}}
+        </button>
+      </sc-for>
+    </div>
+  </sc-if>
+
+  <div style="border: 1px solid #CBD2D9; border-radius: 8px; background: #FFFFFF; overflow: auto; max-height: 680px">
+    <div style="{{gridStyle}}">
+      <sc-for list="{{rows}}" as="row" hint-placeholder-count="12">
+        <div style="display: flex; height: 32px; box-sizing: border-box; border-bottom: 1px solid #E4E7EB">
+          <div style="{{row.labelStyle}}">
+            <sc-if value="{{row.isGroup}}" hint-placeholder-val="{{true}}">
+              <button aria-label="{{row.toggleAria}}" aria-expanded="{{row.expanded}}" onClick="{{row.toggle}}" style="width: 22px; height: 22px; flex: none; display: flex; align-items: center; justify-content: center; border: 0; border-radius: 4px; background: transparent; color: #323F4B; cursor: pointer; padding: 0">
+                <svg width="12" height="12" viewBox="0 0 12 12" aria-hidden="true" style="{{row.chevStyle}}"><path d="M4 2 L8 6 L4 10" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"></path></svg>
+              </button>
+            </sc-if>
+            <sc-if value="{{row.isBed}}" hint-placeholder-val="{{false}}">
+              <span style="width: 22px; flex: none"></span>
+            </sc-if>
+            <button onClick="{{row.openNode}}" style="{{row.nameStyle}}">{{row.name}}</button>
+            <span style="font-size: 10px; color: #52606D; text-transform: uppercase; letter-spacing: 0.04em; flex: none">{{row.meta}}</span>
+          </div>
+          <div style="{{row.bodyStyle}}">
+            <sc-if value="{{row.isBed}}" hint-placeholder-val="{{false}}">
+              <button aria-label="{{row.addAria}}" onClick="{{row.addClick}}" onPointerDown="{{row.dragStart}}" onPointerMove="{{row.dragMove}}" onPointerUp="{{row.dragEnd}}" onPointerCancel="{{dragCancel}}" style="position: absolute; inset: 0; width: 100%; height: 100%; background: transparent; border: 0; padding: 0; cursor: cell; z-index: 0; touch-action: none"></button>
+              <sc-if value="{{row.hasSel}}" hint-placeholder-val="{{false}}">
+                <div style="{{row.selStyle}}">{{row.selLabel}}</div>
+              </sc-if>
+              <sc-for list="{{row.bars}}" as="bar" hint-placeholder-count="1">
+                <button style="{{bar.style}}" onClick="{{bar.click}}" aria-label="{{bar.aria}}" title="{{bar.aria}}">
+                  <sc-if value="{{bar.hasWarn}}" hint-placeholder-val="{{false}}">
+                    <svg width="12" height="12" viewBox="0 0 12 12" aria-hidden="true" style="flex: none"><path d="M6 1 L11 10.5 H1 Z" fill="#FFF4E5" stroke="#7A1610" stroke-width="1.2" stroke-linejoin="round"></path><path d="M6 4.5 V7.2 M6 8.6 V8.9" stroke="#7A1610" stroke-width="1.3" stroke-linecap="round"></path></svg>
+                  </sc-if>
+                  <sc-if value="{{bar.over}}" hint-placeholder-val="{{false}}"><svg width="12" height="12" viewBox="0 0 12 12" aria-hidden="true" style="flex: none"><circle cx="6" cy="6" r="5.2" fill="#FFFFFF" stroke="#4C1D95" stroke-width="1.2"></circle><path d="M6 8.8 V3.6 M3.9 5.6 L6 3.5 L8.1 5.6" fill="none" stroke="#4C1D95" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"></path></svg></sc-if>
+                  <span style="overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0">{{bar.label}}</span>
+                </button>
+              </sc-for>
+            </sc-if>
+            <sc-if value="{{row.showSummary}}" hint-placeholder-val="{{false}}">
+              <div style="display: flex; height: 100%">
+                <sc-for list="{{row.weeks}}" as="wk" hint-placeholder-count="6">
+                  <button style="{{wk.style}}" onClick="{{wk.click}}" aria-label="{{wk.aria}}" title="{{wk.aria}}">
+                    <sc-for list="{{wk.chips}}" as="chip" hint-placeholder-count="3">
+                      <span style="display: inline-flex; align-items: center; gap: 3px; font-size: 11px; font-weight: 500; color: #1F2933"><span style="{{chip.sw}}"></span>{{chip.count}}</span>
+                    </sc-for>
+                  </button>
+                </sc-for>
+              </div>
+            </sc-if>
+          </div>
+        </div>
+      </sc-for>
+
+      <div style="{{axisRowStyle}}">
+        <div style="position: sticky; left: 0; z-index: 5; width: 300px; flex: none; box-sizing: border-box; display: flex; align-items: center; padding: 0 12px; background: #FFFFFF; border-right: 1px solid #CBD2D9; font-size: 11px; font-weight: 500; color: #52606D; text-transform: uppercase; letter-spacing: 0.04em">Week commencing</div>
+        <div style="{{axisBodyStyle}}">
+          <sc-for list="{{ticks}}" as="t" hint-placeholder-count="6">
+            <div style="{{t.style}}">{{t.label}}</div>
+          </sc-for>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <sc-if value="{{modal.open}}" hint-placeholder-val="{{false}}">
+    <div style="position: fixed; inset: 0; background: rgba(15, 23, 42, 0.35); display: flex; align-items: center; justify-content: center; z-index: 50; padding: 16px">
+      <div role="dialog" aria-modal="true" aria-labelledby="dlg-title" style="background: #FFFFFF; border-radius: 10px; width: 100%; max-width: 460px; box-shadow: 0 12px 40px rgba(15, 23, 42, 0.25); padding: 20px 22px; display: flex; flex-direction: column; gap: 14px; box-sizing: border-box">
+        <div style="display: flex; align-items: flex-start; justify-content: space-between; gap: 12px">
+          <div style="display: flex; flex-direction: column; gap: 2px">
+            <span style="font-size: 11px; font-weight: 500; color: #52606D; text-transform: uppercase; letter-spacing: 0.05em">{{modal.kind}}</span>
+            <h2 id="dlg-title" style="margin: 0; font-size: 18px; font-weight: 600">{{modal.title}}</h2>
+          </div>
+          <button aria-label="Close" onClick="{{close}}" style="width: 36px; height: 36px; display: flex; align-items: center; justify-content: center; border: 0; border-radius: 6px; background: #F0F2F5; color: #1F2933; cursor: pointer">
+            <svg width="12" height="12" viewBox="0 0 12 12" aria-hidden="true"><path d="M2 2 L10 10 M10 2 L2 10" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"></path></svg>
+          </button>
+        </div>
+        <dl style="margin: 0; display: grid; grid-template-columns: 140px minmax(0, 1fr); gap: 8px 12px; font-size: 13px">
+          <sc-for list="{{modal.lines}}" as="ln" hint-placeholder-count="4">
+            <dt style="color: #52606D">{{ln.k}}</dt>
+            <dd style="margin: 0; color: #1F2933">{{ln.v}}</dd>
+          </sc-for>
+        </dl>
+        <sc-if value="{{modal.isNew}}" hint-placeholder-val="{{false}}">
+          <div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px">
+            <label for="alloc-from" style="display: flex; flex-direction: column; gap: 4px; font-size: 12px; font-weight: 500; color: #323F4B">First night
+              <input id="alloc-from" type="date" value="{{modal.from}}" onChange="{{modal.setFrom}}" style="height: 40px; box-sizing: border-box; padding: 0 10px; border: 1px solid #9AA5B1; border-radius: 6px; font: 400 13px Inter, sans-serif; color: #1F2933">
+            </label>
+            <label for="alloc-to" style="display: flex; flex-direction: column; gap: 4px; font-size: 12px; font-weight: 500; color: #323F4B">Departure day
+              <input id="alloc-to" type="date" value="{{modal.to}}" onChange="{{modal.setTo}}" style="height: 40px; box-sizing: border-box; padding: 0 10px; border: 1px solid #9AA5B1; border-radius: 6px; font: 400 13px Inter, sans-serif; color: #1F2933">
+            </label>
+          </div>
+          <p style="margin: 0; font-size: 13px; font-weight: 500; color: #1F2933">{{modal.summary}}</p>
+          <p style="{{modal.clashStyle}}">{{modal.clashText}}</p>
+        </sc-if>
+        <div style="border: 1px dashed #9AA5B1; border-radius: 8px; padding: 14px; font-size: 13px; color: #52606D; background: #F7F8FA">Edit form to come: {{modal.editHint}}</div>
+        <div style="display: flex; justify-content: flex-end; gap: 8px">
+          <button onClick="{{close}}" style="height: 40px; padding: 0 16px; border: 1px solid #CBD2D9; border-radius: 6px; background: #FFFFFF; color: #1F2933; font: 500 13px Inter, sans-serif; cursor: pointer">Close</button>
+          <sc-if value="{{modal.isNew}}" hint-placeholder-val="{{false}}">
+            <button disabled="{{modal.blocked}}" onClick="{{close}}" style="{{modal.saveStyle}}">{{modal.saveLabel}}</button>
+          </sc-if>
+        </div>
+      </div>
+    </div>
+  </sc-if>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"weeks":{"editor":"int","default":6,"min":3,"max":10,"section":"Timeline"},"dayWidth":{"editor":"range","default":22,"min":14,"max":36,"step":1,"unit":"px","section":"Timeline"},"greenAt":{"editor":"int","default":100,"min":50,"max":150,"unit":"%","section":"Course thresholds"},"redBelow":{"editor":"int","default":80,"min":0,"max":100,"unit":"%","section":"Course thresholds"},"weekDeparture":{"editor":"enum","options":["Sunday","Monday"],"default":"Sunday","section":"Week blocks"},"allowClashes":{"editor":"boolean","default":true,"section":"Rules"},"$preview":{"width":1440,"height":900}}'>
+var BASE = Date.UTC(2026, 10, 16);
+var DAYMS = 86400000;
+var WD = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+function dd(d) { var t = new Date(BASE + d * DAYMS); return String(t.getUTCDate()).padStart(2, '0') + '/' + String(t.getUTCMonth() + 1).padStart(2, '0'); }
+function dlong(d) { return WD[((d % 7) + 7) % 7] + ' ' + dd(d); }
+function isoOf(d) { return new Date(BASE + d * DAYMS).toISOString().slice(0, 10); }
+function dayOfIso(s) { var t = Date.parse(s + 'T00:00:00Z'); return isNaN(t) ? null : Math.round((t - BASE) / DAYMS); }
+function yr(d) { return new Date(BASE + d * DAYMS).getUTCFullYear(); }
+
+var RAW = { id: 'S:NC', level: 'Site', name: 'North Camp', children: [
+  { id: 'BU:HH', level: 'Building', name: 'Hartley House', children: [
+    { id: 'BL:A', level: 'Block', name: 'Block A', children: [
+      { id: 'F:A1', level: 'Floor', name: 'Floor 1', rooms: [['101', 2], ['102', 2], ['103', 1], ['104', 2]] },
+      { id: 'F:A2', level: 'Floor', name: 'Floor 2', rooms: [['201', 2], ['202', 2], ['203', 2], ['204', 1]] },
+      { id: 'F:A3', level: 'Floor', name: 'Floor 3', rooms: [['301', 2], ['302', 2], ['303', 1]] }
+    ] },
+    { id: 'BL:B', level: 'Block', name: 'Block B', children: [
+      { id: 'F:B1', level: 'Floor', name: 'Floor 1', rooms: [['B101', 2], ['B102', 2]] }
+    ] }
+  ] }
+] };
+
+function build(n, parent) {
+  var node = { id: n.id, level: n.level, name: n.name, parent: parent, children: [] };
+  if (n.rooms) {
+    node.children = n.rooms.map(function (r) {
+      var room = { id: 'R:' + r[0], level: 'Room', name: 'Room ' + r[0], parent: node, children: [] };
+      for (var i = 0; i < r[1]; i++) {
+        var L = 'ab'[i];
+        room.children.push({ id: 'B:' + r[0] + L, bed: r[0] + L, level: 'Bed', name: 'Bed ' + L.toUpperCase(), parent: room, children: [] });
+      }
+      return room;
+    });
+  } else if (n.children) {
+    node.children = n.children.map(function (c) { return build(c, node); });
+  }
+  return node;
+}
+var ROOT = build(RAW, null);
+var NODES = {};
+var BEDS = [];
+(function walk(n) { NODES[n.id] = n; if (n.level === 'Bed') BEDS.push(n); n.children.forEach(walk); })(ROOT);
+function bedsUnder(n) { if (n.level === 'Bed') return [n]; var out = []; n.children.forEach(function (c) { out = out.concat(bedsUnder(c)); }); return out; }
+function ancestorIds(n) { var a = []; var p = n; while (p) { a.push(p.id); p = p.parent; } return a; }
+function pathOf(n) { var a = []; var p = n; while (p) { a.unshift(p.name); p = p.parent; } return a.join(' › '); }
+
+var COURSES = {
+  'LDR-01': { code: 'LDR-01', name: 'Leadership Foundation', start: 0, end: 5, scheduled: 6, loaded: 6, loadedAt: 'Thu 12/11' },
+  'SAF-14': { code: 'SAF-14', name: 'Site Safety', start: 7, end: 12, scheduled: 8, loaded: 7, loadedAt: 'Fri 13/11' },
+  'TEC-07': { code: 'TEC-07', name: 'Technical Refresher', start: 14, end: 26, scheduled: 10, loaded: 12, loadedAt: 'Fri 13/11' },
+  'INT-22': { code: 'INT-22', name: 'Induction', start: 28, end: 33, scheduled: 4, loaded: 3, loadedAt: 'Wed 11/11' }
+};
+var ALLOCS = [];
+var aid = 1;
+function addCourse(code, beds, status) {
+  var c = COURSES[code];
+  beds.forEach(function (b, i) { ALLOCS.push({ id: aid++, course: code, ind: i + 1, bed: b, start: c.start, end: c.end, status: status, source: 'LOCAL' }); });
+}
+addCourse('LDR-01', ['101a', '101b', '102a', '102b', '103a', '104a'], 'BOOKED');
+addCourse('SAF-14', ['201a', '201b', '202a', '202b', '204a', '101a', '101b'], 'ALLOCATED');
+addCourse('TEC-07', ['301a', '301b', '302a', '302b', '303a'], 'ALLOCATED');
+addCourse('INT-22', ['101a', '101b', '102a', '102b'], 'ALLOCATED');
+[['BK-4471', 'Visiting assessors', '104b', 2, 9], ['BK-4502', 'Contractor', '202a', 16, 23], ['BK-4519', 'Regional team', 'B101a', 3, 10], ['BK-4530', 'Regional team', 'B101a', 22, 25]].forEach(function (x) {
+  ALLOCS.push({ id: aid++, course: null, ref: x[0], extName: x[1], bed: x[2], start: x[3], end: x[4], status: 'BOOKED', source: 'EXTERNAL' });
+});
+var OUTAGES = [
+  { id: 1, node: 'R:203', start: 10, end: 20, reason: 'Heating failure' },
+  { id: 2, node: 'F:B1', start: 21, end: 28, reason: 'Fire alarm upgrade' }
+];
+var INDIVIDUALS = {};
+ALLOCS.forEach(function (a) { if (a.course) { INDIVIDUALS[a.course] = INDIVIDUALS[a.course] || {}; INDIVIDUALS[a.course][a.ind] = true; } });
+function isOver(code) { return COURSES[code].loaded > COURSES[code].scheduled; }
+function allocatedCount(code) { return Object.keys(INDIVIDUALS[code] || {}).length; }
+var BED_OUT = {};
+BEDS.forEach(function (b) { var anc = ancestorIds(b); BED_OUT[b.bed] = OUTAGES.filter(function (o) { return anc.indexOf(o.node) >= 0; }); });
+
+var SW = 'display:inline-block;width:12px;height:12px;border-radius:3px;box-sizing:border-box;flex:none;';
+var ST = {
+  free: { sw: 'background:#FFFFFF;border:1px solid #7B8794' },
+  out: { bar: 'background:repeating-linear-gradient(135deg,#EEF0F3 0 5px,#C5CBD3 5px 7px);color:#1F2933;border:1px solid #9AA5B1;', sw: 'background:repeating-linear-gradient(135deg,#EEF0F3 0 2px,#7B8794 2px 3px);border:1px solid #7B8794' },
+  green: { bar: 'background:#CDEBD6;color:#14532D;border:1px solid #2F855A;', sw: 'background:#CDEBD6;border:1px solid #2F855A' },
+  amber: { bar: 'background:#FFC98A;color:#5C2C00;border:1px solid #C05621;', sw: 'background:#FFC98A;border:1px solid #C05621' },
+  red: { bar: 'background:#B42318;color:#FFFFFF;border:1px solid #7A1610;', sw: 'background:#B42318;border:1px solid #7A1610' },
+  ext: { bar: 'background:#E8EDF5;color:#1E293B;border:1px dashed #475569;', sw: 'background:#E8EDF5;border:1px dashed #475569' }
+};
+var ORDER = ['free', 'out', 'green', 'amber', 'red', 'ext'];
+var NAMES = { free: 'free', out: 'out of action', green: 'green', amber: 'amber', red: 'red', ext: 'external' };
+var BAR = 'position:absolute;top:5px;height:22px;box-sizing:border-box;border-radius:4px;font:500 11px/1 Inter,sans-serif;padding:0 6px;overflow:hidden;white-space:nowrap;text-align:left;cursor:pointer;display:flex;align-items:center;gap:4px;';
+var ROWBG = { Site: '#E9EDF2', Building: '#EEF1F5', Block: '#F2F4F7', Floor: '#F5F7FA', Room: '#FAFBFC', Bed: '#FFFFFF' };
+var ROW_H = 32;
+var DEFAULT_COLLAPSED =['F:A3', 'BL:B'];
+
+class Component extends DCLogic {
+  collapsedSet() { var s = this.state || {}; return new Set(s.collapsed || DEFAULT_COLLAPSED); }
+  toggle(id) { var c = this.collapsedSet(); if (c.has(id)) c.delete(id); else c.add(id); this.setState({ collapsed: Array.from(c) }); }
+  open(m) { m.open = true; this.setState({ modal: m }); }
+
+  openNode(n) {
+    var beds = bedsUnder(n);
+    var outs = OUTAGES.filter(function (o) { return ancestorIds(NODES[o.node]).indexOf(n.id) >= 0 || ancestorIds(n).indexOf(o.node) >= 0; });
+    var lines = [{ k: 'Location', v: pathOf(n) }, { k: 'Beds', v: String(beds.length) }];
+    lines.push({ k: 'Outages', v: outs.length ? outs.map(function (o) { return o.reason + ' (' + NODES[o.node].name + ', ' + dd(o.start) + '–' + dd(o.end) + ')'; }).join('; ') : 'None' });
+    this.open({ kind: n.level, title: n.name, lines: lines, editHint: 'location details and dated attributes, including taking it out of action.' });
+  }
+  basis() { return ((this.state || {}).basis) || 'scheduled'; }
+  basisOf(code) { return this.basis() === 'loaded' ? COURSES[code].loaded : COURSES[code].scheduled; }
+  courseLines(code, colour) {
+    var c = COURSES[code], n = allocatedCount(code), b = this.basisOf(code);
+    var lines = [{ k: 'Scheduled', v: String(c.scheduled) }, { k: 'Loaded', v: c.loaded + ' (updated ' + c.loadedAt + ')' },
+      { k: 'Allocated', v: n + ' of ' + b + ' ' + this.basis() + ' (' + (b ? Math.round(n / b * 100) : 100) + '%), ' + colour }];
+    if (isOver(code)) lines.push({ k: 'Warning', v: 'Loaded is ' + (c.loaded - c.scheduled) + ' above scheduled' });
+    return lines;
+  }
+  openCourse(code, colour) {
+    var c = COURSES[code];
+    this.open({ kind: 'Course', title: c.code + ' ' + c.name, lines: [{ k: 'Dates', v: dlong(c.start) + ' to departure ' + dlong(c.end) }].concat(this.courseLines(code, colour)),
+      editHint: 'course details, scheduled number, update loaded.' });
+  }
+  openAlloc(a, colour, conflict, bed) {
+    var lines;
+    if (a.course) {
+      var c = COURSES[a.course];
+      lines = [
+        { k: 'Course', v: c.code + ' ' + c.name },
+        { k: 'Individual', v: '#' + a.ind },
+        { k: 'Bed', v: pathOf(bed) },
+        { k: 'Nights', v: dlong(a.start) + ' to departure ' + dlong(a.end) + ' (' + (a.end - a.start) + ' nights)' },
+        { k: 'Status', v: a.status }
+      ].concat(this.courseLines(a.course, colour));
+    } else {
+      lines = [
+        { k: 'Reference', v: a.ref },
+        { k: 'Name', v: a.extName },
+        { k: 'Bed', v: pathOf(bed) },
+        { k: 'Nights', v: dlong(a.start) + ' to departure ' + dlong(a.end) + ' (' + (a.end - a.start) + ' nights)' },
+        { k: 'Status', v: a.status },
+        { k: 'Source', v: 'External booking system' }
+      ];
+    }
+    if (conflict) lines.push({ k: 'Conflict', v: 'Bed is out of action for part of this stay' });
+    this.open({ kind: a.course ? 'Allocation' : 'External booking', title: a.course ? a.course + ' · individual #' + a.ind : a.ref, lines: lines, editHint: 'move bed or dates, change status, check in/out, cancel.' });
+  }
+  openOutage(o) {
+    var node = NODES[o.node];
+    var beds = bedsUnder(node).map(function (b) { return b.bed; });
+    var hit = ALLOCS.filter(function (a) { return beds.indexOf(a.bed) >= 0 && a.start < o.end && o.start < a.end; });
+    this.open({ kind: 'Outage', title: o.reason, lines: [
+      { k: 'Set on', v: node.level + ': ' + pathOf(node) },
+      { k: 'Dates', v: dlong(o.start) + ' to ' + dlong(o.end) + ' (exclusive)' },
+      { k: 'Beds affected', v: String(beds.length) },
+      { k: 'Bookings affected', v: hit.length ? hit.map(function (a) { return a.course ? a.course + ' #' + a.ind : a.ref; }).join(', ') : 'None' }
+    ], editHint: 'change dates or reason, end the outage, rehouse affected bookings.' });
+  }
+  openNew(beds, a, b) {
+    var names = beds.map(function (x) { return x.parent.name + ' ' + x.name.replace('Bed ', ''); });
+    var shown = names.length > 8 ? names.slice(0, 8).join(', ') + ' +' + (names.length - 8) + ' more' : names.join(', ');
+    this.open({ kind: 'New allocation', isNew: true, beds: beds.map(function (x) { return x.bed; }),
+      title: beds.length === 1 ? pathOf(beds[0]) : beds.length + ' beds',
+      from: isoOf(a), to: isoOf(b),
+      lines: [{ k: beds.length === 1 ? 'Bed' : 'Beds (' + beds.length + ')', v: shown }],
+      editHint: 'choose the course and which individuals go in these beds, or mark as an external booking.' });
+  }
+  openWeek(n, best, start) {
+    var lines = [{ k: 'Location', v: pathOf(n) }, { k: 'Week commencing', v: dlong(start) }, { k: 'Limiting night', v: dlong(best.d) + ' (fewest free beds)' }];
+    ORDER.forEach(function (k) { lines.push({ k: NAMES[k].charAt(0).toUpperCase() + NAMES[k].slice(1), v: String(best.c[k]) }); });
+    this.open({ kind: n.level + ' summary', title: n.name, lines: lines, editHint: 'drill into this week, bulk outage or bulk allocate.' });
+  }
+
+  renderVals() {
+    var self = this;
+    var st = this.state || {};
+    var weeks = this.props.weeks ?? 6;
+    var dayW = this.props.dayWidth ?? 22;
+    var greenAt = this.props.greenAt ?? 100;
+    var redBelow = this.props.redBelow ?? 80;
+    var allowClashes = this.props.allowClashes ?? true;
+    var depLen = (this.props.weekDeparture ?? 'Sunday') === 'Monday' ? 7 : 6;
+    var off = st.offset || 0;
+    var s0 = off * 7, nDays = weeks * 7, s1 = s0 + nDays;
+    var bodyW = nDays * dayW, labelW = 300;
+    var collapsed = this.collapsedSet();
+
+    var basis = st.basis || 'scheduled';
+    function colour(code) { var b = self.basisOf(code); var p = b > 0 ? allocatedCount(code) / b * 100 : 100; return p >= greenAt ? 'green' : (p < redBelow ? 'red' : 'amber'); }
+    function stateAt(bed, d) {
+      if (BED_OUT[bed.bed].some(function (o) { return o.start <= d && d < o.end; })) return 'out';
+      var a = ALLOCS.find(function (x) { return x.bed === bed.bed && x.start <= d && d < x.end; });
+      if (!a) return 'free';
+      return a.course ? colour(a.course) : 'ext';
+    }
+    var grid = 'background-image:repeating-linear-gradient(90deg,transparent 0 ' + (7 * dayW - 1) + 'px,#CBD2D9 ' + (7 * dayW - 1) + 'px ' + (7 * dayW) + 'px),repeating-linear-gradient(90deg,transparent 0 ' + (dayW - 1) + 'px,#EEF0F3 ' + (dayW - 1) + 'px ' + dayW + 'px),repeating-linear-gradient(90deg,transparent 0 ' + (5 * dayW) + 'px,#F5F6F8 ' + (5 * dayW) + 'px ' + (7 * dayW) + 'px);';
+
+    var rows = [];
+    var rowNodes = [];
+    function visit(n, depth) {
+      var idx = rows.length;
+      rowNodes[idx] = n;
+      var isBed = n.level === 'Bed';
+      var isCol = !isBed && collapsed.has(n.id);
+      var beds = bedsUnder(n);
+      var row = {
+        key: n.id, name: n.name, isBed: isBed, isGroup: !isBed, showSummary: isCol, expanded: !isCol,
+        meta: isBed ? '' : n.level + ' · ' + beds.length + (beds.length === 1 ? ' bed' : ' beds'),
+        labelStyle: 'position:sticky;left:0;z-index:3;width:' + labelW + 'px;flex:none;box-sizing:border-box;display:flex;align-items:center;gap:4px;padding-left:' + (8 + depth * 16) + 'px;padding-right:10px;border-right:1px solid #CBD2D9;background:' + ROWBG[n.level] + ';',
+        nameStyle: 'border:0;background:transparent;padding:4px 4px;border-radius:4px;cursor:pointer;text-align:left;font:' + (isBed ? '400' : (n.level === 'Room' ? '500' : '600')) + ' 13px Inter,sans-serif;color:#1F2933;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0;flex:1 1 auto',
+        chevStyle: 'transition:transform 120ms;transform:rotate(' + (isCol ? 0 : 90) + 'deg)',
+        toggleAria: (isCol ? 'Expand ' : 'Collapse ') + n.name,
+        toggle: function () { self.toggle(n.id); },
+        openNode: function () { self.openNode(n); },
+        bodyStyle: 'position:relative;flex:none;width:' + bodyW + 'px;height:31px;' + (isBed || isCol ? grid : 'background:' + ROWBG[n.level] + ';'),
+        bars: [], weeks: []
+      };
+      if (isBed) {
+        row.addAria = 'New allocation on ' + pathOf(n);
+        var weekAt = function (e) {
+          var r = e.currentTarget.getBoundingClientRect();
+          return Math.max(0, Math.min(weeks - 1, Math.floor((e.clientX - r.left) / (7 * dayW))));
+        };
+        // Drag: horizontally snaps to whole weeks, vertically spans bed rows (group rows in between are skipped)
+        row.dragStart = function (e) {
+          if (e.button !== 0) return;
+          e.currentTarget.setPointerCapture(e.pointerId);
+          var w = weekAt(e);
+          self.setState({ drag: { r0: idx, r1: idx, w0: w, w1: w, top: e.currentTarget.getBoundingClientRect().top } });
+        };
+        row.dragMove = function (e) {
+          var dg = (self.state || {}).drag;
+          if (!dg || dg.r0 !== idx) return;
+          var w = weekAt(e);
+          var r = Math.max(0, Math.min(rows.length - 1, dg.r0 + Math.floor((e.clientY - dg.top) / ROW_H)));
+          if (w !== dg.w1 || r !== dg.r1) self.setState({ drag: Object.assign({}, dg, { w1: w, r1: r }) });
+        };
+        row.dragEnd = function () {
+          var dg = (self.state || {}).drag;
+          if (!dg || dg.r0 !== idx) return;
+          var a = Math.min(dg.w0, dg.w1), b = Math.max(dg.w0, dg.w1);
+          var picked = rowNodes.slice(Math.min(dg.r0, dg.r1), Math.max(dg.r0, dg.r1) + 1).filter(function (x) { return x.level === 'Bed'; });
+          self.setState({ drag: null });
+          self.openNew(picked, s0 + a * 7, s0 + b * 7 + depLen);
+        };
+        // Keyboard activation (no pointer): allocate the first visible week
+        row.addClick = function (e) { if (e.detail === 0) self.openNew([n], s0, s0 + depLen); };
+        var dg = st.drag;
+        row.hasSel = !!(dg && idx >= Math.min(dg.r0, dg.r1) && idx <= Math.max(dg.r0, dg.r1));
+        if (row.hasSel) {
+          var wa = Math.min(dg.w0, dg.w1), nw = Math.max(dg.w0, dg.w1) - wa + 1;
+          row.selLabel = '';
+          row.selStyle = 'position:absolute;top:3px;height:26px;left:' + (wa * 7 * dayW) + 'px;width:' + (nw * 7 * dayW) + 'px;box-sizing:border-box;background:rgba(29,78,216,0.14);border:2px dashed #1D4ED8;border-radius:4px;z-index:3;pointer-events:none;display:flex;align-items:center;padding-left:8px;font:600 11px Inter,sans-serif;color:#1E3A8A;white-space:nowrap;overflow:visible';
+        }
+        var outs = BED_OUT[n.bed];
+        outs.filter(function (o) { return o.start < s1 && o.end > s0; }).forEach(function (o) {
+          var a = Math.max(o.start, s0), b = Math.min(o.end, s1);
+          var lvl = NODES[o.node].level;
+          var label = 'Out of action' + (lvl !== 'Bed' ? ' (' + lvl.toLowerCase() + ')' : '');
+          row.bars.push({ key: 'o' + o.id, hasWarn: false, over: false, label: label,
+            aria: label + ': ' + o.reason + ', ' + dd(o.start) + ' to ' + dd(o.end),
+            style: BAR + 'z-index:1;left:' + ((a - s0) * dayW + 1) + 'px;width:' + ((b - a) * dayW - 2) + 'px;' + ST.out.bar,
+            click: function (e) { e.stopPropagation(); self.openOutage(o); } });
+        });
+        ALLOCS.filter(function (x) { return x.bed === n.bed && x.start < s1 && x.end > s0; }).forEach(function (x) {
+          var a = Math.max(x.start, s0), b = Math.min(x.end, s1);
+          var col = x.course ? colour(x.course) : 'ext';
+          var conflict = outs.some(function (o) { return o.start < x.end && x.start < o.end; });
+          var over = !!x.course && isOver(x.course);
+          var label = x.course ? x.course + ' #' + x.ind + ' · ' + allocatedCount(x.course) + '/' + self.basisOf(x.course) : x.ref + ' · ' + x.extName;
+          row.bars.push({ key: 'a' + x.id, hasWarn: conflict, over: over, label: label,
+            aria: label + ', ' + dd(x.start) + ' to ' + dd(x.end) + (conflict ? ', clashes with an outage' : '') + (over ? ', course loaded above scheduled' : ''),
+            style: BAR + 'z-index:2;left:' + ((a - s0) * dayW + 1) + 'px;width:' + ((b - a) * dayW - 2) + 'px;' + ST[col].bar + (conflict ? 'outline:2px solid #B42318;outline-offset:1px;' : ''),
+            click: function (e) { e.stopPropagation(); self.openAlloc(x, col, conflict, n); } });
+        });
+      }
+      if (isCol) {
+        for (var w = 0; w < weeks; w++) {
+          var ws = s0 + w * 7, best = null;
+          for (var d = ws; d < ws + 7; d++) {
+            var c = { free: 0, out: 0, green: 0, amber: 0, red: 0, ext: 0 };
+            beds.forEach(function (b) { c[stateAt(b, d)]++; });
+            if (!best || c.free < best.c.free) best = { d: d, c: c };
+          }
+          (function (best, ws) {
+            var chips = ORDER.filter(function (k) { return best.c[k] > 0; }).map(function (k) { return { key: k, count: best.c[k], sw: SW + ST[k].sw }; });
+            row.weeks.push({ key: 'w' + ws,
+              style: 'width:' + (7 * dayW) + 'px;height:100%;flex:none;box-sizing:border-box;display:flex;align-items:center;gap:7px;padding:0 6px;border:0;border-right:1px solid #CBD2D9;background:transparent;cursor:pointer;overflow:hidden;font:inherit',
+              chips: chips,
+              aria: n.name + ', week of ' + dd(ws) + ', limiting night ' + dlong(best.d) + ': ' + ORDER.filter(function (k) { return best.c[k] > 0; }).map(function (k) { return best.c[k] + ' ' + NAMES[k]; }).join(', '),
+              click: function () { self.openWeek(n, best, ws); } });
+          })(best, ws);
+        }
+      }
+      rows.push(row);
+      if (!isCol) n.children.forEach(function (ch) { visit(ch, depth + 1); });
+    }
+    visit(ROOT, 0);
+    if (st.drag) {
+      var dr = st.drag, ra = Math.min(dr.r0, dr.r1), rb = Math.max(dr.r0, dr.r1);
+      var nb = rowNodes.slice(ra, rb + 1).filter(function (x) { return x.level === 'Bed'; }).length;
+      var wa2 = Math.min(dr.w0, dr.w1), wb2 = Math.max(dr.w0, dr.w1), nw2 = wb2 - wa2 + 1;
+      var firstBed = rows.find(function (r, i) { return i >= ra && i <= rb && r.isBed; });
+      if (firstBed) firstBed.selLabel = nb + (nb === 1 ? ' bed' : ' beds') + ' · ' + nw2 + (nw2 === 1 ? ' week' : ' weeks') + ' · ' + dd(s0 + wa2 * 7) + ' – ' + dd(s0 + wb2 * 7 + depLen);
+    }
+
+    var ticks = [];
+    for (var i = 0; i < weeks; i++) {
+      ticks.push({ key: 't' + i, label: dd(s0 + i * 7), style: 'position:absolute;top:0;left:' + (i * 7 * dayW) + 'px;height:100%;box-sizing:border-box;border-left:1px solid #52606D;padding:8px 0 0 5px;font:500 11px Inter,sans-serif;color:#323F4B;white-space:nowrap' });
+    }
+
+    var legend = [
+      { key: 'free', sw: SW + ST.free.sw, label: 'Free' },
+      { key: 'out', sw: SW + ST.out.sw, label: 'Out of action' },
+      { key: 'green', sw: SW + ST.green.sw, label: 'Allocated ≥ ' + greenAt + '% of ' + basis },
+      { key: 'amber', sw: SW + ST.amber.sw, label: 'Allocated ' + redBelow + '–' + greenAt + '% of ' + basis },
+      { key: 'red', sw: SW + ST.red.sw, label: 'Allocated < ' + redBelow + '% of ' + basis },
+      { key: 'ext', sw: SW + ST.ext.sw, label: 'External booking' }
+    ];
+
+    var warnings = [];
+    Object.keys(COURSES).forEach(function (k) {
+      var c = COURSES[k];
+      if (isOver(k)) warnings.push({ key: 'c' + k, isOver: true, isClash: false, text: k + ': ' + c.loaded + ' loaded vs ' + c.scheduled + ' scheduled', click: function () { self.openCourse(k, colour(k)); } });
+    });
+    ALLOCS.forEach(function (a) {
+      var bed = BEDS.find(function (b) { return b.bed === a.bed; });
+      if (BED_OUT[a.bed].some(function (o) { return o.start < a.end && a.start < o.end; }))
+        warnings.push({ key: 'a' + a.id, isOver: false, isClash: true, text: (a.course ? a.course + ' #' + a.ind : a.ref) + ' is in an out-of-action bed (' + bed.parent.name + ' ' + bed.name + ', ' + dd(a.start) + ')',
+          click: function () { self.openAlloc(a, a.course ? colour(a.course) : 'external', true, bed); } });
+    });
+    function basisBtn(b) {
+      var on = basis === b;
+      return { pressed: on ? 'true' : 'false', pick: function () { self.setState({ basis: b }); },
+        style: 'border:0;padding:0 12px;font:500 13px Inter,sans-serif;cursor:pointer;' + (on ? 'background:#1F2933;color:#FFFFFF' : 'background:#FFFFFF;color:#1F2933') };
+    }
+    return {
+      basisSched: basisBtn('scheduled'), basisLoaded: basisBtn('loaded'),
+      warnings: warnings, hasWarnings: warnings.length > 0, warningsTitle: warnings.length + (warnings.length === 1 ? ' warning' : ' warnings'),
+      rows: rows, ticks: ticks, legend: legend,
+      rangeLabel: dlong(s0) + ' – ' + dlong(s1 - 1) + ' ' + yr(s1 - 1),
+      gridStyle: 'position:relative;width:' + (labelW + bodyW) + 'px',
+      axisRowStyle: 'display:flex;height:34px;position:sticky;bottom:0;z-index:4;background:#FFFFFF;border-top:1px solid #9AA5B1;width:' + (labelW + bodyW) + 'px',
+      axisBodyStyle: 'position:relative;flex:none;width:' + bodyW + 'px;height:100%',
+      modal: (function () {
+        var m = st.modal;
+        if (!m) return { open: false, isNew: false, kind: '', title: '', lines: [], editHint: '' };
+        if (!m.isNew) return m;
+        var v = Object.assign({}, m);
+        var fd = dayOfIso(m.from), td = dayOfIso(m.to);
+        v.setFrom = function (e) { self.setState({ modal: Object.assign({}, (self.state || {}).modal, { from: e.target.value }) }); };
+        v.setTo = function (e) { self.setState({ modal: Object.assign({}, (self.state || {}).modal, { to: e.target.value }) }); };
+        var btn = 'height:40px;padding:0 16px;border:0;border-radius:6px;font:500 13px Inter,sans-serif;';
+        if (fd === null || td === null || td <= fd) {
+          v.summary = 'Departure day must be after the first night.';
+          v.clashText = '';
+          v.clashStyle = 'display:none';
+          v.blocked = true;
+          v.saveLabel = 'Allocate';
+          v.saveStyle = btn + 'background:#E4E7EB;color:#52606D;cursor:not-allowed';
+          return v;
+        }
+        var nights = td - fd;
+        var weekBlock = ((fd % 7) + 7) % 7 === 0 && (nights + (depLen === 6 ? 1 : 0)) % 7 === 0;
+        var nwk = Math.round((nights + (depLen === 6 ? 1 : 0)) / 7);
+        v.summary = nights + (nights === 1 ? ' night' : ' nights') + ': ' + dlong(fd) + ' to departure ' + dlong(td) + (weekBlock ? ' (' + nwk + (nwk === 1 ? ' week block)' : ' week blocks)') : '');
+        var clashes = [];
+        m.beds.forEach(function (code) {
+          var label = code.slice(0, -1) + code.slice(-1).toUpperCase();
+          BED_OUT[code].forEach(function (o) { if (o.start < td && fd < o.end) clashes.push(label + ': out of action ' + dd(o.start) + '–' + dd(o.end)); });
+          ALLOCS.forEach(function (x) { if (x.bed === code && x.start < td && fd < x.end) clashes.push(label + ': ' + (x.course ? x.course + ' #' + x.ind : x.ref) + ' ' + dd(x.start) + '–' + dd(x.end)); });
+        });
+        v.blocked = clashes.length > 0 && !allowClashes;
+        var bedsWord = m.beds.length === 1 ? 'this bed' : 'these beds';
+        if (!clashes.length) v.clashText = 'No clashes: ' + bedsWord + (m.beds.length === 1 ? ' is' : ' are') + ' free for every night in this range.';
+        else if (v.blocked) v.clashText = 'Not allowed (clashes are set to block): ' + clashes.join('; ');
+        else v.clashText = 'Warning, clashes on ' + bedsWord + ': ' + clashes.join('; ') + '. You can still allocate.';
+        v.clashStyle = 'margin:0;font-size:13px;padding:8px 10px;border-radius:6px;' + (clashes.length ? 'background:#FDECEA;color:#7A1610' : 'background:#E9F6EE;color:#14532D');
+        v.saveLabel = m.beds.length === 1 ? 'Allocate' : 'Allocate ' + m.beds.length + ' beds';
+        v.saveStyle = btn + (v.blocked ? 'background:#E4E7EB;color:#52606D;cursor:not-allowed' : 'background:#1F2933;color:#FFFFFF;cursor:pointer');
+        return v;
+      })(),
+      dragCancel: function () { self.setState({ drag: null }); },
+      close: function () { self.setState({ modal: null }); },
+      prev: function () { self.setState({ offset: off - 1 }); },
+      next: function () { self.setState({ offset: off + 1 }); },
+      expandAll: function () { self.setState({ collapsed: [] }); },
+      collapseFloors: function () { self.setState({ collapsed: Object.keys(NODES).filter(function (k) { return NODES[k].level === 'Floor'; }) }); }
+    };
+  }
+}
+</script>
+</body>
+</html>
