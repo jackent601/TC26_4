@@ -1,4 +1,4 @@
--- Read API for the availability page (migration 0006), on the DEMO sample data.
+-- Read API for the availability page (migrations 0006 and 0007), on the DEMO sample data.
 -- Assertions run as the test superuser (pgTAP lives in public, which api_user
 -- can't use). Row-level security still applies: api views run as their owner
 -- and api functions are security definer, both app_owner. One check at the end
@@ -6,7 +6,7 @@
 -- Demo dates are relative to day 0 (w0), the Monday two weeks ago.
 begin;
 create extension pgtap;
-select plan(35);
+select plan(36);
 
 select api.use_tenant('DEMO');
 select count(*) from api.reset_demo_data();
@@ -23,6 +23,8 @@ select f.floor_id as a3 from core.floors f join core.blocks bl using (block_id)
 select f.floor_id as b1 from core.floors f join core.blocks bl using (block_id)
  where bl.tenant_id = core.current_tenant_id() and bl.code = 'B' and f.code = '1' \gset
 select site_id as site from core.sites where tenant_id = core.current_tenant_id() \gset
+select course_id as tec from core.courses where tenant_id = core.current_tenant_id() and code = 'TEC-07' \gset
+select course_id as saf from core.courses where tenant_id = core.current_tenant_id() and code = 'SAF-14' \gset
 
 -- Helpers are not endpoints.
 select hasnt_view('api', 'v_bed_path', 'v_bed_path is not in api');
@@ -50,6 +52,10 @@ select results_eq($$ select code, scheduled, loaded, allocated::int, loaded_abov
                             ('LDR-01', 6, 6, 6, false), ('SAF-14', 8, 7, 7, false),
                             ('TEC-07', 10, 12, 5, true) $$,
                   'course figures match the mockup');
+select results_eq($$ select code, pct_scheduled, pct_loaded from api.course_figures order by code $$,
+                  $$ values ('FIN-03', 0.0, 0.0), ('INT-22', 100.0, 133.3), ('LDR-01', 100.0, 100.0),
+                            ('SAF-14', 87.5, 100.0), ('TEC-07', 50.0, 41.7) $$,
+                  'allocation percentages of scheduled and loaded (0007)');
 
 ------------------------------- fn_bed_bars --------------------------------
 select results_eq(format($$ select kind, count(*)::int from api.fn_bed_bars(%L, %L) group by kind order by kind $$,
@@ -69,35 +75,37 @@ select results_eq(format($$ select set_on_level, reason from api.fn_bed_bars(%L,
 select throws_ok(format($$ select * from api.fn_bed_bars(%L, %L) $$, :'w0', :'w0'),
                  'P0001', 'p_to must be after p_from', 'fn_bed_bars needs p_to after p_from');
 
------------------------------ fn_week_summary ------------------------------
-select results_eq(format($$ select free::int, out_of_action::int from api.fn_week_summary(%L, 5)
+---------------------- fn_week_summary (0007, D29) -------------------------
+-- Facts only: beds by category on each week's busiest night, per course.
+select hasnt_function('api', 'fn_week_summary', array['date', 'integer', 'text', 'numeric', 'numeric'],
+                      'fn_week_summary no longer takes a basis or thresholds');
+select results_eq(format($$ select category, course_id, beds::int from api.fn_week_summary(%L, 5)
                              where key = 'floor:%s' and week_start = %L $$,
                          :'w0', :b1, (:'w0'::date + 21)),
-                  $$ values (0, 4) $$, 'Block B Floor 1 is all out of action in the outage week');
-select results_eq(format($$ select red::int, free::int from api.fn_week_summary(%L, 5)
+                  $$ values ('out_of_action', null::int, 4) $$,
+                  'Block B Floor 1 is all out of action in the outage week');
+select results_eq(format($$ select category, course_id, beds::int from api.fn_week_summary(%L, 5)
                              where key = 'floor:%s' and week_start = %L $$,
                          :'w0', :a3, (:'w0'::date + 14)),
-                  $$ values (5, 0) $$, 'Floor 3 is red while TEC-07 runs (5 of 10 allocated)');
-select results_eq(format($$ select amber::int, green::int from api.fn_week_summary(%L, 5, 'scheduled')
-                             where key = 'site:%s' and week_start = %L $$,
+                  format($$ values ('course', %s, 5) $$, :tec),
+                  'Floor 3 has 5 TEC-07 beds while it runs');
+select results_eq(format($$ select category, course_id, beds::int from api.fn_week_summary(%L, 5)
+                             where key = 'site:%s' and week_start = %L order by category, course_id $$,
                          :'w0', :site, (:'w0'::date + 7)),
-                  $$ values (7, 0) $$, 'SAF-14 counts amber by scheduled (7 of 8)');
-select results_eq(format($$ select amber::int, green::int from api.fn_week_summary(%L, 5, 'loaded')
-                             where key = 'site:%s' and week_start = %L $$,
-                         :'w0', :site, (:'w0'::date + 7)),
-                  $$ values (0, 7) $$, 'SAF-14 counts green by loaded (7 of 7)');
-select is((select busiest_night from api.fn_week_summary(:'w0', 5)
+                  format($$ values ('course', %s, 7), ('external', null::int, 2), ('free', null::int, 14) $$, :saf),
+                  'the site in week 2: 7 SAF-14 beds, 2 external, 14 free');
+select is((select distinct busiest_night from api.fn_week_summary(:'w0', 5)
             where key = 'site:' || :site and week_start = :'w0'::date + 7),
           :'w0'::date + 7,
           'busiest night: fewest free beds, earliest on a tie (night 7: SAF-14 + BK-4471 + BK-4519; night 10: SAF-14 + Room 203 outage)');
-select is((select count(*)::int from api.fn_week_summary(:'w0', 5)), 21 * 5,
-          'one row per location above bed level per week');
-select throws_ok(format($$ select * from api.fn_week_summary(%L, 5, 'planned') $$, :'w0'),
-                 'P0001', 'p_basis must be scheduled or loaded', 'fn_week_summary rejects an unknown basis');
+select is((select count(*)::int from (select s.key, s.week_start, sum(s.beds) as beds
+                                        from api.fn_week_summary(:'w0', 5) s group by s.key, s.week_start) x
+            join api.locations l on l.key = x.key where x.beds <> l.bed_count), 0,
+          'each location''s categories add up to its bed count');
+select is((select count(*)::int from (select distinct key, week_start from api.fn_week_summary(:'w0', 5)) x), 21 * 5,
+          'every location above bed level appears in every week');
 select throws_ok(format($$ select * from api.fn_week_summary(%L, 0) $$, :'w0'),
                  'P0001', 'p_weeks must be between 1 and 52', 'fn_week_summary rejects 0 weeks');
-select throws_ok(format($$ select * from api.fn_week_summary(%L, 5, 'loaded', 80, 90) $$, :'w0'),
-                 'P0001', 'p_red_below must not be above p_green_at', 'fn_week_summary rejects crossed thresholds');
 
 --------------------------------- warnings ---------------------------------
 select results_eq($$ select kind, message from api.warnings order by kind $$,
@@ -123,7 +131,7 @@ set local role api_user;
 select (select count(*) from api.locations) || '/' || (select count(*) from api.course_figures) || '/'
     || (select count(*) from api.warnings) || '/'
     || (select count(*) from api.fn_bed_bars(:'w0', :'w0'::date + 35)) || '/'
-    || (select count(*) from api.fn_week_summary(:'w0', 5)) || '/'
+    || (select count(*) from (select distinct key, week_start from api.fn_week_summary(:'w0', 5)) s) || '/'
     || (select count(*) from api.fn_check_allocation(array[:b101a], :'w0'::date + 21, :'w0'::date + 28))
     as as_api_user \gset
 reset role;
@@ -140,6 +148,13 @@ select results_eq($$ select message from api.warnings where kind = 'DOUBLE_BOOKI
                   'a double booking warns on both bookings');
 select is((select count(*)::int from api.fn_check_allocation(array[:r101a], :'w0'::date + 21, :'w0'::date + 28)), 2,
           'the clash check lists both bookings on a double-booked bed');
+
+------------------------- percentages with no basis ------------------------
+insert into core.courses (code, name, start_date, end_date, scheduled, loaded)
+values ('ZERO-01', 'Nothing planned yet', :'w0'::date + 28, :'w0'::date + 30, 0, 0);
+select results_eq($$ select pct_scheduled, pct_loaded from api.course_figures where code = 'ZERO-01' $$,
+                  $$ values (null::numeric, null::numeric) $$,
+                  'percentages are null when scheduled or loaded is 0');
 
 ---------------------------- tenant isolation ------------------------------
 select api.use_tenant('LIVE');

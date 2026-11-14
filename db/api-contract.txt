@@ -6,9 +6,9 @@ function api.fn_check_allocation(p_bed_ids integer[], p_from date, p_to date)
   -- Clashes for allocating the given beds from p_from to p_to (exclusive), before anything is saved: existing bookings and outages on those beds. Clashes warn by default (D11).
   returns TABLE(bed_id integer, kind text, ref text, start_date date, end_date date, message text)
 
-function api.fn_week_summary(p_from date, p_weeks integer, p_basis text DEFAULT 'scheduled'::text, p_green_at numeric DEFAULT 100, p_red_below numeric DEFAULT 80)
-  -- For each location above bed level (key as in api.locations) and each of p_weeks weeks from p_from: the busiest night (fewest free beds) and its beds by state. Courses are green at or above p_green_at % of p_basis (scheduled or loaded), red below p_red_below %, amber between: the user's view settings (D28).
-  returns TABLE(key text, week_start date, busiest_night date, free bigint, out_of_action bigint, green bigint, amber bigint, red bigint, external bigint)
+function api.fn_week_summary(p_from date, p_weeks integer)
+  -- For each location above bed level (key as in api.locations) and each of p_weeks weeks from p_from: the busiest night (fewest free beds, earliest on a tie) and its beds by category: free, out_of_action, external, or course (one row per course_id). Categories with no beds are left out. The UI bands courses by colour from api.course_figures (D29).
+  returns TABLE(key text, week_start date, busiest_night date, category text, course_id integer, beds bigint)
 
 function api.reset_demo_data()
   -- Wipe and reload the current tenant's reference and sample data. Demo tenants only.
@@ -19,7 +19,7 @@ function api.use_tenant(p_code text, p_local boolean DEFAULT true)
   returns text
 
 view api.course_figures
-  -- Per course: scheduled (planned), loaded (registered, as of loaded_at) and allocated (individuals with a bed, not cancelled). The UI colours courses by allocated against scheduled or loaded (D13).
+  -- Per course: scheduled (planned), loaded (registered, as of loaded_at) and allocated (individuals with a bed, not cancelled). pct_scheduled and pct_loaded are allocated as a percentage of each, to 1 decimal place, null when that figure is 0. Colour bands are applied by the UI from the user's thresholds (D29).
   course_id integer
   code text
   name text
@@ -31,6 +31,8 @@ view api.course_figures
   loaded_at timestamp without time zone
   allocated bigint
   loaded_above_scheduled boolean
+  pct_scheduled numeric
+  pct_loaded numeric
 
 view api.health
   -- Health check: status, time, the selected tenant and its bed count.

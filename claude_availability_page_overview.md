@@ -42,7 +42,7 @@ Each course is coloured by how many of its individuals are allocated, compared w
 - **Green:** allocated at or above the green threshold (default 100% of the basis).
 - **Amber:** between the thresholds.
 - **Red:** below the red threshold (default 80%).
-- **Thresholds and basis are per user, set in the UI** (D28). They aren't stored centrally. Because collapsed-row counts depend on them, the UI passes the basis and thresholds as parameters when it asks the API for summaries.
+- **Thresholds and basis are per user, set in the UI** (D28). They aren't stored centrally. Since D29 (migration 0007) the API returns facts only: allocated, scheduled, loaded and percentages per course, and beds per course on each week's busiest night. The UI applies the bands to both bars and collapsed rows, so the basis and thresholds are never sent to the API.
 - Colours must differ in lightness as well as hue, and every bar has a text label, so the page works without relying on colour.
 
 ## Warnings
@@ -95,7 +95,7 @@ These are the views and functions the page needs, as proposed SQL. They have **n
 | The tree | `api.locations` (key, parent_key, level, id, name, bed_count) |
 | Course colours and figures | `api.course_figures` (scheduled, loaded, `loaded_at`, allocated, `loaded_above_scheduled`) |
 | Bed rows for the date range | `api.fn_bed_bars(p_from, p_to)`: allocations, external bookings and outages per bed, clipped to the range, with an `on_outage` flag |
-| Collapsed-row counts | `api.fn_week_summary(p_from, p_weeks, p_basis, p_green_at, p_red_below)`: per location and week, the busiest night and its counts by state. The basis and thresholds come from the user's view settings (D28) |
+| Collapsed-row counts | `api.fn_week_summary(p_from, p_weeks)`: per location and week, the busiest night and its beds by category (free, out of action, external, and per course). Superseded the proposal below that took the basis and thresholds (D29, migration 0007) |
 | Warnings strip | `api.warnings`: loaded > scheduled, bookings on out-of-action beds, double bookings |
 | New-allocation popup clashes | `api.fn_check_allocation(p_bed_ids, p_from, p_to)`: existing bookings and outages per bed, before anything is saved |
 

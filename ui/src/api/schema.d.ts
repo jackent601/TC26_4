@@ -389,7 +389,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Per course: scheduled (planned), loaded (registered, as of loaded_at) and allocated (individuals with a bed, not cancelled). The UI colours courses by allocated against scheduled or loaded (D13). */
+        /** Per course: scheduled (planned), loaded (registered, as of loaded_at) and allocated (individuals with a bed, not cancelled). pct_scheduled and pct_loaded are allocated as a percentage of each, to 1 decimal place, null when that figure is 0. Colour bands are applied by the UI from the user's thresholds (D29). */
         get: {
             parameters: {
                 query?: {
@@ -404,6 +404,8 @@ export interface paths {
                     loaded_at?: components["parameters"]["rowFilter.course_figures.loaded_at"];
                     allocated?: components["parameters"]["rowFilter.course_figures.allocated"];
                     loaded_above_scheduled?: components["parameters"]["rowFilter.course_figures.loaded_above_scheduled"];
+                    pct_scheduled?: components["parameters"]["rowFilter.course_figures.pct_scheduled"];
+                    pct_loaded?: components["parameters"]["rowFilter.course_figures.pct_loaded"];
                     /** @description Filtering Columns */
                     select?: components["parameters"]["select"];
                     /** @description Ordering */
@@ -749,15 +751,12 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** For each location above bed level (key as in api.locations) and each of p_weeks weeks from p_from: the busiest night (fewest free beds) and its beds by state. Courses are green at or above p_green_at % of p_basis (scheduled or loaded), red below p_red_below %, amber between: the user's view settings (D28). */
+        /** For each location above bed level (key as in api.locations) and each of p_weeks weeks from p_from: the busiest night (fewest free beds, earliest on a tie) and its beds by category: free, out_of_action, external, or course (one row per course_id). Categories with no beds are left out. The UI bands courses by colour from api.course_figures (D29). */
         get: {
             parameters: {
                 query: {
                     p_from: string;
                     p_weeks: number;
-                    p_basis?: string;
-                    p_green_at?: number;
-                    p_red_below?: number;
                 };
                 header?: never;
                 path?: never;
@@ -775,7 +774,7 @@ export interface paths {
             };
         };
         put?: never;
-        /** For each location above bed level (key as in api.locations) and each of p_weeks weeks from p_from: the busiest night (fewest free beds) and its beds by state. Courses are green at or above p_green_at % of p_basis (scheduled or loaded), red below p_red_below %, amber between: the user's view settings (D28). */
+        /** For each location above bed level (key as in api.locations) and each of p_weeks weeks from p_from: the busiest night (fewest free beds, earliest on a tie) and its beds by category: free, out_of_action, external, or course (one row per course_id). Categories with no beds are left out. The UI bands courses by colour from api.course_figures (D29). */
         post: {
             parameters: {
                 query?: never;
@@ -789,50 +788,26 @@ export interface paths {
             requestBody: {
                 content: {
                     "application/json": {
-                        /** Format: text */
-                        p_basis?: string;
                         /** Format: date */
                         p_from: string;
-                        /** Format: numeric */
-                        p_green_at?: number;
-                        /** Format: numeric */
-                        p_red_below?: number;
                         /** Format: int32 */
                         p_weeks: number;
                     };
                     "application/vnd.pgrst.object+json;nulls=stripped": {
-                        /** Format: text */
-                        p_basis?: string;
                         /** Format: date */
                         p_from: string;
-                        /** Format: numeric */
-                        p_green_at?: number;
-                        /** Format: numeric */
-                        p_red_below?: number;
                         /** Format: int32 */
                         p_weeks: number;
                     };
                     "application/vnd.pgrst.object+json": {
-                        /** Format: text */
-                        p_basis?: string;
                         /** Format: date */
                         p_from: string;
-                        /** Format: numeric */
-                        p_green_at?: number;
-                        /** Format: numeric */
-                        p_red_below?: number;
                         /** Format: int32 */
                         p_weeks: number;
                     };
                     "text/csv": {
-                        /** Format: text */
-                        p_basis?: string;
                         /** Format: date */
                         p_from: string;
-                        /** Format: numeric */
-                        p_green_at?: number;
-                        /** Format: numeric */
-                        p_red_below?: number;
                         /** Format: int32 */
                         p_weeks: number;
                     };
@@ -914,7 +889,7 @@ export interface components {
             /** Format: int64 */
             bed_count?: number;
         };
-        /** @description Per course: scheduled (planned), loaded (registered, as of loaded_at) and allocated (individuals with a bed, not cancelled). The UI colours courses by allocated against scheduled or loaded (D13). */
+        /** @description Per course: scheduled (planned), loaded (registered, as of loaded_at) and allocated (individuals with a bed, not cancelled). pct_scheduled and pct_loaded are allocated as a percentage of each, to 1 decimal place, null when that figure is 0. Colour bands are applied by the UI from the user's thresholds (D29). */
         course_figures: {
             /**
              * Format: int32
@@ -942,6 +917,10 @@ export interface components {
             allocated?: number;
             /** Format: boolean */
             loaded_above_scheduled?: boolean;
+            /** Format: numeric */
+            pct_scheduled?: number;
+            /** Format: numeric */
+            pct_loaded?: number;
         };
     };
     responses: never;
@@ -1001,6 +980,8 @@ export interface components {
         "rowFilter.course_figures.loaded_at": string;
         "rowFilter.course_figures.allocated": string;
         "rowFilter.course_figures.loaded_above_scheduled": string;
+        "rowFilter.course_figures.pct_scheduled": string;
+        "rowFilter.course_figures.pct_loaded": string;
     };
     requestBodies: {
         /** @description tenants */
