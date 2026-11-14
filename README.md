@@ -39,7 +39,8 @@ The tool needs to:
 │   │   ├── 0003_reference_data.sql            Tenants (LIVE, DEMO) and their starter attribute types and rules
 │   │   ├── 0004_demo.sql                      Demo data loader and api.reset_demo_data (demo tenants only)
 │   │   ├── 0005_postgrest.sql                 PostgREST request hook (X-Tenant, X-User) and API descriptions
-│   │   └── 0006_availability_read.sql         Read API for the availability page: locations, course figures, bars, week summary, warnings, clash check
+│   │   ├── 0006_availability_read.sql         Read API for the availability page: locations, course figures, bars, week summary, warnings, clash check
+│   │   └── 0007_facts_not_bands.sql           Facts, not colour bands (D29): allocation percentages; week summary by course
 │   ├── test/
 │   │   ├── Dockerfile                         Test-only image: PostgreSQL 16 + pgTAP + pg_prove + dbmate
 │   │   └── run-tests.sh                       Throwaway database, migrations, tests, rollback check
@@ -90,7 +91,7 @@ Every view in the `api` schema is a `GET /<view>` (filters like `?col=eq.value`,
 
 **API contract.** The contract between the UI and the back end (D22) is the `api` schema itself: its views and functions with their types, which PostgREST serves as-is. `db/api-contract.txt` is a snapshot of it. With the database running, `scripts/api-contract.sh --check` fails if the contract has changed, and `scripts/api-contract.sh` updates the snapshot, so contract changes are always deliberate and visible in commits. There are no API unit tests because there is no API code: the behaviour is tested in pgTAP (`scripts/db-test.sh`).
 
-**UI.** `scripts/up.sh` starts everything, rebuilds the UI and checks each service answers; then open `http://localhost:8080` (`UI_PORT`). The header switches between tenants (a "DEMO DATA" banner shows on DEMO), and the home page shows `api.health` for the selected tenant, with "Reset demo data" on DEMO only. The `ui` image is built from `ui/Dockerfile` with official images only: Node builds the static files, `caddy:2-alpine` serves them and forwards `/api/*` to PostgREST (decision I6). No Node is needed on your machine: npm runs in the official node image.
+**UI.** `scripts/up.sh` starts everything, rebuilds the UI and checks each service answers; then open `http://localhost:8080` (`UI_PORT`). The header switches between tenants (a "DEMO DATA" banner shows on DEMO), and the home page shows `api.health` for the selected tenant, with "Reset demo data" on DEMO only. The Availability page (`/availability`) shows the estate tree against nights, with bars per bed and busiest-night counts on collapsed rows; its view settings (weeks shown, day width, colour basis and thresholds, collapsed rows) are kept in the browser. The `ui` image is built from `ui/Dockerfile` with official images only: Node builds the static files, `caddy:2-alpine` serves them and forwards `/api/*` to PostgREST (decision I6). No Node is needed on your machine: npm runs in the official node image.
 
 ```
 docker compose --profile dev up ui-dev   # dev server with live reload: http://localhost:5173

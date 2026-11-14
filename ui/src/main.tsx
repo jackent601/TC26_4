@@ -5,6 +5,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { TenantProvider } from "./tenant";
 import { Layout } from "./Layout";
 import { Home } from "./pages/Home";
+import { AvailabilityPage } from "./pages/availability/AvailabilityPage";
 import "./styles.css";
 
 const queryClient = new QueryClient({
@@ -16,6 +17,7 @@ const router = createBrowserRouter([
     element: <Layout />,
     children: [
       { path: "/", element: <Home /> },
+      { path: "/availability", element: <AvailabilityPage /> },
       { path: "*", element: <p>Page not found.</p> },
     ],
   },

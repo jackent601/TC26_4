@@ -33,9 +33,16 @@ Based on the SQL in `claude_availability_page_overview.md`, with the agreed chan
 
 Still to do in phase 1: effective attributes per bed and individual, and rule warnings (gender, grade, step-free, work pattern) in `api.warnings` and as a flag on bars.
 
-## Next step: phase 2, the availability page in React
+## Phase 2: the availability page in React (in progress)
 
-Rebuild `docs/pages_pocs/availability.html` on these endpoints (spec: `claude_availability_page_overview.md`). See `docs/build_plan.md`.
+Rebuilding `docs/pages_pocs/availability.html` on the 0006 endpoints (spec: `claude_availability_page_overview.md`), in five agreed steps:
+1. **Done:** `/availability` route; data hooks keyed by tenant (`ui/src/pages/availability/data.ts`); view settings in local storage (`settings.ts`; collapsed rows per tenant); header controls (week navigation, Today, Colour by, Expand all, Collapse to floors, Settings panel).
+2. **Done:** grid (`TimelineGrid.tsx`): tree rows, night columns with week lines and weekend shading, axis that stays visible at the bottom, bars on bed rows (outage, allocation, external; on-outage outline, loaded-above-scheduled icon), busiest-night counts on collapsed rows from `fn_week_summary`. Checked in the browser on DEMO, with both bases.
+3. Legend and warnings strip (`api.warnings`).
+4. Read-only popups: location, booking, outage, week breakdown. Bars and week cells are already buttons with labels; they have no click handler yet.
+5. Selection (click a week, drag weeks and beds) and the "New allocation" popup with clashes from `fn_check_allocation`; Allocate disabled until phase 3.
+
+Notes: since 0007 (D29) the database returns facts only. `fn_week_summary(p_from, p_weeks)` gives beds by category (free, out_of_action, external, course per `course_id`) on each week's busiest night; `api.course_figures` has `pct_scheduled` and `pct_loaded`. Colour bands exist only in the UI (`look.tsx`, `courseColour`), used by both bars and collapsed rows, so switching Colour by or a threshold makes no request. pgTAP for 0007 is in `db/tests/006_availability_read.sql` (36 checks; 84 in all). The first week shown defaults to the Monday two weeks ago and isn't remembered. The mockup's "Departure day" and "Allow clashes" settings were left out: D9 fixes the week block, and D11 is a database rule.
 
 ## The availability page (agreed in the mockup)
 

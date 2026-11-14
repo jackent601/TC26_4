@@ -12,6 +12,7 @@ export function Layout() {
           <NavLink to="/" end>
             Home
           </NavLink>
+          <NavLink to="/availability">Availability</NavLink>
         </nav>
         <div className="tenant-switch" role="group" aria-label="Tenant">
           {tenants.map((t) => (
