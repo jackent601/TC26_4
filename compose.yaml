@@ -49,34 +49,30 @@ services:
     command:
       - psql -q -v api_password="$$API_DB_PASSWORD" -f /db/setup/roles.sql && echo "Roles updated."
 
-  # API: FastAPI generic layer over the api schema (decisions D16, D22).
-  # Connects as api_user, so it can only reach the api schema. Starts once the
-  # migrations and role passwords are done. Docs at /api/docs.
+  # API: the official PostgREST image, configured only (decision D27). It serves
+  # the database's api schema as HTTP: GET /<view>, POST /rpc/<function>.
+  # Connects as api_user and switches to api_access per request; the
+  # api_internal.pre_request hook applies the X-Tenant and X-User headers.
+  # No application code: every endpoint is a SQL view or function.
   api:
-    build:
-      context: ./api
-      target: runtime
-    image: accomm-api:local
+    image: postgrest/postgrest:v14.18
     depends_on:
       db-roles:
         condition: service_completed_successfully
     environment:
-      DATABASE_URL: postgresql://api_user:${API_DB_PASSWORD}@db:5432/${POSTGRES_DB:-accomm}
-      DEFAULT_TENANT: ${DEFAULT_TENANT:-}
+      PGRST_DB_URI: postgres://api_user:${API_DB_PASSWORD}@db:5432/${POSTGRES_DB:-accomm}
+      PGRST_DB_SCHEMAS: api
+      PGRST_DB_ANON_ROLE: api_access
+      PGRST_DB_PRE_REQUEST: api_internal.pre_request
+      PGRST_SERVER_PORT: "3000"
+      PGRST_ADMIN_SERVER_HOST: localhost       # health endpoint, inside the container only
+      PGRST_ADMIN_SERVER_PORT: "3001"
+      PGRST_OPENAPI_SERVER_PROXY_URI: ${API_PUBLIC_URL:-http://localhost:8000}
     healthcheck:
-      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/api/health')"]
+      test: ["CMD", "postgrest", "--ready"]
       interval: 5s
       timeout: 3s
       retries: 20
-
-  # API unit tests (test only). No database needed. Runs only when asked:
-  #   docker compose --profile test run --rm api-test   (or scripts/api-test.sh)
-  api-test:
-    build:
-      context: ./api
-      target: test
-    image: accomm-api-test:local
-    profiles: ["test"]
 
   # Database tests (test only; decision I2). Starts a throwaway database inside
   # the container, applies all migrations, runs db/tests with pg_prove, checks

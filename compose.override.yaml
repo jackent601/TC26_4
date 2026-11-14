@@ -10,4 +10,16 @@ services:
     ports:
       # Localhost only. Until the ui service exists this is how to reach the API;
       # afterwards the browser goes through ui and this is just for debugging.
-      - "127.0.0.1:${API_PORT:-8000}:8000"
+      - "127.0.0.1:${API_PORT:-8000}:3000"
+
+  # Browsable API docs (official image), built from PostgREST's OpenAPI output.
+  # Dev only: http://localhost:8081
+  api-docs:
+    image: swaggerapi/swagger-ui
+    depends_on:
+      api:
+        condition: service_healthy
+    environment:
+      API_URL: ${API_PUBLIC_URL:-http://localhost:8000}/
+    ports:
+      - "127.0.0.1:${API_DOCS_PORT:-8081}:8080"

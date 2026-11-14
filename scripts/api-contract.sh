@@ -1,21 +1,18 @@
 #!/usr/bin/env bash
-# The API contract (decision D22) is the OpenAPI document generated from the
-# database's api schema. This keeps a snapshot of it in api/openapi.json so
-# changes to the contract show up in commits.
+# The API contract (decisions D22, D27) is the api schema: its views and
+# functions with their types. PostgREST serves exactly that. This keeps a
+# snapshot in db/api-contract.txt so changes to the contract show up in commits.
 #
-#   scripts/api-contract.sh          update api/openapi.json from the running API
-#   scripts/api-contract.sh --check  fail if the running API differs from the snapshot
+#   scripts/api-contract.sh          update db/api-contract.txt from the database
+#   scripts/api-contract.sh --check  fail if the database differs from the snapshot
 #
-# Needs the api service running (docker compose up -d --build api).
+# Needs the db service running with migrations applied (scripts/db-up.sh).
 set -uo pipefail
 cd "$(dirname "$0")/.."
 
-snapshot=api/openapi.json
-current=$(docker compose exec -T api python -c '
-import json, urllib.request
-doc = json.load(urllib.request.urlopen("http://localhost:8000/api/openapi.json"))
-print(json.dumps(doc, indent=2, sort_keys=True))
-') || { echo "Could not read the contract. Is the api service running?"; exit 1; }
+snapshot=db/api-contract.txt
+current=$(docker compose exec -T db sh -c 'psql -X -q -At -v ON_ERROR_STOP=1 -U "$POSTGRES_USER" -d "$POSTGRES_DB"' \
+          < db/setup/api_contract.sql) || { echo "Could not read the contract. Is the database running?"; exit 1; }
 
 if [ "${1:-}" = "--check" ]; then
   if [ ! -f "$snapshot" ]; then

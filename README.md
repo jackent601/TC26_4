@@ -19,6 +19,8 @@ The tool needs to:
 ```
 .
 ├── README.md                                  This file
+├── CLAUDE.md                                  Guidance for Claude (principles, conventions, how to run and test)
+├── claude_handover.md                         State of work in progress, for picking up in a new session
 ├── docs/
 │   ├── Accommodation System Requirements.xlsx Agreed requirements (summarised below)
 │   ├── build_plan.md                          How the PoC is built: architecture, API design, phases
@@ -29,39 +31,29 @@ The tool needs to:
 │   ├── erd.png                                The same ER diagram as an image
 │   ├── erd.svg                                The same ER diagram as a scalable image
 │   └── pages_pocs/                            Clickable page mockups (open the .html files in a browser)
-├── api/                                       API service (FastAPI): a thin layer over the database's api schema
-│   ├── Dockerfile                             Targets: runtime (deployed) and test (unit tests)
-│   ├── pyproject.toml                         Pinned Python dependencies
-│   ├── openapi.json                           Snapshot of the API contract (see scripts/api-contract.sh)
-│   ├── tests/                                 API unit tests (pytest, no database needed)
-│   └── app/
-│       ├── main.py                            App, error mapping (database errors -> HTTP status)
-│       ├── generic.py                         GET /api/<view> and POST /api/rpc/<function>
-│       ├── catalogue.py                       Reads the api schema's views and functions from PostgreSQL
-│       ├── openapi.py                         OpenAPI document generated from the api schema
-│       ├── db.py                              Connection pool; per-request transaction with tenant and user
-│       └── state.py                           Settings and the cached catalogue
 ├── db/
 │   ├── migrations/                            dbmate migrations, applied in order
 │   │   ├── 0001_schema.sql                    The data model as SQL: 15 tables in the core schema, multi-tenant
 │   │   ├── 0002_api_schema.sql                The api schema (the contract), api_access and api_user roles
 │   │   ├── 0003_reference_data.sql            Tenants (LIVE, DEMO) and their starter attribute types and rules
-│   │   └── 0004_demo.sql                      Demo data loader and api.reset_demo_data (demo tenants only)
+│   │   ├── 0004_demo.sql                      Demo data loader and api.reset_demo_data (demo tenants only)
+│   │   └── 0005_postgrest.sql                 PostgREST request hook (X-Tenant, X-User) and API descriptions
 │   ├── test/
 │   │   ├── Dockerfile                         Test-only image: PostgreSQL 16 + pgTAP + pg_prove + dbmate
 │   │   └── run-tests.sh                       Throwaway database, migrations, tests, rollback check
-│   ├── tests/                                 pgTAP tests (schemas and roles, tenancy, reference data, demo reset)
+│   ├── tests/                                 pgTAP tests (schemas and roles, tenancy, reference data, demo reset, PostgREST hook)
+│   ├── api-contract.txt                       Snapshot of the API contract: the api schema's views and functions
 │   └── setup/
-│       └── roles.sql                          Sets api_user's password from .env (run by db-roles after each migration run)
+│       ├── roles.sql                          Sets api_user's password from .env; tells PostgREST to reload (run by db-roles)
+│       └── api_contract.sql                   Lists the api schema's views and functions (used by scripts/api-contract.sh)
 ├── scripts/
 │   ├── db-up.sh                               Starts db, runs migrate and db-roles, shows their output and result
 │   ├── db-seed.sh                             Loads or resets the DEMO tenant's sample data (calls api.reset_demo_data)
 │   ├── db-reset.sh                            Wipes the local database and rebuilds it with sample data
 │   ├── db-test.sh                             Runs the database tests in a throwaway database
-│   ├── api-test.sh                            Runs the API unit tests
-│   └── api-contract.sh                        Updates or checks the API contract snapshot (api/openapi.json)
-├── compose.yaml                               Docker Compose services (db, migrate, db-roles, api, api-test, db-test; ui to follow)
-├── compose.override.yaml                      Local dev extras, loaded automatically (database port on localhost)
+│   └── api-contract.sh                        Updates or checks the API contract snapshot (db/api-contract.txt)
+├── compose.yaml                               Docker Compose services (db, migrate, db-roles, api, db-test; ui to follow)
+├── compose.override.yaml                      Local dev extras, loaded automatically (database and API ports, API docs page)
 └── .env.example                               Settings to copy into .env
 ```
 
@@ -77,21 +69,21 @@ scripts/db-up.sh
 docker compose exec db psql -U accomm_owner -d accomm -c "\dt core.*"
 ```
 
-**API.** `docker compose up -d --build api` starts the database, migrations, role passwords and the API, in that order. In local dev it's on `http://localhost:8000` (`API_PORT` in `.env`); the interactive docs are at `http://localhost:8000/api/docs`. Choose a tenant with the `X-Tenant` header, e.g.:
+**API.** The API is the official PostgREST image, configured only: it serves the database's `api` schema as HTTP, with no application code (decision D27). `docker compose up -d api` starts the database, migrations, role passwords and the API, in that order. In local dev it's on `http://localhost:8000` (`API_PORT` in `.env`), and a browsable docs page is on `http://localhost:8081`. Choose a tenant with the `X-Tenant` header, e.g.:
 
 ```
-curl -H "X-Tenant: DEMO" http://localhost:8000/api/health
-curl -H "X-Tenant: DEMO" "http://localhost:8000/api/tenants?select=code,name&order=code.asc"
-curl -X POST -H "X-Tenant: DEMO" http://localhost:8000/api/rpc/reset_demo_data
+curl -H "X-Tenant: DEMO" http://localhost:8000/health
+curl -H "X-Tenant: DEMO" "http://localhost:8000/tenants?select=code,name&order=code.asc"
+curl -X POST -H "X-Tenant: DEMO" http://localhost:8000/rpc/reset_demo_data
 ```
 
-Every view in the database's `api` schema is a `GET /api/<view>` (filters like `?col=eq.value`, `select=`, `order=`, `limit=`, `offset=`), and every function is a `POST /api/rpc/<function>` with its arguments as JSON. New views and functions appear automatically, and the OpenAPI document at `/api/openapi.json` describes them all with their types.
+Every view in the `api` schema is a `GET /<view>` (filters like `?col=eq.value`, `select=`, `order=`, `limit=`, `offset=`), and every function is a `POST /rpc/<function>` with its arguments as JSON. Once the UI exists, the browser reaches the same paths under `/api/` through Caddy. New views and functions appear after the next migration run (`db-roles` tells PostgREST to reload).
 
 **Tenants and demo data.** The database is multi-tenant: LIVE and DEMO to start with (decisions D24, D25). Every query sees one tenant at a time, selected with `api.use_tenant('LIVE')` or `api.use_tenant('DEMO')`; with none selected nothing is visible. Sample data only ever goes into the DEMO tenant: `scripts/db-seed.sh` loads or resets it (the same `api.reset_demo_data()` the UI will call), and it refuses for any non-demo tenant. `scripts/db-reset.sh` wipes the whole local volume and rebuilds everything. Demo dates are relative to the day it is loaded: five weeks from the Monday two weeks ago, with today in the middle week.
 
 **Database tests** run in their own throwaway database, never the one above: `scripts/db-test.sh` (or `docker compose --profile test build db-test` then `docker compose --profile test run --rm db-test`). It applies every migration to an empty database, runs the pgTAP tests in `db/tests/`, checks every migration rolls back and re-applies, and ends with `ALL PASSED` or `FAILED`. pgTAP is only in the test image, never in the deployed database.
 
-**API tests and contract.** `scripts/api-test.sh` runs the API unit tests (filter parsing and validation, values always sent as parameters, function arguments, error mapping, OpenAPI generation) in a short-lived container; no database needed. The API contract (D22) is the OpenAPI document generated from the database; `api/openapi.json` is a snapshot of it. With the API running, `scripts/api-contract.sh --check` fails if the contract has changed, and `scripts/api-contract.sh` updates the snapshot, so contract changes are always deliberate and visible in commits.
+**API contract.** The contract between the UI and the back end (D22) is the `api` schema itself: its views and functions with their types, which PostgREST serves as-is. `db/api-contract.txt` is a snapshot of it. With the database running, `scripts/api-contract.sh --check` fails if the contract has changed, and `scripts/api-contract.sh` updates the snapshot, so contract changes are always deliberate and visible in commits. There are no API unit tests because there is no API code: the behaviour is tested in pgTAP (`scripts/db-test.sh`).
 
 For local development the database is also published on `localhost:5432` (set `POSTGRES_PORT` in `.env` to change it). Connect any client (DBeaver, pgAdmin, VS Code, psql) with host `localhost`, the port, database `accomm`, user `accomm_owner` and the password from `.env`. It listens on localhost only. To run without the dev extras: `docker compose -f compose.yaml up`.
 
@@ -173,7 +165,7 @@ From `docs/Accommodation System Requirements.xlsx`:
 
 ## Open questions
 
-- **Platform and database:** chosen for the PoC (PostgreSQL, dbmate, FastAPI, Caddy as Docker Compose services; see `docs/build_plan.md`). Production hosting is still open.
+- **Platform and database:** chosen for the PoC (PostgreSQL, dbmate, PostgREST, Caddy as Docker Compose services; see `docs/build_plan.md`). Production hosting is still open.
 - **Booking system export:** what format it comes in, and whether it has room IDs and references we can match on. This decides how import and reconciliation work.
 - **External bookings:** do they carry attributes such as gender? If not, rooms they occupy will show "missing information" warnings.
 - **Ownership:** who maintains the attribute list and the rules once they're written down?
@@ -181,7 +173,7 @@ From `docs/Accommodation System Requirements.xlsx`:
 
 ## Suggested next steps
 
-See [`docs/build_plan.md`](docs/build_plan.md) for the build phases. Platform chosen: PostgreSQL, dbmate, FastAPI and a Caddy-served UI as four Docker Compose services (decisions D16–D20).
+See [`docs/build_plan.md`](docs/build_plan.md) for the build phases. Platform chosen: PostgreSQL, dbmate, PostgREST and a Caddy-served UI as Docker Compose services (decisions D17–D27).
 
 1. ~~Choose the platform and database.~~ Done.
 2. Add the `OUT_OF_ACTION` reference data (attribute type and rule) as a migration or seed script.

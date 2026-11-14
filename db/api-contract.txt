@@ -1,0 +1,20 @@
+function api.reset_demo_data()
+  -- Wipe and reload the current tenant's reference and sample data. Demo tenants only.
+  returns TABLE(tenant text, day0 date, beds bigint, courses bigint, allocations bigint, outages bigint)
+
+function api.use_tenant(p_code text, p_local boolean DEFAULT true)
+  -- Select a tenant for the current transaction. Normally done for you from the X-Tenant header.
+  returns text
+
+view api.health
+  -- Health check: status, time, the selected tenant and its bed count.
+  status text
+  checked_at timestamp with time zone
+  tenant character varying(30)
+  bed_count bigint
+
+view api.tenants
+  -- Tenants that can be selected with the X-Tenant header.
+  code character varying(30)
+  name character varying(100)
+  is_demo character(1)
