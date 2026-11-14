@@ -21,7 +21,7 @@ Four services, each its own container, run together with Docker Compose (D20).
 | `migrate` | `ghcr.io/amacneil/dbmate` (official, unchanged) | Applies `db/migrations`, then exits | No |
 | `db-roles` | `postgres:16` (official, used only for `psql`) | Sets role passwords from `.env` (`db/setup/roles.sql`), then exits | No |
 | `api` | `postgrest/postgrest` (official, configured only; D27) | Serves the `api` schema as HTTP: views and functions | Inside the network only |
-| `ui` | Built from `ui/Dockerfile`: Node builds the React app, then `caddy:2` serves the built files (no Node at run time) | Serves the app; passes `/api/*` to `api` | Port 8080 on the host |
+| `ui` | Built from `ui/Dockerfile` (I6): `node` builds the React app, then `caddy:2-alpine` serves the built files (no Node at run time) | Serves the app; passes `/api/*` to `api` | Port 8080 on the host |
 
 ```
 Browser
@@ -44,7 +44,7 @@ Start-up order: `db` becomes healthy (`pg_isready`), `migrate` runs and exits su
 
 ```
 cp .env.example .env
-docker compose up --build
+scripts/up.sh                 # or: docker compose up --build
 # open http://localhost:8080   (API docs in dev: http://localhost:8081)
 ```
 
@@ -102,12 +102,12 @@ The official PostgREST image serves the database's `api` schema; there is no app
 ## UI (D21)
 
 - **React + TypeScript, built with Vite.** Caddy serves the built files; nginx is a drop-in alternative if the eventual host prefers it.
-- **Typed API client** generated from PostgREST's OpenAPI document (converted from Swagger 2.0, then `openapi-typescript`; `npm run gen:api`). A change to a view or function shows up as a type error in the UI.
-- **Libraries:** TanStack Query (fetching, caching, refresh after saves), TanStack Table and TanStack Virtual (large grids), React Hook Form (popups and forms), React Router (pages), date-fns (dates).
+- **Typed API client** generated from PostgREST's OpenAPI document (converted from Swagger 2.0, then `openapi-typescript`; `scripts/ui-npm.sh run gen:api`), called through `openapi-fetch`. A change to a view or function shows up as a type error in the UI. Limits: PostgREST's document marks every view column optional and doesn't describe function results, so those types are written by hand in the UI next to the call. TypeScript stays on 5.x: `openapi-typescript` needs TypeScript's JavaScript API, which version 7 (the native rewrite) doesn't have.
+- **Libraries:** TanStack Query (fetching, caching, refresh after saves), React Router (pages), installed with the skeleton; TanStack Table and TanStack Virtual (large grids), React Hook Form (popups and forms) and date-fns (dates) to be added when the pages need them.
 - **Thin:** no business rules in the UI. It shows data from views, calls functions, and displays the warnings they return. Colour thresholds and similar display settings are fine in the UI; anything that decides what is allowed is not.
 - **Structure:** each page under `src/pages/`, shared pieces (grid, popup, warnings strip) under `src/components/`, all API access under `src/api/`.
 - **First page:** availability, ported from `docs/pages_pocs/availability.html`.
-- **Development:** `npm run dev` runs Vite with instant reload and proxies `/api` to the `api` container.
+- **Development:** `docker compose --profile dev up ui-dev` runs Vite with live reload on port 5173 in the official node image (no Node on the host) and proxies `/api` to the `api` container. `scripts/ui-npm.sh` runs any other npm command the same way.
 
 ## Repository layout
 
@@ -123,7 +123,7 @@ The official PostgREST image serves the database's `api` schema; there is no app
 │   ├── test/                  Dockerfile for the test-only db-test image
 │   └── tests/                 pgTAP tests
 ├── ui/
-│   ├── Dockerfile             Stage 1: node builds the app; stage 2: caddy:2 serves dist/
+│   ├── Dockerfile             Stage 1: node builds the app; stage 2: caddy:2-alpine serves dist/
 │   ├── Caddyfile              Static files (with SPA fallback); /api/* → api:3000, prefix stripped
 │   ├── package.json
 │   ├── vite.config.ts         Dev server proxies /api to the api container

@@ -52,9 +52,12 @@ The tool needs to:
 │   ├── db-seed.sh                             Loads or resets the DEMO tenant's sample data (calls api.reset_demo_data)
 │   ├── db-reset.sh                            Wipes the local database and rebuilds it with sample data
 │   ├── db-test.sh                             Runs the database tests in a throwaway database
-│   └── api-contract.sh                        Updates or checks the API contract snapshot (db/api-contract.txt)
-├── compose.yaml                               Docker Compose services (db, migrate, db-roles, api, db-test; ui to follow)
-├── compose.override.yaml                      Local dev extras, loaded automatically (database and API ports, API docs page)
+│   ├── api-contract.sh                        Updates or checks the API contract snapshot (db/api-contract.txt)
+│   ├── up.sh                                  Starts everything (database, API, API docs, UI) and checks each answers
+│   └── ui-npm.sh                              Runs npm for the UI in the official node image (no Node needed locally)
+├── ui/                                        React + TypeScript app (Vite); Dockerfile (node builds, caddy:2-alpine serves), Caddyfile
+├── compose.yaml                               Docker Compose services (db, migrate, db-roles, api, ui, db-test)
+├── compose.override.yaml                      Local dev extras, loaded automatically (database and API ports, API docs page, ui-dev)
 └── .env.example                               Settings to copy into .env
 ```
 
@@ -78,13 +81,22 @@ curl -H "X-Tenant: DEMO" "http://localhost:8000/tenants?select=code,name&order=c
 curl -X POST -H "X-Tenant: DEMO" http://localhost:8000/rpc/reset_demo_data
 ```
 
-Every view in the `api` schema is a `GET /<view>` (filters like `?col=eq.value`, `select=`, `order=`, `limit=`, `offset=`), and every function is a `POST /rpc/<function>` with its arguments as JSON. Once the UI exists, the browser reaches the same paths under `/api/` through Caddy. New views and functions appear after the next migration run (`db-roles` tells PostgREST to reload).
+Every view in the `api` schema is a `GET /<view>` (filters like `?col=eq.value`, `select=`, `order=`, `limit=`, `offset=`), and every function is a `POST /rpc/<function>` with its arguments as JSON. The browser reaches the same paths under `/api/` through the UI's Caddy. New views and functions appear after the next migration run (`db-roles` tells PostgREST to reload).
 
-**Tenants and demo data.** The database is multi-tenant: LIVE and DEMO to start with (decisions D24, D25). Every query sees one tenant at a time, selected with `api.use_tenant('LIVE')` or `api.use_tenant('DEMO')`; with none selected nothing is visible. Sample data only ever goes into the DEMO tenant: `scripts/db-seed.sh` loads or resets it (the same `api.reset_demo_data()` the UI will call), and it refuses for any non-demo tenant. `scripts/db-reset.sh` wipes the whole local volume and rebuilds everything. Demo dates are relative to the day it is loaded: five weeks from the Monday two weeks ago, with today in the middle week.
+**Tenants and demo data.** The database is multi-tenant: LIVE and DEMO to start with (decisions D24, D25). Every query sees one tenant at a time, selected with `api.use_tenant('LIVE')` or `api.use_tenant('DEMO')`; with none selected nothing is visible. Sample data only ever goes into the DEMO tenant: `scripts/db-seed.sh` loads or resets it (the same `api.reset_demo_data()` as the UI's "Reset demo data" button), and it refuses for any non-demo tenant. `scripts/db-reset.sh` wipes the whole local volume and rebuilds everything. Demo dates are relative to the day it is loaded: five weeks from the Monday two weeks ago, with today in the middle week.
 
 **Database tests** run in their own throwaway database, never the one above: `scripts/db-test.sh` (or `docker compose --profile test build db-test` then `docker compose --profile test run --rm db-test`). It applies every migration to an empty database, runs the pgTAP tests in `db/tests/`, checks every migration rolls back and re-applies, and ends with `ALL PASSED` or `FAILED`. pgTAP is only in the test image, never in the deployed database.
 
 **API contract.** The contract between the UI and the back end (D22) is the `api` schema itself: its views and functions with their types, which PostgREST serves as-is. `db/api-contract.txt` is a snapshot of it. With the database running, `scripts/api-contract.sh --check` fails if the contract has changed, and `scripts/api-contract.sh` updates the snapshot, so contract changes are always deliberate and visible in commits. There are no API unit tests because there is no API code: the behaviour is tested in pgTAP (`scripts/db-test.sh`).
+
+**UI.** `scripts/up.sh` starts everything, rebuilds the UI and checks each service answers; then open `http://localhost:8080` (`UI_PORT`). The header switches between tenants (a "DEMO DATA" banner shows on DEMO), and the home page shows `api.health` for the selected tenant, with "Reset demo data" on DEMO only. The `ui` image is built from `ui/Dockerfile` with official images only: Node builds the static files, `caddy:2-alpine` serves them and forwards `/api/*` to PostgREST (decision I6). No Node is needed on your machine: npm runs in the official node image.
+
+```
+docker compose --profile dev up ui-dev   # dev server with live reload: http://localhost:5173
+scripts/ui-npm.sh run gen:api            # regenerate ui/src/api/schema.d.ts after changing the api schema (API must be running)
+scripts/ui-npm.sh install <package>      # add a dependency
+scripts/ui-npm.sh run build              # type-check and build, as the Dockerfile does
+```
 
 For local development the database is also published on `localhost:5432` (set `POSTGRES_PORT` in `.env` to change it). Connect any client (DBeaver, pgAdmin, VS Code, psql) with host `localhost`, the port, database `accomm`, user `accomm_owner` and the password from `.env`. It listens on localhost only. To run without the dev extras: `docker compose -f compose.yaml up`.
 

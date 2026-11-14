@@ -23,3 +23,25 @@ services:
       API_URL: ${API_PUBLIC_URL:-http://localhost:8000}/
     ports:
       - "127.0.0.1:${API_DOCS_PORT:-8081}:8080"
+
+  # UI dev server with live reload (official node image, nothing installed on
+  # the host). Runs only when asked: docker compose --profile dev up ui-dev
+  # Also runs npm for you, e.g. scripts/ui-npm.sh install <package>.
+  # node_modules lives in a volume, not in the Windows folder.
+  ui-dev:
+    image: node:22-alpine
+    profiles: ["dev"]
+    working_dir: /app
+    environment:
+      API_PROXY_TARGET: http://api:3000
+      API_URL: http://api:3000/
+      VITE_POLL: "1"
+    volumes:
+      - ./ui:/app
+      - ui-node-modules:/app/node_modules
+    ports:
+      - "127.0.0.1:${UI_DEV_PORT:-5173}:5173"
+    command: ["sh", "-c", "npm install && npm run dev -- --host 0.0.0.0"]
+
+volumes:
+  ui-node-modules:

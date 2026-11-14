@@ -74,6 +74,18 @@ services:
       timeout: 3s
       retries: 20
 
+  # UI (decisions D21, I6): React app built to static files and served by Caddy,
+  # which forwards /api/* to the api service. The one service meant to be
+  # reached from outside. Image built from ui/Dockerfile (official node + caddy).
+  ui:
+    build: ./ui
+    image: accomm-ui:local
+    depends_on:
+      api:
+        condition: service_healthy
+    ports:
+      - "${UI_PORT:-8080}:8080"
+
   # Database tests (test only; decision I2). Starts a throwaway database inside
   # the container, applies all migrations, runs db/tests with pg_prove, checks
   # the migrations roll back and re-apply, then exits 0 (pass) or 1 (fail).

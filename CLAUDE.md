@@ -24,7 +24,8 @@ Decisions are in `docs/decisions.md` (D = design, I = implementation). The build
 | `migrate` | dbmate | Applies `db/migrations`, then exits |
 | `db-roles` | `postgres:16` | Sets role passwords from `.env`, tells PostgREST to reload, then exits |
 | `api` | `postgrest/postgrest` | Serves `api` as `GET /<view>`, `POST /rpc/<function>` |
-| `ui` | custom (to be built) | React + TypeScript (Vite), served by Caddy; `/api/*` proxied to `api` |
+| `ui` | built from `ui/Dockerfile` (official `node`, then `caddy:2-alpine`) | React + TypeScript (Vite), served by Caddy; `/api/*` proxied to `api` |
+| `ui-dev` | `node:22-alpine`, dev profile only | Vite dev server with live reload; also runs npm (`scripts/ui-npm.sh`) |
 | `db-test` | custom, test only | Throwaway database: all migrations, pgTAP tests, rollback check |
 | `api-docs` | swagger-ui, dev only | Browsable API docs |
 
@@ -40,9 +41,13 @@ scripts/db-reset.sh             # wipe the local volume and rebuild everything (
 docker compose up -d api api-docs
 scripts/db-test.sh              # pgTAP tests in a throwaway database; must end ALL PASSED
 scripts/api-contract.sh --check # has the API contract changed?
+scripts/up.sh                   # everything, UI rebuilt; checks each answers
+docker compose --profile dev up ui-dev   # Vite dev server, live reload
+scripts/ui-npm.sh run gen:api   # regenerate the typed client after api changes
+scripts/ui-npm.sh run build     # type-check and build the UI
 ```
 
-Dev ports (localhost only): database 5432, API 8000, API docs 8081, UI 8080 (once built).
+Dev ports (localhost only): database 5432, API 8000, API docs 8081, Vite dev 5173. UI 8080. There is no Node on the user's machine: run npm through `scripts/ui-npm.sh` (official node image; `node_modules` lives in a volume).
 
 ## Conventions
 
@@ -58,7 +63,9 @@ Dev ports (localhost only): database 5432, API 8000, API docs 8081, UI 8080 (onc
 
 **Tests:** every new `api` function or view gets pgTAP tests in `db/tests/` (rules, warnings, tenant isolation, audit). Run `scripts/db-test.sh` before saying something works. When testing behaviour as `api_user`, connect over the network (host `db`), not `localhost` inside the db container, which skips password checks.
 
-**API contract:** after changing the `api` schema, run `scripts/api-contract.sh` and commit `db/api-contract.txt` with the change.
+**API contract:** after changing the `api` schema, run `scripts/api-contract.sh` and commit `db/api-contract.txt` with the change, then `scripts/ui-npm.sh run gen:api` and commit `ui/src/api/schema.d.ts`.
+
+**UI:** keep TypeScript on 5.x (`openapi-typescript` needs its JavaScript API; TypeScript 7 has none). Function results and view column nullability aren't in PostgREST's OpenAPI: type them by hand next to the call. Every request sends `X-Tenant` (`tenantHeaders`), and query keys include the tenant.
 
 **Docs:** keep the README, `docs/build_plan.md` and `docs/erd.md` in line with changes. If the data model changes, update `docs/erd.dot` and run `sh docs/build_erd.sh`. Log decisions in `docs/decisions.md`: short entries, design (D) vs implementation (I); supersede old entries rather than rewriting them.
 

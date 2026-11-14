@@ -9,23 +9,19 @@ Context from a long Claude session (in the Claude app, writing to this folder re
   - Migrations 0001–0005: multi-tenant core model (15 tables, row-level security), `api` schema and roles, per-tenant reference data, demo data loader and `api.reset_demo_data`, PostgREST pre-request hook.
   - pgTAP: 5 files, 48 checks, plus a rollback/re-apply check; all passing in the session's PostgreSQL 16.
   - PostgREST v14.18 tested against the database (tenants, errors, health check, CORS, OpenAPI).
-- **Waiting on the user** (may already be done; check `git status` and `git log`):
-  1. Delete the FastAPI leftovers: `git rm -r api scripts/api-test.sh`.
-  2. Verify on their machine: `docker compose down --remove-orphans`, `scripts/db-up.sh` (should apply 0005), `docker compose up -d api api-docs`, `curl -H "X-Tenant: DEMO" http://localhost:8000/health` (23 beds once seeded), `scripts/api-contract.sh --check`, `scripts/db-test.sh` (48 tests, ALL PASSED).
-  3. Commit on `postgrest`, then decide whether to merge into `master`.
-- **Not verified:** the Docker image tags `postgrest/postgrest:v14.18` and `swaggerapi/swagger-ui` (latest) could not be checked from the session. If v14.18 won't pull, try `:latest` and pin what it reports.
+- FastAPI leftovers removed and the PostgREST switch committed; PostgREST v14.18 runs on the user's machine (DEMO health shows 23 beds). `postgrest` is not merged into `master` yet.
 
-## Next step: UI skeleton (end of phase 0)
+## UI skeleton (end of phase 0): built, not yet committed
 
-Agreed scope (D21, adjusted for PostgREST):
-- `ui/` with React + TypeScript (Vite). `ui/Dockerfile`: Node builds, then `caddy:2` serves `dist/`. The only service exposed outside (port 8080).
-- `Caddyfile`: serve the app with SPA fallback; `handle_path /api/*` → `api:3000` (strip the prefix). Then PostgREST's CORS can be locked down, and `API_PUBLIC_URL` becomes `http://localhost:8080/api`.
-- Typed client: PostgREST's OpenAPI is Swagger 2.0, so convert (e.g. `swagger2openapi`) then `openapi-typescript`; `npm run gen:api`.
-- First screen: header with a LIVE / DEMO switch (sends `X-Tenant`), a clear "DEMO DATA" banner, `api.health` for the selected tenant, and a "Reset demo data" button (DEMO only) calling `/api/rpc/reset_demo_data`.
-- Libraries planned: TanStack Query, Table, Virtual; React Hook Form; React Router; date-fns.
-- Vite dev server proxies `/api` to `http://localhost:8000`. Add a `scripts/up.sh` that starts everything and prints the URLs.
+- `ui/`: React 19 + TypeScript 5 (Vite 8), React Router, TanStack Query, `openapi-fetch` with types from `scripts/ui-npm.sh run gen:api`. Header with the tenant switch (from `api.tenants`, remembered in local storage, defaults to the first non-demo tenant), "DEMO DATA" banner, `api.health`, "Reset demo data" on DEMO only.
+- `ui/Dockerfile` (I6): `node:22.23-alpine` builds, `caddy:2.11-alpine` serves; `ui/Caddyfile` has SPA fallback, `/api/*` → `api:3000`, `admin off`, security headers, long cache for `/assets/*` and `no-cache` for the rest.
+- `ui-dev` (dev profile, official node image) runs Vite on 5173 and npm via `scripts/ui-npm.sh`; `scripts/up.sh` starts everything and checks it.
+- Checked in this session: build passes; `/`, deep links and `/api/health` through Caddy; LIVE and DEMO switch in the browser; reset refused for LIVE; dev server proxy. "Reset demo data" was not clicked in the browser.
+- Not done: locking down PostgREST's CORS. The `api-docs` page (port 8081) calls the API from another origin, so it needs CORS or a route through Caddy first.
 
-After that: phase 1 (read functions behind the availability page), then phase 2 (rebuild the availability mockup in React). See `docs/build_plan.md`.
+## Next step: phase 1 read API (`0006_availability_read.sql`)
+
+Proposed SQL is in `claude_availability_page_overview.md`. Agreed changes: add `sort_order` to `api.locations`; keep `DOUBLE_BOOKING` severity hard-coded until D11 is decided; `fn_week_summary` raises P0001 unless `p_basis` is `scheduled` or `loaded`; pgTAP checks that LIVE sees nothing through each new object; keep the `fn_` prefix on functions (`reset_demo_data` is a special case). Then phase 2 (availability page in React). See `docs/build_plan.md`.
 
 ## The availability page (agreed in the mockup)
 
