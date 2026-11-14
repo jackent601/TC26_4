@@ -1,0 +1,117 @@
+# Accommodation allocation tool
+
+A tool to replace a team's accommodation-booking spreadsheet. The team books beds for people attending training courses across an estate of sites, buildings, blocks, floors, rooms and beds. Today this is done in one large spreadsheet plus knowledge held in people's heads: who can go where, what clashes, what an out-of-action room affects, nor can they tell if courses have been successfully allocated.
+
+The tool needs to:
+
+- accept course requests (dates, headcount, and attributes of the course or of individuals on it);
+- know which beds suit which individuals/courses, from attributes and rules that change over time;
+- allocate beds without double-booking or using out-of-action beds;
+- show warnings for anything unsuitable or missing, without blocking the user;
+- track each booking through to check-in and check-out.
+- handle attributes at all accommodation levels, most notables attribute type OUTAGE which denies users from allocating to any affected room
+- visualise all of this
+
+**Status: design stage.** The data model for the MVP is agreed (below). Nothing is built yet. The application, queries and business logic are to be written from scratch; the platform and database are not yet chosen, so keep everything database-neutral.
+
+## Repository layout
+
+```
+.
+├── README.md                                  This file
+├── docs/
+│   ├── Accommodation System Requirements.xlsx Agreed requirements (summarised below)
+│   ├── erd.md                                 Data model: Mermaid ER diagram plus the rules the diagram can't show
+│   ├── erd.png                                The same ER diagram as an image
+│   └── erd.svg                                The same ER diagram as a scalable image
+└── src/
+    └── db/
+        └── migrations/
+            └── 0001_schema.sql                The data model as SQL: 14 tables, keys, relationships, checks, indexes
+```
+
+### File details
+
+- **`docs/Accommodation System Requirements.xlsx`**: one sheet, ten requirements, each with minimum behaviour, a demonstration test and a priority. Summarised in [Requirements](#requirements).
+- **`docs/erd.md`**: the main description of the data model. A table of the five groups of tables, the full ER diagram as Mermaid (shows in GitHub, GitLab and VS Code), and a list of rules enforced by checks or application logic rather than relationships.
+- **`docs/erd.png`, `docs/erd.svg`**: the same model drawn with Graphviz, grouped and coloured by area (Supply blue, Demand green, Vocabulary purple, Allocation orange, Audit grey). Use the SVG to zoom.
+- **`src/db/migrations/0001_schema.sql`**: the source of truth for the model. Standard SQL that has been loaded and tested on PostgreSQL 16. Notes at the top explain the small changes needed for SQL Server, MySQL or SQLite (identity columns). Structure only: no data, views, triggers or functions.
+
+If the model changes, update `0001_schema.sql` first (or add a new migration), then bring `erd.md` and the images into line.
+
+## Data model (MVP)
+
+14 tables in five groups. See `docs/erd.md` for the diagram.
+
+| Group | Tables | Purpose |
+|---|---|---|
+| Supply | `sites` > `buildings` > `blocks` > `floors` > `rooms` > `beds`, plus `location_attributes` | The estate down to the bed, and dated attributes set at any level of it |
+| Vocabulary and rules | `attribute_types`, `rules` | The list of attributes and how they behave; suitability rules stored as data |
+| Demand | `courses`, `course_attributes`, `course_individual_attributes` | Courses, their default attributes, and attributes of individual (anonymous) attendees |
+| Allocation | `allocations` | An individual on a course, or an external booking, in a bed for a range of nights. Also holds the booking status and check-in/out times |
+| Audit | `audit_log` | Change history. Standalone, no foreign keys |
+
+### Key design decisions
+
+These were settled while simplifying an earlier, Oracle APEX-based proof of concept. Keep them unless there's a reason to revisit.
+
+1. **No named individuals.** There is no people table. A course's attendees are anonymous and numbered 1 to `est_attendees` (`individual_no`). Their attributes (e.g. individual 3 is female, needs step-free access) live in `course_individual_attributes` and override the course defaults in `course_attributes`.
+2. **The allocation is the booking.** There is no separate attendance or booking table. `allocations` carries the status (`ALLOCATED` → `BOOKED` → `CHECKED_IN` → `CHECKED_OUT`, or `NO_SHOW` / `CANCELLED`) and the check-in/out times. An individual can have several allocations, e.g. a room move mid-stay.
+3. **External bookings** (made outside the tool, e.g. in the booking system) are allocations with no course and no individual number, `source = 'EXTERNAL'`.
+4. **Location attributes apply at any level.** Each `location_attributes` row sets exactly one of `site_id` … `bed_id`, with a date range. Attributes are inherited down to beds. `attribute_types.inherit_mode` says how: `NEAREST` (the value set nearest the bed wins, so a room can override its floor) or `ANY` (applies if set at any level above, and can't be overridden).
+5. **Outages are attributes, not a separate table.** Taking somewhere out of action is a location attribute `OUT_OF_ACTION = 'Y'` with dates and the reason in `comments`. Its attribute type is `inherit_mode = ANY`, `allow_overlap = Y`, `comment_required = Y`, and a `LOCATION_BLOCKS` rule makes it block every allocation. These two reference rows need creating when the database is set up (not yet in the schema file).
+6. **Rules are data.** `rules` holds suitability rules of five types: `COMPARE` (individual attribute vs location attribute, e.g. grade ≥ floor minimum), `REQUIRES` (individual flag needs location flag, e.g. step-free), `MATCH_WITHIN` (everyone in a room, floor or block shares an attribute, e.g. no mixed-gender rooms), `SOLE_USE` (individual should not share a room) and `LOCATION_BLOCKS` (location flag blocks everyone, e.g. out of action). Each has a severity: `BLOCK`, `WARNING` or `INFO`.
+7. **Warn, don't block.** Only physical impossibilities block an allocation: two people in one bed, one individual in two beds at once, or an out-of-action bed. Everything else saves and is shown as a warning.
+8. **Warnings are never stored.** Conflicts and warnings are worked out by queries every time they're shown. For the MVP there is no way to accept or dismiss a warning.
+9. **Dates are half-open.** Start is the first night; end is the departure day (exclusive). Two stays overlap when `a.start_date < b.end_date and b.start_date < a.end_date`. Use this everywhere.
+10. **Generate nights, don't store them.** Availability ("free beds per night") generates the nights for the requested period in the query (e.g. `generate_series` in PostgreSQL, a recursive query elsewhere). There is no calendar table.
+11. **Audit log is standalone** for the MVP: no foreign keys. It keeps `course_id` and `individual_no` only for looking up one individual's history.
+
+### Deliberately left out of the MVP
+
+| Left out | Consequence | Could come back as |
+|---|---|---|
+| Room adjacency | Rules can't say "not in neighbouring rooms"; approximate with floor or block scope | A `room_adjacency` table and an `ADJACENT` rule scope |
+| Accepting warnings | A warning someone has deliberately allowed keeps showing; the warnings screen needs good filters | An acknowledgements table keyed by allocation and warning code |
+| Named people | No names or contact details for check-in lists or notifications | A people table linked from allocations |
+| Dated individual attributes | Changes to an individual's attributes aren't time-bound | `valid_from` / `valid_to` columns, as on location attributes |
+
+### Enforced in application logic, not the schema
+
+- `individual_no` is between 1 and the course's `est_attendees` (it isn't a foreign key, as individuals have no table).
+- `attribute_types.allow_overlap = 'N'`: no two rows for the same attribute and location with overlapping dates.
+- `attribute_types.comment_required = 'Y'`: every row of that attribute has a comment.
+- Status transitions on `allocations` follow the order above.
+- Writing to `audit_log` when allocations change.
+
+## Requirements
+
+From `docs/Accommodation System Requirements.xlsx`:
+
+| Requirement | Minimum behaviour | Priority |
+|---|---|---|
+| Data import | Load or paste the agreed accommodation and booking data without re-keying; report rejected or missing fields | Must |
+| Availability view | Show available, allocated and unavailable capacity by date and location; identify the limiting date | Must |
+| Booking | Create an individual or group/course requirement for a date range | Must |
+| Allocation | Recommend or make suitable bed allocations, preventing obvious conflicts | Must |
+| Conflict warning | Flag over-capacity, duplicate booking, unsuitable allocation and missing information | Must |
+| Outage modelling | Take a block, room or bed out of action and show who or what is affected | Must |
+| Check-in/out | Record status through to checked in and checked out, and show exceptions | Must |
+| Notification output | Generate arrival/allocation information suitable for email or Teams | Should |
+| Management information | Occupancy, forecast pressure, conflicts, no-shows and overdue check-outs in one view | Should |
+| Audit/history | Record allocation and status changes and who made them | Could (prototype); required for live use |
+
+## Open questions
+
+- **Platform and database:** not chosen. Oracle APEX was the earlier proof of concept; the model is now database-neutral.
+- **Booking system export:** what format it comes in, and whether it has room IDs and references we can match on. This decides how import and reconciliation work.
+- **External bookings:** do they carry attributes such as gender? If not, rooms they occupy will show "missing information" warnings.
+- **Ownership:** who maintains the attribute list and the rules once they're written down?
+- **Allocation suggestions:** the earlier proof of concept used a simple one-at-a-time ("greedy") suggestion. Later this could become a proper optimisation using a constraint solver, treating `BLOCK` rules as hard constraints and warnings as costs.
+
+## Suggested next steps
+
+1. Choose the platform and database.
+2. Add the `OUT_OF_ACTION` reference data (attribute type and rule) as a migration or seed script.
+3. Write the core queries: effective attributes per bed and per individual, conflicts and warnings, and availability by night.
+4. Build the course, allocation, conflicts and arrivals screens, then import.
