@@ -1,0 +1,474 @@
+{
+  "components": {
+    "schemas": {
+      "ArgsResetDemoData": {
+        "properties": {},
+        "required": [],
+        "type": "object"
+      },
+      "ArgsUseTenant": {
+        "properties": {
+          "p_code": {
+            "type": "string"
+          },
+          "p_local": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "p_code"
+        ],
+        "type": "object"
+      },
+      "Error": {
+        "properties": {
+          "code": {
+            "type": "string"
+          },
+          "error": {
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "Health": {
+        "properties": {
+          "bed_count": {
+            "nullable": true,
+            "type": "integer"
+          },
+          "checked_at": {
+            "format": "date-time",
+            "nullable": true,
+            "type": "string"
+          },
+          "status": {
+            "nullable": true,
+            "type": "string"
+          },
+          "tenant": {
+            "nullable": true,
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "Tenants": {
+        "properties": {
+          "code": {
+            "nullable": true,
+            "type": "string"
+          },
+          "is_demo": {
+            "nullable": true,
+            "type": "string"
+          },
+          "name": {
+            "nullable": true,
+            "type": "string"
+          }
+        },
+        "type": "object"
+      }
+    }
+  },
+  "info": {
+    "description": "Generated from the database's api schema. Select a tenant with the X-Tenant header.",
+    "title": "Accommodation allocation API",
+    "version": "0.1.0"
+  },
+  "openapi": "3.1.0",
+  "paths": {
+    "/api/health": {
+      "get": {
+        "description": "Filter rows with col=op.value. Operators: eq, neq, lt, lte, gt, gte, in (e.g. in.(a,b)), is (null|true|false). Also select=a,b, order=a.asc,b.desc, limit, offset.",
+        "operationId": "get_health",
+        "parameters": [
+          {
+            "description": "Tenant code, e.g. LIVE or DEMO",
+            "in": "header",
+            "name": "X-Tenant",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "select",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "order",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "offset",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/Health"
+                  },
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Rows"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "description": "Error"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "description": "Error"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        },
+        "summary": "Read api.health",
+        "tags": [
+          "views"
+        ]
+      }
+    },
+    "/api/rpc/reset_demo_data": {
+      "post": {
+        "operationId": "rpc_reset_demo_data",
+        "parameters": [
+          {
+            "description": "Tenant code, e.g. LIVE or DEMO",
+            "in": "header",
+            "name": "X-Tenant",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ArgsResetDemoData"
+              }
+            }
+          },
+          "required": false
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "properties": {
+                      "allocations": {
+                        "nullable": true,
+                        "type": "integer"
+                      },
+                      "beds": {
+                        "nullable": true,
+                        "type": "integer"
+                      },
+                      "courses": {
+                        "nullable": true,
+                        "type": "integer"
+                      },
+                      "day0": {
+                        "format": "date",
+                        "nullable": true,
+                        "type": "string"
+                      },
+                      "outages": {
+                        "nullable": true,
+                        "type": "integer"
+                      },
+                      "tenant": {
+                        "nullable": true,
+                        "type": "string"
+                      }
+                    },
+                    "type": "object"
+                  },
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Result"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "description": "Error"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "description": "Error"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "description": "Error"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        },
+        "summary": "Call api.reset_demo_data (returns TABLE(tenant text, day0 date, beds bigint, courses bigint, allocations bigint, outages bigint))",
+        "tags": [
+          "functions"
+        ]
+      }
+    },
+    "/api/rpc/use_tenant": {
+      "post": {
+        "operationId": "rpc_use_tenant",
+        "parameters": [
+          {
+            "description": "Tenant code, e.g. LIVE or DEMO",
+            "in": "header",
+            "name": "X-Tenant",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ArgsUseTenant"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "nullable": true,
+                  "type": "string"
+                }
+              }
+            },
+            "description": "Result"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "description": "Error"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "description": "Error"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "description": "Error"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        },
+        "summary": "Call api.use_tenant (returns text)",
+        "tags": [
+          "functions"
+        ]
+      }
+    },
+    "/api/tenants": {
+      "get": {
+        "description": "Filter rows with col=op.value. Operators: eq, neq, lt, lte, gt, gte, in (e.g. in.(a,b)), is (null|true|false). Also select=a,b, order=a.asc,b.desc, limit, offset.",
+        "operationId": "get_tenants",
+        "parameters": [
+          {
+            "description": "Tenant code, e.g. LIVE or DEMO",
+            "in": "header",
+            "name": "X-Tenant",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "select",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "order",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "offset",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/Tenants"
+                  },
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Rows"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "description": "Error"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "description": "Error"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        },
+        "summary": "Read api.tenants",
+        "tags": [
+          "views"
+        ]
+      }
+    }
+  }
+}

@@ -53,7 +53,9 @@ services:
   # Connects as api_user, so it can only reach the api schema. Starts once the
   # migrations and role passwords are done. Docs at /api/docs.
   api:
-    build: ./api
+    build:
+      context: ./api
+      target: runtime
     image: accomm-api:local
     depends_on:
       db-roles:
@@ -66,6 +68,15 @@ services:
       interval: 5s
       timeout: 3s
       retries: 20
+
+  # API unit tests (test only). No database needed. Runs only when asked:
+  #   docker compose --profile test run --rm api-test   (or scripts/api-test.sh)
+  api-test:
+    build:
+      context: ./api
+      target: test
+    image: accomm-api-test:local
+    profiles: ["test"]
 
   # Database tests (test only; decision I2). Starts a throwaway database inside
   # the container, applies all migrations, runs db/tests with pg_prove, checks

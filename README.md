@@ -30,8 +30,10 @@ The tool needs to:
 │   ├── erd.svg                                The same ER diagram as a scalable image
 │   └── pages_pocs/                            Clickable page mockups (open the .html files in a browser)
 ├── api/                                       API service (FastAPI): a thin layer over the database's api schema
-│   ├── Dockerfile
+│   ├── Dockerfile                             Targets: runtime (deployed) and test (unit tests)
 │   ├── pyproject.toml                         Pinned Python dependencies
+│   ├── openapi.json                           Snapshot of the API contract (see scripts/api-contract.sh)
+│   ├── tests/                                 API unit tests (pytest, no database needed)
 │   └── app/
 │       ├── main.py                            App, error mapping (database errors -> HTTP status)
 │       ├── generic.py                         GET /api/<view> and POST /api/rpc/<function>
@@ -55,8 +57,10 @@ The tool needs to:
 │   ├── db-up.sh                               Starts db, runs migrate and db-roles, shows their output and result
 │   ├── db-seed.sh                             Loads or resets the DEMO tenant's sample data (calls api.reset_demo_data)
 │   ├── db-reset.sh                            Wipes the local database and rebuilds it with sample data
-│   └── db-test.sh                             Runs the database tests in a throwaway database
-├── compose.yaml                               Docker Compose services (db, migrate, db-roles, api, db-test; ui to follow)
+│   ├── db-test.sh                             Runs the database tests in a throwaway database
+│   ├── api-test.sh                            Runs the API unit tests
+│   └── api-contract.sh                        Updates or checks the API contract snapshot (api/openapi.json)
+├── compose.yaml                               Docker Compose services (db, migrate, db-roles, api, api-test, db-test; ui to follow)
 ├── compose.override.yaml                      Local dev extras, loaded automatically (database port on localhost)
 └── .env.example                               Settings to copy into .env
 ```
@@ -86,6 +90,8 @@ Every view in the database's `api` schema is a `GET /api/<view>` (filters like `
 **Tenants and demo data.** The database is multi-tenant: LIVE and DEMO to start with (decisions D24, D25). Every query sees one tenant at a time, selected with `api.use_tenant('LIVE')` or `api.use_tenant('DEMO')`; with none selected nothing is visible. Sample data only ever goes into the DEMO tenant: `scripts/db-seed.sh` loads or resets it (the same `api.reset_demo_data()` the UI will call), and it refuses for any non-demo tenant. `scripts/db-reset.sh` wipes the whole local volume and rebuilds everything. Demo dates are relative to the day it is loaded: five weeks from the Monday two weeks ago, with today in the middle week.
 
 **Database tests** run in their own throwaway database, never the one above: `scripts/db-test.sh` (or `docker compose --profile test build db-test` then `docker compose --profile test run --rm db-test`). It applies every migration to an empty database, runs the pgTAP tests in `db/tests/`, checks every migration rolls back and re-applies, and ends with `ALL PASSED` or `FAILED`. pgTAP is only in the test image, never in the deployed database.
+
+**API tests and contract.** `scripts/api-test.sh` runs the API unit tests (filter parsing and validation, values always sent as parameters, function arguments, error mapping, OpenAPI generation) in a short-lived container; no database needed. The API contract (D22) is the OpenAPI document generated from the database; `api/openapi.json` is a snapshot of it. With the API running, `scripts/api-contract.sh --check` fails if the contract has changed, and `scripts/api-contract.sh` updates the snapshot, so contract changes are always deliberate and visible in commits.
 
 For local development the database is also published on `localhost:5432` (set `POSTGRES_PORT` in `.env` to change it). Connect any client (DBeaver, pgAdmin, VS Code, psql) with host `localhost`, the port, database `accomm`, user `accomm_owner` and the password from `.env`. It listens on localhost only. To run without the dev extras: `docker compose -f compose.yaml up`.
 
