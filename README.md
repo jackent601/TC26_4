@@ -35,6 +35,10 @@ The tool needs to:
 │   │   ├── 0002_api_schema.sql                The api schema (the contract), api_access and api_user roles
 │   │   ├── 0003_reference_data.sql            Tenants (LIVE, DEMO) and their starter attribute types and rules
 │   │   └── 0004_demo.sql                      Demo data loader and api.reset_demo_data (demo tenants only)
+│   ├── test/
+│   │   ├── Dockerfile                         Test-only image: PostgreSQL 16 + pgTAP + pg_prove + dbmate
+│   │   └── run-tests.sh                       Throwaway database, migrations, tests, rollback check
+│   ├── tests/                                 pgTAP tests (schemas and roles, tenancy, reference data, demo reset)
 │   ├── seed/
 │   │   └── sample.sql                         Loads/resets the DEMO tenant's data (calls api.reset_demo_data)
 │   └── setup/
@@ -42,8 +46,9 @@ The tool needs to:
 ├── scripts/
 │   ├── db-up.sh                               Starts db, runs migrate and db-roles, shows their output and result
 │   ├── db-seed.sh                             Loads or resets the DEMO tenant's sample data
-│   └── db-reset.sh                            Wipes the local database and rebuilds it with sample data
-├── compose.yaml                               Docker Compose services (db, migrate, db-roles, db-seed; api and ui to follow)
+│   ├── db-reset.sh                            Wipes the local database and rebuilds it with sample data
+│   └── db-test.sh                             Runs the database tests in a throwaway database
+├── compose.yaml                               Docker Compose services (db, migrate, db-roles, db-seed, db-test; api and ui to follow)
 ├── compose.override.yaml                      Local dev extras, loaded automatically (database port on localhost)
 └── .env.example                               Settings to copy into .env
 ```
@@ -61,6 +66,8 @@ docker compose exec db psql -U accomm_owner -d accomm -c "\dt core.*"
 ```
 
 **Tenants and demo data.** The database is multi-tenant: LIVE and DEMO to start with (decisions D24, D25). Every query sees one tenant at a time, selected with `api.use_tenant('LIVE')` or `api.use_tenant('DEMO')`; with none selected nothing is visible. Sample data only ever goes into the DEMO tenant: `scripts/db-seed.sh` loads or resets it (the same `api.reset_demo_data()` the UI will call), and it refuses for any non-demo tenant. `scripts/db-reset.sh` wipes the whole local volume and rebuilds everything. Demo dates are relative to the day it is loaded: five weeks from the Monday two weeks ago, with today in the middle week.
+
+**Database tests** run in their own throwaway database, never the one above: `scripts/db-test.sh` (or `docker compose --profile test build db-test` then `docker compose --profile test run --rm db-test`). It applies every migration to an empty database, runs the pgTAP tests in `db/tests/`, checks every migration rolls back and re-applies, and ends with `ALL PASSED` or `FAILED`. pgTAP is only in the test image, never in the deployed database.
 
 For local development the database is also published on `localhost:5432` (set `POSTGRES_PORT` in `.env` to change it). Connect any client (DBeaver, pgAdmin, VS Code, psql) with host `localhost`, the port, database `accomm`, user `accomm_owner` and the password from `.env`. It listens on localhost only. To run without the dev extras: `docker compose -f compose.yaml up`.
 

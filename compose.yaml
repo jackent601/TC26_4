@@ -68,5 +68,19 @@ services:
       - ./db/seed:/db/seed:ro
     command: ["psql", "-q", "-f", "/db/seed/sample.sql"]
 
+  # Database tests (test only; decision I2). Starts a throwaway database inside
+  # the container, applies all migrations, runs db/tests with pg_prove, checks
+  # the migrations roll back and re-apply, then exits 0 (pass) or 1 (fail).
+  # Never touches the db service or its data. Runs only when asked:
+  #   docker compose --profile test run --rm db-test   (or scripts/db-test.sh)
+  db-test:
+    build: ./db/test
+    image: accomm-db-test:local
+    profiles: ["test"]
+    volumes:
+      - ./db/migrations:/db/migrations:ro
+      - ./db/setup:/db/setup:ro
+      - ./db/tests:/db/tests:ro
+
 volumes:
   pgdata:
