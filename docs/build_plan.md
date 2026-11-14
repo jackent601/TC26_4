@@ -69,7 +69,7 @@ Docker Desktop needs a paid licence in larger organisations; Podman and Rancher 
 
 **Migrations (D19):** dbmate, one SQL file per change in `db/migrations/`, run by the `migrate` service on every `docker compose up` (already-applied files are skipped). `0001_schema.sql` moves there and gains dbmate's `-- migrate:up` marker.
 
-**Reference and demo data:** reference data (attribute types and rules) is per tenant, installed by `core.load_reference_data` in migration 0003. Demo data (D25) is built by `core.load_sample_data` in migration 0004 and only ever loaded into a demo tenant, through `api.reset_demo_data()`; `db/seed/sample.sql` (run by `scripts/db-seed.sh`) just calls it for DEMO, and the UI's "Reset demo data" will call the same function.
+**Reference and demo data:** reference data (attribute types and rules) is per tenant, installed by `core.load_reference_data` in migration 0003. Demo data (D25) is built by `core.load_sample_data` in migration 0004 and only ever loaded into a demo tenant, through `api.reset_demo_data()`; `scripts/db-seed.sh` calls it for DEMO, and the UI's "Reset demo data" will call the same function.
 
 **Tests:** pgTAP tests in `db/tests/`, run by a test-only service, `db-test` (Compose profile `test`): `docker compose --profile test run --rm db-test`. Its image (`db/test/Dockerfile`: `postgres:16` + pgTAP + `pg_prove` + dbmate) starts a throwaway in-memory PostgreSQL, applies all migrations from scratch, runs `pg_prove`, and exits with pass or fail. pgTAP is never installed in the deployed database. Every write function gets tests for its rules and warnings.
 
@@ -117,7 +117,6 @@ Docker Desktop needs a paid licence in larger organisations; Podman and Rancher 
 ├── .env.example               Ports, passwords, settings
 ├── db/
 │   ├── migrations/            dbmate migrations (0001_schema.sql, 0002_api.sql, ...)
-│   ├── seed/                  reference.sql, sample.sql
 │   ├── setup/                 roles.sql (role passwords from .env)
 │   ├── test/                  Dockerfile for the test-only db-test image
 │   └── tests/                 pgTAP tests

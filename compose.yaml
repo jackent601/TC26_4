@@ -49,25 +49,6 @@ services:
     command:
       - psql -q -v api_password="$$API_DB_PASSWORD" -f /db/setup/roles.sql && echo "Roles updated."
 
-  # Loads or resets the DEMO tenant's sample data (db/seed/sample.sql calls
-  # api.reset_demo_data). Runs only when asked:
-  #   docker compose --profile seed run --rm db-seed   (or scripts/db-seed.sh)
-  # Never touches non-demo tenants.
-  db-seed:
-    image: postgres:16
-    profiles: ["seed"]
-    depends_on:
-      migrate:
-        condition: service_completed_successfully
-    environment:
-      PGHOST: db
-      PGDATABASE: ${POSTGRES_DB:-accomm}
-      PGUSER: ${POSTGRES_USER:-accomm_owner}
-      PGPASSWORD: ${POSTGRES_PASSWORD}
-    volumes:
-      - ./db/seed:/db/seed:ro
-    command: ["psql", "-q", "-f", "/db/seed/sample.sql"]
-
   # Database tests (test only; decision I2). Starts a throwaway database inside
   # the container, applies all migrations, runs db/tests with pg_prove, checks
   # the migrations roll back and re-apply, then exits 0 (pass) or 1 (fail).

@@ -39,16 +39,14 @@ The tool needs to:
 │   │   ├── Dockerfile                         Test-only image: PostgreSQL 16 + pgTAP + pg_prove + dbmate
 │   │   └── run-tests.sh                       Throwaway database, migrations, tests, rollback check
 │   ├── tests/                                 pgTAP tests (schemas and roles, tenancy, reference data, demo reset)
-│   ├── seed/
-│   │   └── sample.sql                         Loads/resets the DEMO tenant's data (calls api.reset_demo_data)
 │   └── setup/
 │       └── roles.sql                          Sets api_user's password from .env (run by db-roles after each migration run)
 ├── scripts/
 │   ├── db-up.sh                               Starts db, runs migrate and db-roles, shows their output and result
-│   ├── db-seed.sh                             Loads or resets the DEMO tenant's sample data
+│   ├── db-seed.sh                             Loads or resets the DEMO tenant's sample data (calls api.reset_demo_data)
 │   ├── db-reset.sh                            Wipes the local database and rebuilds it with sample data
 │   └── db-test.sh                             Runs the database tests in a throwaway database
-├── compose.yaml                               Docker Compose services (db, migrate, db-roles, db-seed, db-test; api and ui to follow)
+├── compose.yaml                               Docker Compose services (db, migrate, db-roles, db-test; api and ui to follow)
 ├── compose.override.yaml                      Local dev extras, loaded automatically (database port on localhost)
 └── .env.example                               Settings to copy into .env
 ```
