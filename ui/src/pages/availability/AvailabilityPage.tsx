@@ -1,6 +1,8 @@
-// Availability page (phase 2, steps 1-2): header controls and the grid.
+// Availability page (phase 2): header controls, legend, warnings strip, the
+// grid and its read-only popups.
 // Spec: claude_availability_page_overview.md; mockup: docs/pages_pocs/availability.html.
 import { useCallback, useMemo, useState } from "react";
+import { PopupView } from "./Popups";
 import { useTenant } from "../../tenant";
 import { Controls } from "./Controls";
 import { useBedBars, useCourseFigures, useLocations, useWarnings, useWeekSummary } from "./data";
@@ -8,7 +10,7 @@ import { Legend, WarningsStrip } from "./LegendAndWarnings";
 import { addDaysIso, dayLong, dayLongYear, defaultStart, iso, mondayOf } from "./dates";
 import { useCollapsed, useViewSettings } from "./settings";
 import { TimelineGrid, type VisibleRow } from "./TimelineGrid";
-import type { LocationNode } from "./types";
+import type { LocationNode, Popup } from "./types";
 import "./availability.css";
 
 export function AvailabilityPage() {
@@ -22,6 +24,21 @@ export function AvailabilityPage() {
   const bars = useBedBars(tenant, start, settings.weeks);
   const summary = useWeekSummary(tenant, start, settings.weeks);
   const warnings = useWarnings(tenant, start);
+
+  // The open popup; `seq` gives each opening a fresh dialog.
+  const [popup, setPopup] = useState<{ p: Popup; seq: number } | null>(null);
+  const open = useCallback((p: Popup) => setPopup((cur) => ({ p, seq: (cur?.seq ?? 0) + 1 })), []);
+
+  // Every location by key, for paths and lookups in popups.
+  const nodes = useMemo(() => {
+    const map = new Map<string, LocationNode>();
+    const visit = (n: LocationNode) => {
+      map.set(n.key, n);
+      n.children.forEach(visit);
+    };
+    (locations.data ?? []).forEach(visit);
+    return map;
+  }, [locations.data]);
 
   // Rows in tree order, stopping below collapsed nodes.
   const rows = useMemo(() => {
@@ -79,7 +96,7 @@ export function AvailabilityPage() {
       </header>
 
       <Legend settings={settings} />
-      <WarningsStrip warnings={warnings.data ?? []} error={warnings.error} />
+      <WarningsStrip warnings={warnings.data ?? []} error={warnings.error} onOpen={open} />
 
       {error && <p className="error">Could not load availability: {error.message}</p>}
       {!tenant || loading ? (
@@ -95,6 +112,25 @@ export function AvailabilityPage() {
           summary={summary.data ?? new Map()}
           figures={figures.data ?? new Map()}
           onToggle={toggle}
+          onOpen={open}
+        />
+      )}
+
+      {popup && (
+        <PopupView
+          key={popup.seq}
+          popup={popup.p}
+          onOpen={open}
+          onClose={() => setPopup(null)}
+          data={{
+            tenant,
+            settings,
+            nodes,
+            bars: bars.data ?? new Map(),
+            figures: figures.data ?? new Map(),
+            summary: summary.data ?? new Map(),
+            warnings: warnings.data ?? [],
+          }}
         />
       )}
     </div>

@@ -622,7 +622,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Bars for every bed between p_from and p_to (exclusive): kind allocation, external or outage, with dates clipped to the range. on_outage flags a booking that falls on an out-of-action bed. */
+        /** Bars for every bed that overlap p_from to p_to (exclusive): kind allocation, external or outage, with their full dates (end exclusive). on_outage flags a booking that falls on an out-of-action bed. */
         get: {
             parameters: {
                 query: {
@@ -645,7 +645,7 @@ export interface paths {
             };
         };
         put?: never;
-        /** Bars for every bed between p_from and p_to (exclusive): kind allocation, external or outage, with dates clipped to the range. on_outage flags a booking that falls on an out-of-action bed. */
+        /** Bars for every bed that overlap p_from to p_to (exclusive): kind allocation, external or outage, with their full dates (end exclusive). on_outage flags a booking that falls on an out-of-action bed. */
         post: {
             parameters: {
                 query?: never;

@@ -1,4 +1,4 @@
--- Read API for the availability page (migrations 0006 and 0007), on the DEMO sample data.
+-- Read API for the availability page (migrations 0006-0008), on the DEMO sample data.
 -- Assertions run as the test superuser (pgTAP lives in public, which api_user
 -- can't use). Row-level security still applies: api views run as their owner
 -- and api functions are security definer, both app_owner. One check at the end
@@ -65,9 +65,11 @@ select results_eq(format($$ select kind, count(*)::int from api.fn_bed_bars(%L, 
 select results_eq(format($$ select external_ref from api.fn_bed_bars(%L, %L) where on_outage $$,
                          :'w0', (:'w0'::date + 35)),
                   $$ values ('BK-4530') $$, 'only BK-4530 is on an outage');
-select is((select count(*)::int from api.fn_bed_bars(:'w0'::date + 7, :'w0'::date + 14)
-            where start_date < :'w0'::date + 7 or end_date > :'w0'::date + 14), 0,
-          'bars are clipped to the range');
+select results_eq(format($$ select external_ref, start_date, end_date from api.fn_bed_bars(%L, %L)
+                             where external_ref = 'BK-4471' $$,
+                         (:'w0'::date + 7), (:'w0'::date + 14)),
+                  format($$ values ('BK-4471', %L::date, %L::date) $$, (:'w0'::date + 2), (:'w0'::date + 9)),
+                  'bars keep their full dates when they run past the range (0008)');
 select results_eq(format($$ select set_on_level, reason from api.fn_bed_bars(%L, %L)
                              where kind = 'outage' and bed_id = %s $$,
                          :'w0', (:'w0'::date + 35), :b101a),

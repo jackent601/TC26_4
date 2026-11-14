@@ -3,7 +3,25 @@
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { api, tenantHeaders, unwrap } from "../../api/client";
 import { addDaysIso } from "./dates";
-import type { BedBar, CourseFigure, Level, LocationNode, Warning, WeekSummary, WeekSummaryRow } from "./types";
+import type { BedBar, Clash, CourseFigure, Level, LocationNode, Warning, WeekSummary, WeekSummaryRow } from "./types";
+
+// Bookings and outages on some beds over some nights (api.fn_check_allocation).
+// Used by the outage popup to list the bookings an outage affects.
+export function useClashes(tenant: string | null, bedIds: number[], from: string, to: string, enabled = true) {
+  return useQuery({
+    queryKey: ["clashes", tenant, bedIds, from, to],
+    enabled: enabled && tenant !== null && bedIds.length > 0,
+    queryFn: async () => {
+      const rows = await unwrap(
+        api.POST("/rpc/fn_check_allocation", {
+          body: { p_bed_ids: bedIds, p_from: from, p_to: to },
+          headers: tenantHeaders(tenant!),
+        }),
+      );
+      return rows as unknown as Clash[];
+    },
+  });
+}
 
 // Warnings strip: api.warnings that haven't ended before the first night shown
 // (end dates are departure days, so end_date > start), earliest first. No upper
@@ -89,6 +107,12 @@ export function useCourseFigures(tenant: string | null) {
           {
             courseId: r.course_id ?? 0,
             code: r.code ?? "",
+            name: r.name ?? "",
+            startDate: r.start_date ?? "",
+            endDate: r.end_date ?? "",
+            status: r.status ?? "",
+            pctScheduled: r.pct_scheduled ?? null,
+            pctLoaded: r.pct_loaded ?? null,
             scheduled: r.scheduled ?? 0,
             loaded: r.loaded ?? 0,
             loadedAt: r.loaded_at ?? null,

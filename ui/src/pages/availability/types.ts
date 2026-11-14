@@ -23,6 +23,12 @@ export interface LocationNode {
 export interface CourseFigure {
   courseId: number;
   code: string;
+  name: string;
+  startDate: string;
+  endDate: string;
+  status: string;
+  pctScheduled: number | null;
+  pctLoaded: number | null;
   scheduled: number;
   loaded: number;
   loadedAt: string | null;
@@ -30,7 +36,7 @@ export interface CourseFigure {
   loadedAboveScheduled: boolean;
 }
 
-// api.fn_bed_bars
+// api.fn_bed_bars: full dates since 0008; the grid fits them to the weeks shown.
 export interface BedBar {
   bed_id: number;
   kind: "allocation" | "external" | "outage";
@@ -59,6 +65,25 @@ export interface Warning {
   startDate: string | null;
   endDate: string | null;
 }
+
+// api.fn_check_allocation
+export interface Clash {
+  bed_id: number;
+  kind: "BOOKING" | "OUT_OF_ACTION";
+  ref: string;
+  start_date: string;
+  end_date: string;
+  message: string;
+}
+
+// What a popup is showing.
+export type Popup =
+  | { kind: "location"; key: string }
+  | { kind: "booking"; bar: BedBar }
+  | { kind: "outage"; bar: BedBar }
+  | { kind: "week"; key: string; weekStart: string }
+  | { kind: "course"; courseId: number }
+  | { kind: "warning"; warning: Warning };
 
 // api.fn_week_summary (0007): beds by category on a week's busiest night,
 // one row per course for category "course".

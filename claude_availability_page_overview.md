@@ -94,7 +94,7 @@ These are the views and functions the page needs, as proposed SQL. They have **n
 |---|---|
 | The tree | `api.locations` (key, parent_key, level, id, name, bed_count) |
 | Course colours and figures | `api.course_figures` (scheduled, loaded, `loaded_at`, allocated, `loaded_above_scheduled`) |
-| Bed rows for the date range | `api.fn_bed_bars(p_from, p_to)`: allocations, external bookings and outages per bed, clipped to the range, with an `on_outage` flag |
+| Bed rows for the date range | `api.fn_bed_bars(p_from, p_to)`: allocations, external bookings and outages per bed that overlap the range, with an `on_outage` flag. Since 0008 they carry their full dates (popups need them) and the UI fits them to the weeks shown |
 | Collapsed-row counts | `api.fn_week_summary(p_from, p_weeks)`: per location and week, the busiest night and its beds by category (free, out of action, external, and per course). Superseded the proposal below that took the basis and thresholds (D29, migration 0007) |
 | Warnings strip | `api.warnings`: loaded > scheduled, bookings on out-of-action beds, double bookings |
 | New-allocation popup clashes | `api.fn_check_allocation(p_bed_ids, p_from, p_to)`: existing bookings and outages per bed, before anything is saved |

@@ -1,5 +1,5 @@
 function api.fn_bed_bars(p_from date, p_to date)
-  -- Bars for every bed between p_from and p_to (exclusive): kind allocation, external or outage, with dates clipped to the range. on_outage flags a booking that falls on an out-of-action bed.
+  -- Bars for every bed that overlap p_from to p_to (exclusive): kind allocation, external or outage, with their full dates (end exclusive). on_outage flags a booking that falls on an out-of-action bed.
   returns TABLE(bed_id integer, kind text, id integer, start_date date, end_date date, course_id integer, course_code text, individual_no integer, external_ref text, external_name text, status text, set_on_level text, reason text, on_outage boolean)
 
 function api.fn_check_allocation(p_bed_ids integer[], p_from date, p_to date)

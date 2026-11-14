@@ -40,7 +40,8 @@ The tool needs to:
 │   │   ├── 0004_demo.sql                      Demo data loader and api.reset_demo_data (demo tenants only)
 │   │   ├── 0005_postgrest.sql                 PostgREST request hook (X-Tenant, X-User) and API descriptions
 │   │   ├── 0006_availability_read.sql         Read API for the availability page: locations, course figures, bars, week summary, warnings, clash check
-│   │   └── 0007_facts_not_bands.sql           Facts, not colour bands (D29): allocation percentages; week summary by course
+│   │   ├── 0007_facts_not_bands.sql           Facts, not colour bands (D29): allocation percentages; week summary by course
+│   │   └── 0008_bars_full_dates.sql           fn_bed_bars returns full dates; the UI fits bars to the weeks shown
 │   ├── test/
 │   │   ├── Dockerfile                         Test-only image: PostgreSQL 16 + pgTAP + pg_prove + dbmate
 │   │   └── run-tests.sh                       Throwaway database, migrations, tests, rollback check
