@@ -32,9 +32,12 @@ The tool needs to:
 ├── db/
 │   ├── migrations/                            dbmate migrations, applied in order
 │   │   ├── 0001_schema.sql                    The data model as SQL: 14 tables in the core schema
-│   │   └── 0002_api_schema.sql                The api schema (the contract), api_access and api_user roles
+│   │   ├── 0002_api_schema.sql                The api schema (the contract), api_access and api_user roles
+│   │   └── 0003_reference_data.sql            Starter attribute types and rules (OUT_OF_ACTION, GENDER, GRADE, ...)
 │   └── setup/
 │       └── roles.sql                          Sets api_user's password from .env (run by db-roles after each migration run)
+├── scripts/
+│   └── db-up.sh                               Starts db, runs migrate and db-roles, shows their output and result
 ├── compose.yaml                               Docker Compose services (db, migrate, db-roles; api and ui to follow)
 ├── compose.override.yaml                      Local dev extras, loaded automatically (database port on localhost)
 └── .env.example                               Settings to copy into .env
@@ -47,6 +50,8 @@ Needs Docker (or Podman / Rancher Desktop).
 ```
 cp .env.example .env          # then change the passwords
 docker compose up db migrate db-roles  # PostgreSQL, then migrations, then role passwords
+# or, detached with the output and a pass/fail summary (Git Bash):
+scripts/db-up.sh
 docker compose exec db psql -U accomm_owner -d accomm -c "\dt core.*"
 ```
 
