@@ -1,0 +1,21 @@
+[project]
+name = "accomm-api"
+version = "0.1.0"
+description = "Thin HTTP layer over the database's api schema (decisions D16, D22)"
+requires-python = ">=3.12"
+dependencies = [
+  "fastapi==0.163.0",
+  "uvicorn[standard]==0.54.0",
+  "psycopg[binary]==3.3.9",
+  "psycopg-pool==3.3.3",
+]
+
+[project.optional-dependencies]
+test = ["pytest==9.2.0", "httpx==0.28.1"]
+
+[build-system]
+requires = ["setuptools>=69"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+include = ["app*"]

@@ -29,6 +29,16 @@ The tool needs to:
 │   ├── erd.png                                The same ER diagram as an image
 │   ├── erd.svg                                The same ER diagram as a scalable image
 │   └── pages_pocs/                            Clickable page mockups (open the .html files in a browser)
+├── api/                                       API service (FastAPI): a thin layer over the database's api schema
+│   ├── Dockerfile
+│   ├── pyproject.toml                         Pinned Python dependencies
+│   └── app/
+│       ├── main.py                            App, error mapping (database errors -> HTTP status)
+│       ├── generic.py                         GET /api/<view> and POST /api/rpc/<function>
+│       ├── catalogue.py                       Reads the api schema's views and functions from PostgreSQL
+│       ├── openapi.py                         OpenAPI document generated from the api schema
+│       ├── db.py                              Connection pool; per-request transaction with tenant and user
+│       └── state.py                           Settings and the cached catalogue
 ├── db/
 │   ├── migrations/                            dbmate migrations, applied in order
 │   │   ├── 0001_schema.sql                    The data model as SQL: 15 tables in the core schema, multi-tenant
@@ -46,7 +56,7 @@ The tool needs to:
 │   ├── db-seed.sh                             Loads or resets the DEMO tenant's sample data (calls api.reset_demo_data)
 │   ├── db-reset.sh                            Wipes the local database and rebuilds it with sample data
 │   └── db-test.sh                             Runs the database tests in a throwaway database
-├── compose.yaml                               Docker Compose services (db, migrate, db-roles, db-test; api and ui to follow)
+├── compose.yaml                               Docker Compose services (db, migrate, db-roles, api, db-test; ui to follow)
 ├── compose.override.yaml                      Local dev extras, loaded automatically (database port on localhost)
 └── .env.example                               Settings to copy into .env
 ```
@@ -62,6 +72,16 @@ docker compose up db migrate db-roles  # PostgreSQL, then migrations, then role 
 scripts/db-up.sh
 docker compose exec db psql -U accomm_owner -d accomm -c "\dt core.*"
 ```
+
+**API.** `docker compose up -d --build api` starts the database, migrations, role passwords and the API, in that order. In local dev it's on `http://localhost:8000` (`API_PORT` in `.env`); the interactive docs are at `http://localhost:8000/api/docs`. Choose a tenant with the `X-Tenant` header, e.g.:
+
+```
+curl -H "X-Tenant: DEMO" http://localhost:8000/api/health
+curl -H "X-Tenant: DEMO" "http://localhost:8000/api/tenants?select=code,name&order=code.asc"
+curl -X POST -H "X-Tenant: DEMO" http://localhost:8000/api/rpc/reset_demo_data
+```
+
+Every view in the database's `api` schema is a `GET /api/<view>` (filters like `?col=eq.value`, `select=`, `order=`, `limit=`, `offset=`), and every function is a `POST /api/rpc/<function>` with its arguments as JSON. New views and functions appear automatically, and the OpenAPI document at `/api/openapi.json` describes them all with their types.
 
 **Tenants and demo data.** The database is multi-tenant: LIVE and DEMO to start with (decisions D24, D25). Every query sees one tenant at a time, selected with `api.use_tenant('LIVE')` or `api.use_tenant('DEMO')`; with none selected nothing is visible. Sample data only ever goes into the DEMO tenant: `scripts/db-seed.sh` loads or resets it (the same `api.reset_demo_data()` the UI will call), and it refuses for any non-demo tenant. `scripts/db-reset.sh` wipes the whole local volume and rebuilds everything. Demo dates are relative to the day it is loaded: five weeks from the Monday two weeks ago, with today in the middle week.
 

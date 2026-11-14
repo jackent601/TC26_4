@@ -6,3 +6,8 @@ services:
     ports:
       # Localhost only, so the database is not reachable from other machines.
       - "127.0.0.1:${POSTGRES_PORT:-5432}:5432"
+  api:
+    ports:
+      # Localhost only. Until the ui service exists this is how to reach the API;
+      # afterwards the browser goes through ui and this is just for debugging.
+      - "127.0.0.1:${API_PORT:-8000}:8000"

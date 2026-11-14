@@ -49,6 +49,24 @@ services:
     command:
       - psql -q -v api_password="$$API_DB_PASSWORD" -f /db/setup/roles.sql && echo "Roles updated."
 
+  # API: FastAPI generic layer over the api schema (decisions D16, D22).
+  # Connects as api_user, so it can only reach the api schema. Starts once the
+  # migrations and role passwords are done. Docs at /api/docs.
+  api:
+    build: ./api
+    image: accomm-api:local
+    depends_on:
+      db-roles:
+        condition: service_completed_successfully
+    environment:
+      DATABASE_URL: postgresql://api_user:${API_DB_PASSWORD}@db:5432/${POSTGRES_DB:-accomm}
+      DEFAULT_TENANT: ${DEFAULT_TENANT:-}
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/api/health')"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
   # Database tests (test only; decision I2). Starts a throwaway database inside
   # the container, applies all migrations, runs db/tests with pg_prove, checks
   # the migrations roll back and re-apply, then exits 0 (pass) or 1 (fail).
