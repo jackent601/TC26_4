@@ -5,6 +5,7 @@ How the PoC is built and in what order. Decisions referenced as Dn are in [`deci
 ## Principles
 
 - **The data model and database functions are the core product** (D22). The back end essentially calls database functions and reads views; the API and UI around them are replaceable.
+- **Management needs nothing else** (D26). Everything needed to manage allocations is in the database; the UI only makes API calls. Decision engines such as an optimiser are separate apps that read through `api` views and write through `api` functions.
 - **The database holds the logic** (D2). Rules, validation, warnings and audit live in SQL views and functions.
 - **The API is thin** (D3, D4). Most endpoints map HTTP straight to a view or function. Custom code is only for what SQL can't do well (solving, file parsing, notifications), and even that reads through views and writes through functions.
 - **The UI is thin.** It renders what the API returns and calls API functions; it holds no business rules.
