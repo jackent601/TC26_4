@@ -60,4 +60,10 @@ How the solution is built and run. These can change without affecting the design
 
 - Status order: requirements sheet says Booked → Allocated; README/schema say ALLOCATED → BOOKED. Confirm with the team.
 
+- Reinstating a cancelled course in the UI: the Courses tab hides cancelled courses, so `fn_update_course` with a status (D35) can only be reached through the API. Needs a way to show cancelled courses.
+
+- Audit log in the API: `core.audit_log` has no `api` view; history is read with `psql` for now. Decide its shape (per allocation, per course, per user) before adding it.
+
+- Rules maintenance: severities and active flags in `core.rules` (D30) are changed in the database; no screen yet.
+
 - Hardened base images for production: Chainguard (`cgr.dev/chainguard/...`) has minimal, non-root, frequently patched versions of every image we use (PostgreSQL, PostgREST, dbmate, Caddy, Node). Worth adopting once hosting is known; note the free tier only offers `latest`, and pinned versions need a subscription.

@@ -196,6 +196,12 @@ From `docs/Accommodation System Requirements.xlsx`:
 
   These need the effective attributes of each bed (inherited down the estate) and of each individual (course defaults plus individual overrides) first. Once added, they also belong in the bar flags and in `api.fn_check_allocation`, which today checks only bookings and outages. The DEMO data already contains a case of each. Planned for the rest of phase 1 (`docs/build_plan.md`).
 
+- **A cancelled course can't be reopened in the UI.** The Courses tab and the warnings leave cancelled courses out, so reinstating one (`api.fn_update_course` with a status, D35) is API-only until the tab can show cancelled courses.
+
+- **The audit log is read from the database only.** There is no `api` view over `core.audit_log` yet; inspect it with `psql` as `accomm_owner`. A demo reset clears it with the rest of the tenant's data.
+
+- **Clash severity is changed in the database.** Whether a double booking or an out-of-action bed blocks or warns is the rule's severity in `core.rules` (D30); there is no screen for rules yet.
+
 - **Bookings outside course dates are strict, with no allowance** (migration 0010). Any night before the course's start or departure after its end warns, so a normal arrival the night before a course also warns. The warning is fixed at WARNING, not a rule, so it can't be switched off or set to block. Parked options: an allowance (e.g. 1 night either side) as a team setting on a `COURSE_DATES` rule (which could then also block), or as facts plus a personal allowance in the UI, like the colour thresholds (D29).
 
 ## Open questions
