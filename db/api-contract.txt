@@ -1,5 +1,5 @@
 function api.fn_allocate_course(p_course_id integer, p_bed_ids integer[], p_from date, p_to date)
-  -- Allocate a course into the given beds from p_from (first night) to p_to (departure day). One allocation per bed, status ALLOCATED, each given the course's next free individual (no upper limit, D31). Clashes warn unless their rule is BLOCK, which refuses the whole request (D30). Audited. Returns each new allocation with its warnings.
+  -- Allocate a course into the given beds from p_from (first night) to p_to (departure day). One allocation per bed, status ALLOCATED, each given the course's next free individual (no upper limit, D31). Clashes warn unless their rule is BLOCK, which refuses the whole request (D30). Nights outside the course dates warn (0010). Audited. Returns each new allocation with its warnings.
   returns TABLE(allocation_id integer, bed_id integer, warnings text[])
 
 function api.fn_bed_bars(p_from date, p_to date)
@@ -10,12 +10,12 @@ function api.fn_cancel_allocation(p_allocation_id integer)
   -- Cancel one allocation (kept, with status CANCELLED, so it stays in the audit history). Audited.
   returns TABLE(allocation_id integer, status text)
 
-function api.fn_check_allocation(p_bed_ids integer[], p_from date, p_to date)
-  -- Clashes for allocating the given beds from p_from to p_to (exclusive), before anything is saved: existing bookings and outages on those beds. blocks is true when the clash's rule is BLOCK, so saving would be refused (D30); otherwise it saves with a warning.
+function api.fn_check_allocation(p_bed_ids integer[], p_from date, p_to date, p_course_id integer DEFAULT NULL::integer)
+  -- Clashes for allocating the given beds from p_from to p_to (exclusive), before anything is saved: existing bookings and outages on those beds. blocks is true when the clash's rule is BLOCK, so saving would be refused (D30); otherwise it saves with a warning. Given p_course_id, also a COURSE_DATES row (bed_id null) when the nights go outside that course's dates (0010).
   returns TABLE(bed_id integer, kind text, ref text, start_date date, end_date date, message text, blocks boolean)
 
 function api.fn_move_allocation(p_allocation_id integer, p_bed_id integer DEFAULT NULL::integer, p_from date DEFAULT NULL::date, p_to date DEFAULT NULL::date)
-  -- Move an allocation to another bed and/or other dates (any argument left null stays as it is). Clashes warn unless their rule is BLOCK (D30). Audited. Returns the allocation with its warnings.
+  -- Move an allocation to another bed and/or other dates (any argument left null stays as it is). Clashes warn unless their rule is BLOCK (D30); nights outside the course dates warn (0010). Audited. Returns the allocation with its warnings.
   returns TABLE(allocation_id integer, bed_id integer, start_date date, end_date date, warnings text[])
 
 function api.fn_set_status(p_allocation_id integer, p_status text)
@@ -74,7 +74,7 @@ view api.tenants
   is_demo character(1)
 
 view api.warnings
-  -- Warnings for the warnings strip, whatever the colour basis: courses with loaded above scheduled (D14), bookings on out-of-action beds, and double bookings (one row per booking involved). Clash severities come from their rules (D30).
+  -- Warnings for the warnings strip, whatever the colour basis: courses with loaded above scheduled (D14), bookings on out-of-action beds, double bookings (one row per booking involved), and course bookings with nights outside their course's dates (strict, 0010). Clash severities come from their rules (D30).
   kind text
   severity text
   message text

@@ -184,7 +184,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Warnings for the warnings strip, whatever the colour basis: courses with loaded above scheduled (D14), bookings on out-of-action beds, and double bookings (one row per booking involved). Clash severities come from their rules (D30). */
+        /** Warnings for the warnings strip, whatever the colour basis: courses with loaded above scheduled (D14), bookings on out-of-action beds, double bookings (one row per booking involved), and course bookings with nights outside their course's dates (strict, 0010). Clash severities come from their rules (D30). */
         get: {
             parameters: {
                 query?: {
@@ -464,13 +464,14 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Clashes for allocating the given beds from p_from to p_to (exclusive), before anything is saved: existing bookings and outages on those beds. blocks is true when the clash's rule is BLOCK, so saving would be refused (D30); otherwise it saves with a warning. */
+        /** Clashes for allocating the given beds from p_from to p_to (exclusive), before anything is saved: existing bookings and outages on those beds. blocks is true when the clash's rule is BLOCK, so saving would be refused (D30); otherwise it saves with a warning. Given p_course_id, also a COURSE_DATES row (bed_id null) when the nights go outside that course's dates (0010). */
         get: {
             parameters: {
                 query: {
                     p_bed_ids: string;
                     p_from: string;
                     p_to: string;
+                    p_course_id?: number;
                 };
                 header?: never;
                 path?: never;
@@ -488,7 +489,7 @@ export interface paths {
             };
         };
         put?: never;
-        /** Clashes for allocating the given beds from p_from to p_to (exclusive), before anything is saved: existing bookings and outages on those beds. blocks is true when the clash's rule is BLOCK, so saving would be refused (D30); otherwise it saves with a warning. */
+        /** Clashes for allocating the given beds from p_from to p_to (exclusive), before anything is saved: existing bookings and outages on those beds. blocks is true when the clash's rule is BLOCK, so saving would be refused (D30); otherwise it saves with a warning. Given p_course_id, also a COURSE_DATES row (bed_id null) when the nights go outside that course's dates (0010). */
         post: {
             parameters: {
                 query?: never;
@@ -504,6 +505,8 @@ export interface paths {
                     "application/json": {
                         /** Format: integer[] */
                         p_bed_ids: number[];
+                        /** Format: int32 */
+                        p_course_id?: number;
                         /** Format: date */
                         p_from: string;
                         /** Format: date */
@@ -512,6 +515,8 @@ export interface paths {
                     "application/vnd.pgrst.object+json;nulls=stripped": {
                         /** Format: integer[] */
                         p_bed_ids: number[];
+                        /** Format: int32 */
+                        p_course_id?: number;
                         /** Format: date */
                         p_from: string;
                         /** Format: date */
@@ -520,6 +525,8 @@ export interface paths {
                     "application/vnd.pgrst.object+json": {
                         /** Format: integer[] */
                         p_bed_ids: number[];
+                        /** Format: int32 */
+                        p_course_id?: number;
                         /** Format: date */
                         p_from: string;
                         /** Format: date */
@@ -528,6 +535,8 @@ export interface paths {
                     "text/csv": {
                         /** Format: integer[] */
                         p_bed_ids: number[];
+                        /** Format: int32 */
+                        p_course_id?: number;
                         /** Format: date */
                         p_from: string;
                         /** Format: date */
@@ -773,7 +782,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Allocate a course into the given beds from p_from (first night) to p_to (departure day). One allocation per bed, status ALLOCATED, each given the course's next free individual (no upper limit, D31). Clashes warn unless their rule is BLOCK, which refuses the whole request (D30). Audited. Returns each new allocation with its warnings. */
+        /** Allocate a course into the given beds from p_from (first night) to p_to (departure day). One allocation per bed, status ALLOCATED, each given the course's next free individual (no upper limit, D31). Clashes warn unless their rule is BLOCK, which refuses the whole request (D30). Nights outside the course dates warn (0010). Audited. Returns each new allocation with its warnings. */
         post: {
             parameters: {
                 query?: never;
@@ -1038,7 +1047,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Move an allocation to another bed and/or other dates (any argument left null stays as it is). Clashes warn unless their rule is BLOCK (D30). Audited. Returns the allocation with its warnings. */
+        /** Move an allocation to another bed and/or other dates (any argument left null stays as it is). Clashes warn unless their rule is BLOCK (D30); nights outside the course dates warn (0010). Audited. Returns the allocation with its warnings. */
         post: {
             parameters: {
                 query?: never;
@@ -1122,7 +1131,7 @@ export interface components {
             /** Format: character */
             is_demo?: string;
         };
-        /** @description Warnings for the warnings strip, whatever the colour basis: courses with loaded above scheduled (D14), bookings on out-of-action beds, and double bookings (one row per booking involved). Clash severities come from their rules (D30). */
+        /** @description Warnings for the warnings strip, whatever the colour basis: courses with loaded above scheduled (D14), bookings on out-of-action beds, double bookings (one row per booking involved), and course bookings with nights outside their course's dates (strict, 0010). Clash severities come from their rules (D30). */
         warnings: {
             /** Format: text */
             kind?: string;

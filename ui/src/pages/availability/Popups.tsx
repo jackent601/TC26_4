@@ -447,17 +447,26 @@ function NewAllocationPopup({ bedKeys, from, to, data, onClose }: {
 
   const beds = bedKeys.map((k) => data.nodes.get(k)).filter((n): n is LocationNode => n !== undefined);
   const byId = new Map(beds.map((b) => [b.id, b]));
-  const clashes = useClashes(data.tenant, beds.map((b) => b.id), first, departure, valid);
-  const list = clashes.data ?? [];
-  const blocked = list.some((c) => c.blocks);
 
-  // Courses to choose from: not cancelled; those running on these nights first.
-  const courses = [...data.figures.values()]
-    .filter((c) => c.status !== "CANCELLED")
-    .map((c) => ({ c, overlaps: c.startDate < departure && first < c.endDate }))
-    .sort((a, b) => Number(b.overlaps) - Number(a.overlaps) || a.c.startDate.localeCompare(b.c.startDate));
-  const [courseId, setCourseId] = useState<number | null>(() => courses.find((x) => x.overlaps)?.c.courseId ?? null);
-  const course = courseId !== null ? data.figures.get(courseId) : undefined;
+  // Courses to choose from: not cancelled, and running on at least one of the
+  // selected nights (half-open dates, as in the database). Earliest first.
+  const courses = valid
+    ? [...data.figures.values()]
+        .filter((c) => c.status !== "CANCELLED" && c.startDate < departure && first < c.endDate)
+        .sort((a, b) => a.startDate.localeCompare(b.startDate) || a.code.localeCompare(b.code))
+    : [];
+  const [chosenId, setCourseId] = useState<number | null>(() => courses[0]?.courseId ?? null);
+  // If the dates change so the chosen course no longer runs then, fall back to
+  // the first course that does.
+  const course = courses.find((c) => c.courseId === chosenId) ?? courses[0];
+  const courseId = course?.courseId ?? null;
+
+  // Clashes on the beds, plus (given the course) whether the nights go outside
+  // its dates: both from the database.
+  const clashes = useClashes(data.tenant, beds.map((b) => b.id), first, departure, valid, courseId);
+  const outsideCourse = (clashes.data ?? []).find((c) => c.kind === "COURSE_DATES");
+  const list = (clashes.data ?? []).filter((c) => c.kind !== "COURSE_DATES");
+  const blocked = list.some((c) => c.blocks);
 
   const allocate = useAllocateCourse(data.tenant);
   const canAllocate = valid && course !== undefined && !clashes.isPending && !clashes.error && !blocked && !allocate.isPending;
@@ -495,11 +504,12 @@ function NewAllocationPopup({ bedKeys, from, to, data, onClose }: {
 
       <label className="av-field">
         Course
-        <select value={courseId ?? ""} onChange={(e) => setCourseId(e.target.value ? Number(e.target.value) : null)}>
-          <option value="">Choose a course…</option>
-          {courses.map(({ c, overlaps }) => (
+        <select value={courseId ?? ""} disabled={courses.length === 0}
+                onChange={(e) => setCourseId(Number(e.target.value))}>
+          {courses.length === 0 && <option value="">No courses run on these nights</option>}
+          {courses.map((c) => (
             <option key={c.courseId} value={c.courseId}>
-              {c.code}: {c.name} ({ddmm(c.startDate)}–{ddmm(c.endDate)}){overlaps ? "" : " · not on these nights"}
+              {c.code}: {c.name} ({ddmm(c.startDate)}–{ddmm(c.endDate)})
             </option>
           ))}
         </select>
@@ -530,7 +540,7 @@ function NewAllocationPopup({ bedKeys, from, to, data, onClose }: {
             {blocked ? "(a clash rule is set to block)" : "(allowed with a warning)"}
             <ul className="av-list">
               {list.map((c, i) => {
-                const bed = byId.get(c.bed_id);
+                const bed = c.bed_id !== null ? byId.get(c.bed_id) : undefined;
                 return (
                   <li key={i}>
                     {bed ? bedName(data.nodes, bed) : `Bed ${c.bed_id}`}: {c.kind === "BOOKING" ? c.ref : `out of action, ${c.ref}`} ·{" "}
@@ -541,6 +551,12 @@ function NewAllocationPopup({ bedKeys, from, to, data, onClose }: {
             </ul>
           </div>
         ))}
+      {valid && outsideCourse && (
+        <p className="clash bad">
+          <WarnIcon /> These nights go outside {outsideCourse.ref}'s dates ({ddmm(outsideCourse.start_date)}–{ddmm(outsideCourse.end_date)}).
+          Allowed with a warning.
+        </p>
+      )}
       {allocate.error && <p className="clash bad">Not saved: {allocate.error.message}</p>}
     </Dialog>
   );

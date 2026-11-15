@@ -68,8 +68,8 @@ export interface Warning {
 
 // api.fn_check_allocation
 export interface Clash {
-  bed_id: number;
-  kind: "BOOKING" | "OUT_OF_ACTION";
+  bed_id: number | null; // null for COURSE_DATES
+  kind: "BOOKING" | "OUT_OF_ACTION" | "COURSE_DATES";
   ref: string;
   start_date: string;
   end_date: string;

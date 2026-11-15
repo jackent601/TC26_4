@@ -9,8 +9,8 @@ Context from a long Claude session (in the Claude app, writing to this folder re
 - **Done:** step 1 (database) and the API.
   - Migrations 0001–0005: multi-tenant core model (15 tables, row-level security), `api` schema and roles, per-tenant reference data, demo data loader and `api.reset_demo_data`, PostgREST pre-request hook.
   - Migration 0006: availability read API (see below).
-  - Migrations 0007–0008: facts not colour bands (D29); full bar dates. Migration 0009: write API (below).
-  - pgTAP: 7 files, 127 checks, plus a rollback/re-apply check; all passing.
+  - Migrations 0007–0008: facts not colour bands (D29); full bar dates. Migrations 0009–0010: write API and course-dates warning (below).
+  - pgTAP: 8 files, 137 checks, plus a rollback/re-apply check; all passing.
   - PostgREST v14.18 tested against the database (tenants, errors, health check, CORS, OpenAPI).
 - FastAPI leftovers removed and the PostgREST switch committed; PostgREST v14.18 runs on the user's machine (DEMO health shows 23 beds). `postgrest` is not merged into `master` yet.
 
@@ -58,10 +58,16 @@ Agreed with the user (D30–D32):
 - **UI (done):**
   - **Your name:** a "Your name" box in the header (`src/user.tsx`, kept in local storage). `tenantHeaders` adds it as `X-User`, with non-ASCII characters replaced by "?".
   - **Writes** in `pages/availability/writes.ts`. Each one refreshes every query on success.
-  - **New allocation popup:** "Course booking" and "One-off booking" boxes; one-off is disabled until it's built (needs `LOCAL` bookings without a course). It has a course picker (courses on those nights first, defaulting to the first of them) and "Use the course's dates". The clash list says "Not allowed" and disables Allocate when any clash `blocks`. After saving, the popup shows what was saved and the warnings returned.
+  - **New allocation popup:** "Course booking" and "One-off booking" boxes; one-off is disabled until it's built (needs `LOCAL` bookings without a course). It has a course picker listing only courses that run on at least one selected night (earliest first, defaulting to the first; it switches to that if the dates change so the chosen course no longer runs, and says "No courses run on these nights" when none do) and "Use the course's dates". The clash list says "Not allowed" and disables Allocate when any clash `blocks`. After saving, the popup shows what was saved and the warnings returned.
   - **Booking popup** (course allocations only, not external bookings): a Change section with status, move (bed and/or dates) and cancel (with a confirm). Results and returned warnings go to a dismissible notice under the warnings strip.
   - **No "#n" shown:** bars read e.g. `TEC-07 · 6/10`, and the popup title is the course. Attribute badges wait for the parked rule warnings.
   - **Checked in the browser on DEMO** (reset afterwards): booking a free week; booking onto INT-22 (saved with a warning); the same with `DOUBLE_BOOKING` set to BLOCK ("Not allowed", Allocate disabled); then status, move and cancel. The audit log showed all four as "UI tester".
+- **Course-dates warning (`0010_course_dates_warning.sql`):** a course booking with any night before its course's start, or departure after its end, warns. It's strict, with no allowance (parked; README "Known limitations"), and fixed at WARNING, not a rule. `api_internal.course_dates_warning` is used by:
+  - `api.warnings` (kind `OUTSIDE_COURSE_DATES`);
+  - the warnings `fn_allocate_course` and `fn_move_allocation` return;
+  - `fn_check_allocation`'s new optional `p_course_id`, which adds a `COURSE_DATES` row with no bed.
+
+  The New allocation popup shows it under the clashes and it clears with "Use the course's dates". Tests: `db/tests/008_course_dates.sql` (10 checks; 137 in all). The 0010 down section restores 0009's function bodies, which were extracted from 0009.
 - **Not built:** one-off bookings, outage editing (`set_location_attribute`), course create/update and `update_loaded`. Status transitions are deferred (D31).
 - **Known limitation:** the same individual in two beds on the same night isn't checked (README).
 

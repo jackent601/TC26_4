@@ -7,14 +7,16 @@ import type { BedBar, Clash, CourseFigure, Level, LocationNode, Warning, WeekSum
 
 // Bookings and outages on some beds over some nights (api.fn_check_allocation).
 // Used by the outage popup to list the bookings an outage affects.
-export function useClashes(tenant: string | null, bedIds: number[], from: string, to: string, enabled = true) {
+// Given a course, it also says whether the nights go outside the course's dates (0010).
+export function useClashes(tenant: string | null, bedIds: number[], from: string, to: string, enabled = true,
+                           courseId: number | null = null) {
   return useQuery({
-    queryKey: ["clashes", tenant, bedIds, from, to],
+    queryKey: ["clashes", tenant, bedIds, from, to, courseId],
     enabled: enabled && tenant !== null && bedIds.length > 0,
     queryFn: async () => {
       const rows = await unwrap(
         api.POST("/rpc/fn_check_allocation", {
-          body: { p_bed_ids: bedIds, p_from: from, p_to: to },
+          body: { p_bed_ids: bedIds, p_from: from, p_to: to, ...(courseId !== null ? { p_course_id: courseId } : {}) },
           headers: tenantHeaders(tenant!),
         }),
       );

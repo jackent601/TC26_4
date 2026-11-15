@@ -42,11 +42,12 @@ The tool needs to:
 │   │   ├── 0006_availability_read.sql         Read API for the availability page: locations, course figures, bars, week summary, warnings, clash check
 │   │   ├── 0007_facts_not_bands.sql           Facts, not colour bands (D29): allocation percentages; week summary by course
 │   │   ├── 0008_bars_full_dates.sql           fn_bed_bars returns full dates; the UI fits bars to the weeks shown
-│   │   └── 0009_write_allocations.sql         Write API for course bookings: allocate, cancel, move, set status; clash rules (D30)
+│   │   ├── 0009_write_allocations.sql         Write API for course bookings: allocate, cancel, move, set status; clash rules (D30)
+│   │   └── 0010_course_dates_warning.sql      Warning for course bookings outside their course dates (strict)
 │   ├── test/
 │   │   ├── Dockerfile                         Test-only image: PostgreSQL 16 + pgTAP + pg_prove + dbmate
 │   │   └── run-tests.sh                       Throwaway database, migrations, tests, rollback check
-│   ├── tests/                                 pgTAP tests (schemas and roles, tenancy, reference data, demo reset, PostgREST hook, availability read API, write API)
+│   ├── tests/                                 pgTAP tests (schemas and roles, tenancy, reference data, demo reset, PostgREST hook, availability read API, write API, course-dates warning)
 │   ├── api-contract.txt                       Snapshot of the API contract: the api schema's views and functions
 │   └── setup/
 │       ├── roles.sql                          Sets api_user's password from .env; tells PostgREST to reload (run by db-roles)
@@ -181,7 +182,7 @@ From `docs/Accommodation System Requirements.xlsx`:
 
 ## Known limitations
 
-- **Warnings cover only three checks so far.** `api.warnings` (a view, worked out on every read) reports courses loaded above scheduled, bookings on out-of-action beds, and double bookings. The suitability rules already held as data in `core.rules` (migration 0003) are not yet evaluated:
+- **Warnings cover only four checks so far.** `api.warnings` (a view, worked out on every read) reports courses loaded above scheduled, bookings on out-of-action beds, double bookings, and course bookings outside their course's dates. The suitability rules already held as data in `core.rules` (migration 0003) are not yet evaluated:
   - `NO_MIXED_GENDER`: occupants of different genders sharing a room;
   - `GRADE_SUITABLE`: seniority checks, an individual's grade below a location's minimum grade;
   - `STEP_FREE_NEEDED`: an individual who needs step-free access placed where there isn't any;
@@ -190,6 +191,8 @@ From `docs/Accommodation System Requirements.xlsx`:
   Also not checked: the same individual (course and individual number) in two beds on the same night, e.g. from a room move that overlaps.
 
   These need the effective attributes of each bed (inherited down the estate) and of each individual (course defaults plus individual overrides) first. Once added, they also belong in the bar flags and in `api.fn_check_allocation`, which today checks only bookings and outages. The DEMO data already contains a case of each. Planned for the rest of phase 1 (`docs/build_plan.md`).
+
+- **Bookings outside course dates are strict, with no allowance** (migration 0010). Any night before the course's start or departure after its end warns, so a normal arrival the night before a course also warns. The warning is fixed at WARNING, not a rule, so it can't be switched off or set to block. Parked options: an allowance (e.g. 1 night either side) as a team setting on a `COURSE_DATES` rule (which could then also block), or as facts plus a personal allowance in the UI, like the colour thresholds (D29).
 
 ## Open questions
 
