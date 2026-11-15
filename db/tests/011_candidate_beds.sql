@@ -1,6 +1,6 @@
 -- Course-first booking: api.fn_candidate_beds (migration 0013, D35), on the DEMO
--- sample data. w0 is the Monday two weeks ago. FIN-03 runs w0+28 to w0+33 with
--- nothing booked then; INT-22 runs w0+21 to w0+26 alongside TEC-07, BK-4502,
+-- sample data. w0 is the Monday two weeks ago. FIN-03 runs w0+28 to w0+34 with
+-- nothing booked then; INT-22 runs w0+21 to w0+27 alongside TEC-07, BK-4502,
 -- BK-4530 and the Block B Floor 1 outage (w0+21 to w0+28).
 -- Estate order: Block A floors 1-3 (101 102 103 104 / 201 202 203 204 /
 -- 301 302 303), Block B floor 1 (B101 B102); 103, 204 and 303 have one bed.

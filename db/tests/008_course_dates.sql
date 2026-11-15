@@ -1,6 +1,6 @@
 -- Warning for course bookings outside their course's dates (migration 0010):
 -- strict, no allowance. On the DEMO sample data; w0 is the Monday two weeks ago.
--- TEC-07 runs w0+14 (first night) to w0+26 (departure).
+-- TEC-07 runs w0+14 (first night) to w0+27 (departure, 0016).
 begin;
 create extension pgtap;
 select plan(10);

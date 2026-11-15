@@ -1,6 +1,6 @@
 -- Course management (migration 0014, D36), on the DEMO sample data. w0 is the
--- Monday two weeks ago. SAF-14 runs w0+7 to w0+12 with 7 bookings on those
--- dates; TEC-07 (w0+14 to w0+26, 10 scheduled, 12 loaded) has 5; INT-22 has 4.
+-- Monday two weeks ago. SAF-14 runs w0+7 to w0+13 with 7 bookings on those
+-- dates; TEC-07 (w0+14 to w0+27, 10 scheduled, 12 loaded) has 5; INT-22 has 4.
 begin;
 create extension pgtap;
 select plan(25);

@@ -33,7 +33,7 @@ select throws_ok($$ insert into core.rules (tenant_id, rule_code, name, rule_typ
                  '23514', null, 'a BED_CLASH rule takes no attributes');
 
 ---------------------------- fn_allocate_course -----------------------------
--- FIN-03 runs w0+28 to w0+33 and has nothing allocated; Room 101 is free then.
+-- FIN-03 runs w0+28 to w0+34 (0016) and has nothing allocated; Room 101 is free then.
 select results_eq(format($$ select bed_id, cardinality(warnings) from api.fn_allocate_course(%s, array[%s, %s], %L, %L) $$,
                          :fin, :r101a, :r101b, (:'w0'::date + 28), (:'w0'::date + 33)),
                   format($$ values (%s, 0), (%s, 0) $$, :r101a, :r101b),

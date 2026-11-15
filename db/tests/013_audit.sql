@@ -1,7 +1,7 @@
 -- The audit trail as users see it (migration 0015, D37): api.audit summaries,
 -- api.audit_requests roll-ups and the request id from the pre-request hook. On
 -- the DEMO sample data; w0 is the Monday two weeks ago. FIN-03 runs w0+28 to
--- w0+33 with nothing booked; INT-22 has 4 bookings.
+-- w0+34 with nothing booked; INT-22 has 4 bookings.
 begin;
 create extension pgtap;
 select plan(17);
