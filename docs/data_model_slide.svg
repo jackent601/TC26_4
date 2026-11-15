@@ -1,0 +1,228 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1920 1080" width="1920" height="1080" font-family="Helvetica Neue, Helvetica, Arial, sans-serif">
+<!-- Accommodation allocation PoC: data model for a slide (16:9). Simplified from docs/erd.dot; keep in line with db/migrations/0001_schema.sql and 0009 (BED_CLASH). -->
+<style>
+  .panel { stroke-width: 1.5; }
+  .plabel { font-size: 22px; font-weight: 700; }
+  .hdr { font-size: 16px; font-weight: 700; fill: #ffffff; letter-spacing: 0.3px; }
+  .f { font-size: 16px; fill: #1f2937; }
+  .a { font-size: 13px; fill: #6b7280; }
+  .a.ten { fill: #9d174d; } .a.sup { fill: #2f6db5; } .a.voc { fill: #6b4fa8; } .a.dem { fill: #2e8b57; } .a.all { fill: #b45309; }
+  .note { font-size: 14px; fill: #374151; }
+  .rel { fill: none; stroke: #4b5563; stroke-width: 1.6; }
+  .lbl { font-size: 13px; fill: #4b5563; }
+  .box { stroke-width: 1.2; }
+</style>
+<defs>
+  <marker id="crow" markerUnits="userSpaceOnUse" markerWidth="16" markerHeight="16" refX="16" refY="8" orient="auto">
+    <path d="M0,8 L16,2 M0,8 L16,8 M0,8 L16,14" fill="none" stroke="#4b5563" stroke-width="1.6"/>
+  </marker>
+  <marker id="opt" markerUnits="userSpaceOnUse" markerWidth="12" markerHeight="12" refX="12" refY="6" orient="auto-start-reverse">
+    <circle cx="6" cy="6" r="4.5" fill="#ffffff" stroke="#4b5563" stroke-width="1.6"/>
+  </marker>
+</defs>
+
+<rect x="0" y="0" width="1920" height="1080" fill="#ffffff"/>
+
+<!-- ===== Panels ===== -->
+<rect class="panel" x="40" y="40" width="520" height="250" rx="14" fill="#fdf2f8" stroke="#9d174d"/>
+<text class="plabel" x="60" y="70" fill="#9d174d">Tenancy</text>
+
+<rect class="panel" x="600" y="40" width="1280" height="250" rx="14" fill="#f3eefb" stroke="#6b4fa8"/>
+<text class="plabel" x="620" y="70" fill="#6b4fa8">Vocabulary and rules</text>
+
+<rect class="panel" x="40" y="320" width="720" height="720" rx="14" fill="#eaf2fb" stroke="#2f6db5"/>
+<text class="plabel" x="60" y="350" fill="#2f6db5">Supply: the estate</text>
+
+<rect class="panel" x="790" y="320" width="380" height="720" rx="14" fill="#fcf1e6" stroke="#b45309"/>
+<text class="plabel" x="810" y="350" fill="#b45309">Allocation</text>
+
+<rect class="panel" x="1200" y="320" width="680" height="480" rx="14" fill="#eaf6ea" stroke="#2e8b57"/>
+<text class="plabel" x="1220" y="350" fill="#2e8b57">Demand: courses</text>
+
+<rect class="panel" x="1200" y="830" width="440" height="210" rx="14" fill="#f0f0f0" stroke="#555555"/>
+<text class="plabel" x="1220" y="860" fill="#555555">Audit (no foreign keys)</text>
+
+<rect class="panel" x="1670" y="830" width="210" height="210" rx="14" fill="#ffffff" stroke="#9ca3af"/>
+<text class="plabel" x="1690" y="860" fill="#4b5563">Key</text>
+
+<!-- ===== Relationships (drawn under the boxes) ===== -->
+<!-- Estate hierarchy: each level contains many of the next -->
+<path class="rel" d="M160,440 V480" marker-end="url(#crow)"/>
+<path class="rel" d="M160,520 V560" marker-end="url(#crow)"/>
+<path class="rel" d="M160,600 V640" marker-end="url(#crow)"/>
+<path class="rel" d="M160,680 V720" marker-end="url(#crow)"/>
+<path class="rel" d="M160,760 V800" marker-end="url(#crow)"/>
+<text class="lbl" x="172" y="465">contains</text>
+<!-- Every level can carry dated attributes (one level per attribute row) -->
+<path class="rel" d="M260,420 H300 M260,500 H300 M260,580 H300 M260,660 H300 M260,740 H300 M260,820 H300 M300,420 V820"/>
+<path class="rel" d="M300,620 H460" marker-end="url(#crow)"/>
+<!-- A bed holds many allocations -->
+<path class="rel" d="M160,840 V860 H775 V636 H810" marker-end="url(#crow)"/>
+<!-- A course has many allocations; an allocation may have no course (external booking) -->
+<path class="rel" d="M1215,424 H1185 V588 H1150" marker-start="url(#opt)" marker-end="url(#crow)"/>
+<!-- A site may host courses -->
+<path class="rel" d="M160,400 V305 H1480 V380" marker-start="url(#opt)" marker-end="url(#crow)"/>
+<text class="lbl" x="1492" y="372">course site (optional)</text>
+<!-- Course defaults and per-individual overrides -->
+<path class="rel" d="M1530,424 H1555" marker-end="url(#crow)"/>
+<path class="rel" d="M1542,424 V584 H1555" marker-end="url(#crow)"/>
+<!-- Rules name attribute types -->
+<path class="rel" d="M960,126 H980 V198 H1000" marker-end="url(#crow)"/>
+
+<!-- ===== Tenancy ===== -->
+<g>
+  <rect class="box" x="60" y="85" width="210" height="104" fill="#ffffff" stroke="#9d174d"/>
+  <rect x="60" y="85" width="210" height="32" fill="#9d174d"/>
+  <text class="hdr" x="70" y="106">TENANTS</text>
+  <text class="f" x="70" y="134">tenant_id</text><text class="a ten" x="260" y="134" text-anchor="end">PK</text>
+  <text class="f" x="70" y="158">code</text><text class="a ten" x="260" y="158" text-anchor="end">LIVE, DEMO</text>
+  <text class="f" x="70" y="182">name, is_demo</text><text class="a ten" x="260" y="182" text-anchor="end">Y / N</text>
+</g>
+<text class="note" x="290" y="104">Every other table has a tenant_id,</text>
+<text class="note" x="290" y="124">and every link includes it, so rows</text>
+<text class="note" x="290" y="144">never cross tenants.</text>
+<text class="note" x="290" y="164">Row-level security shows one tenant</text>
+<text class="note" x="290" y="184">per request (the X-Tenant header).</text>
+<text class="note" x="290" y="204">DEMO holds sample data and can be</text>
+<text class="note" x="290" y="224">reset. LIVE never receives it.</text>
+
+<!-- ===== Vocabulary and rules ===== -->
+<g>
+  <rect class="box" x="620" y="82" width="340" height="176" fill="#ffffff" stroke="#6b4fa8"/>
+  <rect x="620" y="82" width="340" height="32" fill="#6b4fa8"/>
+  <text class="hdr" x="630" y="103">ATTRIBUTE_TYPES</text>
+  <text class="f" x="630" y="131">attr_code</text><text class="a voc" x="950" y="131" text-anchor="end">PK</text>
+  <text class="f" x="630" y="155">name, description</text>
+  <text class="f" x="630" y="179">applies_to</text><text class="a voc" x="950" y="179" text-anchor="end">LOCATION · INDIVIDUAL · BOTH</text>
+  <text class="f" x="630" y="203">data_type</text><text class="a voc" x="950" y="203" text-anchor="end">TEXT · NUMBER · FLAG</text>
+  <text class="f" x="630" y="227">inherit_mode</text><text class="a voc" x="950" y="227" text-anchor="end">NEAREST · ANY</text>
+  <text class="f" x="630" y="251">allow_overlap, comment_required</text><text class="a voc" x="950" y="251" text-anchor="end">Y / N</text>
+</g>
+<g>
+  <rect class="box" x="1000" y="82" width="420" height="200" fill="#ffffff" stroke="#6b4fa8"/>
+  <rect x="1000" y="82" width="420" height="32" fill="#6b4fa8"/>
+  <text class="hdr" x="1010" y="103">RULES</text>
+  <text class="f" x="1010" y="131">rule_code</text><text class="a voc" x="1410" y="131" text-anchor="end">PK</text>
+  <text class="f" x="1010" y="155">rule_type</text><text class="a voc" x="1410" y="155" text-anchor="end">COMPARE · REQUIRES · MATCH_WITHIN</text>
+  <text class="a voc" x="1410" y="179" text-anchor="end">SOLE_USE · LOCATION_BLOCKS · BED_CLASH</text>
+  <text class="f" x="1010" y="203">individual_attr, location_attr</text><text class="a voc" x="1410" y="203" text-anchor="end">FK: attribute_types</text>
+  <text class="f" x="1010" y="227">operator, scope</text><text class="a voc" x="1410" y="227" text-anchor="end">≥ ≤ =  ·  ROOM · FLOOR · BLOCK</text>
+  <text class="f" x="1010" y="251">severity</text><text class="a voc" x="1410" y="251" text-anchor="end">BLOCK · WARNING · INFO</text>
+  <text class="f" x="1010" y="275">active, message</text><text class="a voc" x="1410" y="275" text-anchor="end">Y / N</text>
+</g>
+<text class="note" x="1450" y="104">Attribute types and rules are data, held per tenant.</text>
+<text class="note" x="1450" y="124">A rule's severity decides whether a breach is refused</text>
+<text class="note" x="1450" y="144">(BLOCK) or saved with a warning (WARNING, INFO).</text>
+<text class="note" x="1450" y="164">Double booking and out-of-action beds are rules too</text>
+<text class="note" x="1450" y="184">(BED_CLASH, LOCATION_BLOCKS), WARNING by default.</text>
+<text class="note" x="1450" y="204">Columns marked "FK: attribute_types" reference this</text>
+<text class="note" x="1450" y="224">vocabulary; one type can apply to locations,</text>
+<text class="note" x="1450" y="244">individuals or both.</text>
+
+<!-- ===== Supply ===== -->
+<g font-size="16" font-weight="700" fill="#ffffff" text-anchor="middle">
+  <rect x="60" y="400" width="200" height="40" fill="#2f6db5"/><text x="160" y="426">SITES</text>
+  <rect x="60" y="480" width="200" height="40" fill="#2f6db5"/><text x="160" y="506">BUILDINGS</text>
+  <rect x="60" y="560" width="200" height="40" fill="#2f6db5"/><text x="160" y="586">BLOCKS</text>
+  <rect x="60" y="640" width="200" height="40" fill="#2f6db5"/><text x="160" y="666">FLOORS</text>
+  <rect x="60" y="720" width="200" height="40" fill="#2f6db5"/><text x="160" y="746">ROOMS</text>
+  <rect x="60" y="800" width="200" height="40" fill="#2f6db5"/><text x="160" y="826">BEDS</text>
+</g>
+<g>
+  <rect class="box" x="460" y="520" width="280" height="200" fill="#ffffff" stroke="#2f6db5"/>
+  <rect x="460" y="520" width="280" height="32" fill="#2f6db5"/>
+  <text class="hdr" x="470" y="541">LOCATION_ATTRIBUTES</text>
+  <text class="f" x="470" y="569">loc_attr_id</text><text class="a sup" x="730" y="569" text-anchor="end">PK</text>
+  <text class="f" x="470" y="593">attr_code</text><text class="a voc" x="730" y="593" text-anchor="end">FK: attribute_types</text>
+  <text class="f" x="470" y="617">attr_value</text>
+  <text class="f" x="470" y="641">valid_from</text><text class="a sup" x="730" y="641" text-anchor="end">first day</text>
+  <text class="f" x="470" y="665">valid_to</text><text class="a sup" x="730" y="665" text-anchor="end">exclusive</text>
+  <text class="f" x="470" y="689">comments</text><text class="a sup" x="730" y="689" text-anchor="end">outage reason</text>
+  <text class="f" x="470" y="713">site_id … bed_id</text><text class="a sup" x="730" y="713" text-anchor="end">exactly one is set</text>
+</g>
+<text class="note" x="60" y="890">Each level has a code (unique within its parent), a name and a sort order.</text>
+<text class="note" x="60" y="910">Location attributes are dated and apply at any level; they are inherited down to beds</text>
+<text class="note" x="60" y="930">(NEAREST: the value set closest to the bed wins; ANY: applies from any level above).</text>
+<text class="note" x="60" y="950">An outage is the attribute OUT_OF_ACTION = Y, with dates and a reason: no outage table.</text>
+
+<!-- ===== Allocation ===== -->
+<g>
+  <rect class="box" x="810" y="520" width="340" height="272" fill="#ffffff" stroke="#b45309"/>
+  <rect x="810" y="520" width="340" height="32" fill="#b45309"/>
+  <text class="hdr" x="820" y="541">ALLOCATIONS</text>
+  <text class="f" x="820" y="569">allocation_id</text><text class="a all" x="1140" y="569" text-anchor="end">PK</text>
+  <text class="f" x="820" y="593">course_id</text><text class="a all" x="1140" y="593" text-anchor="end">FK, null = external booking</text>
+  <text class="f" x="820" y="617">individual_no</text><text class="a all" x="1140" y="617" text-anchor="end">internal number, no FK</text>
+  <text class="f" x="820" y="641">bed_id</text><text class="a all" x="1140" y="641" text-anchor="end">FK</text>
+  <text class="f" x="820" y="665">start_date</text><text class="a all" x="1140" y="665" text-anchor="end">first night</text>
+  <text class="f" x="820" y="689">end_date</text><text class="a all" x="1140" y="689" text-anchor="end">departure day, exclusive</text>
+  <text class="f" x="820" y="713">status</text><text class="a all" x="1140" y="713" text-anchor="end">see note</text>
+  <text class="f" x="820" y="737">checked_in_at, checked_out_at</text>
+  <text class="f" x="820" y="761">source</text><text class="a all" x="1140" y="761" text-anchor="end">LOCAL · EXTERNAL</text>
+  <text class="f" x="820" y="785">external_ref, external_name</text>
+</g>
+<text class="note" x="810" y="822">An allocation is the booking: one bed, one stay.</text>
+<text class="note" x="810" y="842">Status: ALLOCATED, BOOKED, CHECKED_IN,</text>
+<text class="note" x="810" y="862">CHECKED_OUT, or NO_SHOW / CANCELLED.</text>
+<text class="note" x="810" y="882">Writes go through API functions that check</text>
+<text class="note" x="810" y="902">the rules, write the audit log and return</text>
+<text class="note" x="810" y="922">the current warnings.</text>
+
+<!-- ===== Demand ===== -->
+<g>
+  <rect class="box" x="1215" y="380" width="315" height="248" fill="#ffffff" stroke="#2e8b57"/>
+  <rect x="1215" y="380" width="315" height="32" fill="#2e8b57"/>
+  <text class="hdr" x="1225" y="401">COURSES</text>
+  <text class="f" x="1225" y="429">course_id</text><text class="a dem" x="1520" y="429" text-anchor="end">PK</text>
+  <text class="f" x="1225" y="453">code, name</text>
+  <text class="f" x="1225" y="477">site_id</text><text class="a dem" x="1520" y="477" text-anchor="end">FK, optional</text>
+  <text class="f" x="1225" y="501">start_date, end_date</text><text class="a dem" x="1520" y="501" text-anchor="end">end exclusive</text>
+  <text class="f" x="1225" y="525">scheduled</text><text class="a dem" x="1520" y="525" text-anchor="end">planned headcount</text>
+  <text class="f" x="1225" y="549">loaded, loaded_at</text><text class="a dem" x="1520" y="549" text-anchor="end">registered so far</text>
+  <text class="f" x="1225" y="573">status</text>
+  <text class="a dem" x="1520" y="597" text-anchor="end">REQUESTED · CONFIRMED · CANCELLED</text>
+  <text class="f" x="1225" y="621">notes</text>
+</g>
+<g>
+  <rect class="box" x="1555" y="380" width="310" height="104" fill="#ffffff" stroke="#2e8b57"/>
+  <rect x="1555" y="380" width="310" height="32" fill="#2e8b57"/>
+  <text class="hdr" x="1565" y="401">COURSE_ATTRIBUTES</text>
+  <text class="f" x="1565" y="429">course_id</text><text class="a dem" x="1855" y="429" text-anchor="end">PK, FK</text>
+  <text class="f" x="1565" y="453">attr_code</text><text class="a voc" x="1855" y="453" text-anchor="end">PK, FK: attribute_types</text>
+  <text class="f" x="1565" y="477">attr_value</text><text class="a dem" x="1855" y="477" text-anchor="end">course default</text>
+</g>
+<g>
+  <rect class="box" x="1555" y="540" width="310" height="128" fill="#ffffff" stroke="#2e8b57"/>
+  <rect x="1555" y="540" width="310" height="32" fill="#2e8b57"/>
+  <text class="hdr" x="1565" y="561" textLength="290" lengthAdjust="spacingAndGlyphs">COURSE_INDIVIDUAL_ATTRIBUTES</text>
+  <text class="f" x="1565" y="589">course_id</text><text class="a dem" x="1855" y="589" text-anchor="end">PK, FK</text>
+  <text class="f" x="1565" y="613">individual_no</text><text class="a dem" x="1855" y="613" text-anchor="end">PK, anonymous number</text>
+  <text class="f" x="1565" y="637">attr_code</text><text class="a voc" x="1855" y="637" text-anchor="end">PK, FK: attribute_types</text>
+  <text class="f" x="1565" y="661">attr_value</text><text class="a dem" x="1855" y="661" text-anchor="end">overrides the course default</text>
+</g>
+<text class="note" x="1215" y="710">No people table: attendees are anonymous numbers (individual_no) never shown in the UI.</text>
+<text class="note" x="1215" y="730">Course attributes are defaults for every attendee; individual attributes override them.</text>
+<text class="note" x="1215" y="750">scheduled is the plan, loaded the registrations so far; loaded above scheduled warns.</text>
+<text class="note" x="1215" y="770">A course may be allocated beyond either; extra individuals take the course defaults.</text>
+
+<!-- ===== Audit ===== -->
+<g>
+  <rect class="box" x="1220" y="875" width="400" height="152" fill="#ffffff" stroke="#555555"/>
+  <rect x="1220" y="875" width="400" height="32" fill="#555555"/>
+  <text class="hdr" x="1230" y="896">AUDIT_LOG</text>
+  <text class="f" x="1230" y="924">audit_id</text><text class="a" x="1610" y="924" text-anchor="end">PK</text>
+  <text class="f" x="1230" y="948">table_name, record_id</text><text class="a" x="1610" y="948" text-anchor="end">what changed</text>
+  <text class="f" x="1230" y="972">course_id, individual_no</text><text class="a" x="1610" y="972" text-anchor="end">lookup only, no FK</text>
+  <text class="f" x="1230" y="996">action, detail</text><text class="a" x="1610" y="996" text-anchor="end">detail is JSON</text>
+  <text class="f" x="1230" y="1020">changed_by, changed_at</text><text class="a" x="1610" y="1020" text-anchor="end">user from X-User</text>
+</g>
+
+<!-- ===== Key ===== -->
+<path class="rel" d="M1690,900 H1740" marker-end="url(#crow)"/>
+<text class="note" x="1752" y="905">one to many</text>
+<path class="rel" d="M1690,940 H1740" marker-start="url(#opt)" marker-end="url(#crow)"/>
+<text class="note" x="1752" y="945">optional parent</text>
+<text class="note" x="1690" y="985" fill="#6b4fa8">FK: attribute_types</text>
+<text class="note" x="1690" y="1005" fill="#6b4fa8">= refers to the vocabulary</text>
+<text class="a" x="1690" y="1028">tenant_id not drawn</text>
+</svg>

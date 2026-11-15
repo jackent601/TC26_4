@@ -3,7 +3,27 @@
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { api, tenantHeaders, unwrap } from "../../api/client";
 import { addDaysIso } from "./dates";
-import type { BedBar, Clash, CourseFigure, Level, LocationNode, Warning, WeekSummary, WeekSummaryRow } from "./types";
+import type { BedBar, CandidateBed, Clash, CourseFigure, Level, LocationNode, Warning, WeekSummary, WeekSummaryRow } from "./types";
+
+// Beds a course could be booked into for some nights, with the database's
+// suggestion of `beds` of them (api.fn_candidate_beds, D34). No placeholder
+// data: a stale list must not be booked.
+export function useCandidateBeds(tenant: string | null, courseId: number, from: string, to: string, beds: number,
+                                 enabled = true) {
+  return useQuery({
+    queryKey: ["candidate_beds", tenant, courseId, from, to, beds],
+    enabled: enabled && tenant !== null,
+    queryFn: async () => {
+      const rows = await unwrap(
+        api.POST("/rpc/fn_candidate_beds", {
+          body: { p_course_id: courseId, p_from: from, p_to: to, p_beds: beds },
+          headers: tenantHeaders(tenant!),
+        }),
+      );
+      return rows as unknown as CandidateBed[];
+    },
+  });
+}
 
 // Bookings and outages on some beds over some nights (api.fn_check_allocation).
 // Used by the outage popup to list the bookings an outage affects.
