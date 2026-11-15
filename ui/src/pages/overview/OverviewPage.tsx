@@ -81,6 +81,7 @@ export function OverviewPage() {
             <Arrow dir="right" />
           </button>
           <button type="button" className="tb-btn" onClick={() => setStart(iso(mondayOf(new Date())))}>Today</button>
+          <button type="button" className="tb-btn" onClick={() => open({ kind: "newCourse" })}>New course</button>
           <Popover label="Filter sites" align="left" triggerClass={`tb-btn${sites !== null ? " active" : ""}`}
                    trigger={<><FilterIcon /> <span className="filter-label">{siteLabel}</span></>}>
             <div className="filter-panel">
@@ -110,7 +111,12 @@ export function OverviewPage() {
       {error && <p className="error">Could not load the overview: {error.message}</p>}
       {notice && (
         <div className={`av-notice${notice.warnings.length ? " warn" : ""}`} role="status">
-          <div><strong>{notice.text}</strong></div>
+          <div>
+            <strong>{notice.text}</strong>
+            {notice.warnings.length > 0 && (
+              <ul className="av-list">{notice.warnings.map((w, i) => <li key={i}><WarnIcon /> Saved with a warning: {w}</li>)}</ul>
+            )}
+          </div>
           <button type="button" className="x" aria-label="Dismiss" onClick={() => setNotice(null)}>×</button>
         </div>
       )}

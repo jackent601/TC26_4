@@ -1,16 +1,20 @@
 // Popups (phase 2 step 4, writes from phase 3). What's shown comes from data the
-// page already has, except clashes (fn_check_allocation). Course allocations
-// can be booked, moved, cancelled and have their status set (0009); other edit
-// forms come later.
+// page already has, except clashes (fn_check_allocation) and candidate beds
+// (fn_candidate_beds). Course allocations can be booked, moved, cancelled and
+// have their status set (0009), and a course can be booked from its own popup
+// (0012, D34); other edit forms come later.
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { format, parseISO } from "date-fns";
-import { useClashes } from "./data";
-import { dayIndex, dayLong, ddmm } from "./dates";
+import { useCandidateBeds, useClashes } from "./data";
+import { addDaysIso, dayIndex, dayLong, ddmm, iso, mondayOf } from "./dates";
 import { basisOf, courseColour, OverIcon, STATE_NAMES, STATE_ORDER, WarnIcon } from "./look";
 import type { ViewSettings } from "./settings";
 import { weekCounts } from "./TimelineGrid";
-import type { BedBar, CourseFigure, Level, LocationNode, Popup, Warning, WeekSummary } from "./types";
-import { STATUSES, useAllocateCourse, useCancelAllocation, useMoveAllocation, useSetStatus } from "./writes";
+import type { BedBar, CandidateBed, CourseFigure, Level, LocationNode, Popup, Warning, WeekSummary } from "./types";
+import {
+  COURSE_STATUSES, STATUSES, useAllocateCourse, useCancelAllocation, useCancelCourse, useCreateCourse, useMoveAllocation,
+  useSetStatus, useUpdateCourse, useUpdateLoaded, type Allocated, type CourseChange, type CourseInput,
+} from "./writes";
 
 export interface PopupData {
   tenant: string | null;
@@ -36,7 +40,9 @@ export function PopupView({ popup, data, onOpen, onNotice, onClose }: Props) {
     case "booking": return <BookingPopup bar={popup.bar} data={data} onOpen={onOpen} onNotice={onNotice} onClose={onClose} />;
     case "outage": return <OutagePopup bar={popup.bar} data={data} onClose={onClose} />;
     case "week": return <WeekPopup nodeKey={popup.key} weekStart={popup.weekStart} data={data} onOpen={onOpen} onClose={onClose} />;
-    case "course": return <CoursePopup courseId={popup.courseId} data={data} onClose={onClose} />;
+    case "course": return <CoursePopup courseId={popup.courseId} data={data} onOpen={onOpen} onNotice={onNotice} onClose={onClose} />;
+    case "bookCourse": return <BookCoursePopup courseId={popup.courseId} data={data} onClose={onClose} />;
+    case "newCourse": return <NewCoursePopup data={data} onOpen={onOpen} onClose={onClose} />;
     case "warning": return <WarningPopup warning={popup.warning} data={data} onOpen={onOpen} onNotice={onNotice} onClose={onClose} />;
     case "new": return <NewAllocationPopup bedKeys={popup.bedKeys} from={popup.from} to={popup.to} data={data} onClose={onClose} />;
   }
@@ -45,7 +51,7 @@ export function PopupView({ popup, data, onOpen, onNotice, onClose }: Props) {
 // ------------------------------- Pieces --------------------------------
 
 // A modal dialog (native <dialog>: focus stays inside, Esc closes, focus returns).
-function Dialog(p: { kind: string; title: string; onClose: () => void; children: ReactNode; actions?: ReactNode }) {
+function Dialog(p: { kind: string; title: string; onClose: () => void; children: ReactNode; actions?: ReactNode; wide?: boolean }) {
   const ref = useRef<HTMLDialogElement>(null);
   const onClose = useRef(p.onClose);
   onClose.current = p.onClose;
@@ -87,7 +93,7 @@ function Dialog(p: { kind: string; title: string; onClose: () => void; children:
     };
   }, []);
   return (
-    <dialog ref={ref} className="av-dialog" aria-labelledby="av-dialog-title"
+    <dialog ref={ref} className={`av-dialog${p.wide ? " wide" : ""}`} aria-labelledby="av-dialog-title"
             onClick={(e) => { if (e.target === ref.current) close(); }}>
       <div className="av-dialog-inner">
         <div className="av-dialog-head">
@@ -391,12 +397,17 @@ function WeekPopup({ nodeKey, weekStart, data, onOpen, onClose }: {
   );
 }
 
-function CoursePopup({ courseId, data, onClose }: { courseId: number; data: PopupData; onClose: () => void }) {
+function CoursePopup({ courseId, data, onOpen, onNotice, onClose }: {
+  courseId: number; data: PopupData; onOpen: (p: Popup) => void; onNotice: (n: Notice) => void; onClose: () => void;
+}) {
   const c = data.figures.get(courseId);
   if (!c) return null;
   const warnings = data.warnings.filter((w) => w.courseId === courseId && w.allocationId === null);
   return (
-    <Dialog kind="Course" title={`${c.code}: ${c.name}`} onClose={onClose}>
+    <Dialog kind="Course" title={`${c.code}: ${c.name}`} onClose={onClose}
+            actions={c.status !== "CANCELLED" && (
+              <button type="button" className="btn primary" onClick={() => onOpen({ kind: "bookCourse", courseId })}>Book beds</button>
+            )}>
       <Facts rows={[
         ["Dates", stay(c.startDate, c.endDate)],
         ["Status", titleCase(c.status)],
@@ -408,8 +419,177 @@ function CoursePopup({ courseId, data, onClose }: { courseId: number; data: Popu
         ["Colour", allocatedText(c, data.settings)],
         ["Warnings", <WarningList list={warnings} />],
       ]} />
-      <Later what="Editing the course (dates, figures, attributes)" />
+      <CourseChanges c={c} data={data} onNotice={onNotice} onClose={onClose} />
     </Dialog>
+  );
+}
+
+// ----------------------------- Courses (D35) -----------------------------
+
+const sitesOf = (nodes: Map<string, LocationNode>) => [...nodes.values()].filter((n) => n.level === "Site");
+
+function courseValid(v: CourseInput) {
+  return v.code.trim() !== "" && v.name.trim() !== "" && v.startDate !== "" && v.endDate !== "" &&
+    v.endDate > v.startDate && v.scheduled >= 0 && v.loaded >= 0;
+}
+
+// The course fields shared by the New course form and the Course popup's edit
+// form. The database validates; this only keeps the inputs well-formed.
+function CourseFields({ value: v, onChange, sites, withLoaded, disabled }: {
+  value: CourseInput; onChange: (v: CourseInput) => void; sites: LocationNode[]; withLoaded: boolean; disabled: boolean;
+}) {
+  const set = (patch: Partial<CourseInput>) => onChange({ ...v, ...patch });
+  const num = (s: string) => Math.max(0, Math.min(9999, Math.floor(Number(s)) || 0));
+  return (
+    <div className="av-form">
+      <label className="av-field">Code<input type="text" maxLength={30} value={v.code} disabled={disabled} onChange={(e) => set({ code: e.target.value })} /></label>
+      <label className="av-field">Name<input type="text" maxLength={200} value={v.name} disabled={disabled} onChange={(e) => set({ name: e.target.value })} /></label>
+      <label className="av-field">Site
+        <select value={v.siteId ?? ""} disabled={disabled} onChange={(e) => set({ siteId: e.target.value === "" ? null : Number(e.target.value) })}>
+          <option value="">No site (any bed)</option>
+          {sites.map((s) => <option key={s.key} value={s.id}>{s.name}</option>)}
+        </select>
+      </label>
+      <label className="av-field">Status
+        <select value={v.status} disabled={disabled} onChange={(e) => set({ status: e.target.value })}>
+          {COURSE_STATUSES.map((s) => <option key={s} value={s}>{titleCase(s)}</option>)}
+        </select>
+      </label>
+      <label className="av-field">First night<input type="date" value={v.startDate} disabled={disabled} onChange={(e) => set({ startDate: e.target.value })} /></label>
+      <label className="av-field">Departure<input type="date" value={v.endDate} disabled={disabled} onChange={(e) => set({ endDate: e.target.value })} /></label>
+      <label className="av-field">Scheduled<input type="number" min={0} max={9999} value={v.scheduled} disabled={disabled} onChange={(e) => set({ scheduled: num(e.target.value) })} /></label>
+      {withLoaded && (
+        <label className="av-field">Loaded<input type="number" min={0} max={9999} value={v.loaded} disabled={disabled} onChange={(e) => set({ loaded: num(e.target.value) })} /></label>
+      )}
+    </div>
+  );
+}
+
+// Add a course (fn_create_course), then offer to book its beds straight away.
+function NewCoursePopup({ data, onOpen, onClose }: { data: PopupData; onOpen: (p: Popup) => void; onClose: () => void }) {
+  const sites = sitesOf(data.nodes);
+  const monday = addDaysIso(iso(mondayOf(new Date())), 7); // next week
+  const [v, setV] = useState<CourseInput>({
+    code: "", name: "", siteId: sites.length === 1 ? sites[0].id : null,
+    startDate: monday, endDate: addDaysIso(monday, 5), scheduled: 0, loaded: 0, status: "REQUESTED",
+  });
+  const create = useCreateCourse(data.tenant);
+  const valid = courseValid(v);
+
+  if (create.data) {
+    const id = create.data.course_id;
+    return (
+      <Dialog kind="Course added" title={`${create.data.code}: ${v.name.trim()}`} onClose={onClose}
+              actions={<button type="button" className="btn primary" onClick={() => onOpen({ kind: "bookCourse", courseId: id })}>Book beds</button>}>
+        <p className="clash ok">Saved: {stay(v.startDate, v.endDate)}, {v.scheduled} scheduled, {v.loaded} loaded.</p>
+      </Dialog>
+    );
+  }
+
+  return (
+    <Dialog kind="New course" title="Add a course" onClose={onClose} wide
+            actions={
+              <button type="button" className="btn primary" disabled={!valid || create.isPending}
+                      onClick={() => create.mutate({ ...v, code: v.code.trim(), name: v.name.trim() })}>
+                {create.isPending ? "Saving…" : "Add course"}
+              </button>
+            }>
+      <CourseFields value={v} onChange={setV} sites={sites} withLoaded disabled={create.isPending} />
+      {v.startDate && v.endDate && (v.endDate > v.startDate
+        ? <p className="summary">{stay(v.startDate, v.endDate)}</p>
+        : <p className="clash bad">Departure must be after the first night.</p>)}
+      {create.error && <p className="clash bad">Not saved: {create.error.message}</p>}
+    </Dialog>
+  );
+}
+
+// Edit a course from its popup: details (fn_update_course), the loaded figure
+// (fn_update_loaded) and cancelling it with its bookings (fn_cancel_course).
+function CourseChanges({ c, data, onNotice, onClose }: {
+  c: CourseFigure; data: PopupData; onNotice: (n: Notice) => void; onClose: () => void;
+}) {
+  const sites = sitesOf(data.nodes);
+  const current: CourseInput = {
+    code: c.code, name: c.name, siteId: c.siteId, startDate: c.startDate, endDate: c.endDate,
+    scheduled: c.scheduled, loaded: c.loaded, status: c.status === "CANCELLED" ? "REQUESTED" : c.status,
+  };
+  const [v, setV] = useState<CourseInput>(current);
+  const [loaded, setLoaded] = useState(c.loaded);
+  const update = useUpdateCourse(data.tenant);
+  const updateLoaded = useUpdateLoaded(data.tenant);
+  const cancel = useCancelCourse(data.tenant);
+  const busy = update.isPending || updateLoaded.isPending || cancel.isPending;
+  const error = update.error ?? updateLoaded.error ?? cancel.error;
+  const cancelled = c.status === "CANCELLED";
+
+  // Only what differs from the course as it is.
+  const change: CourseChange = { id: c.courseId };
+  const code = v.code.trim(), name = v.name.trim();
+  if (code !== c.code) change.code = code;
+  if (name !== c.name) change.name = name;
+  if (v.siteId !== c.siteId) change.siteId = v.siteId;
+  if (v.startDate !== c.startDate) change.startDate = v.startDate;
+  if (v.endDate !== c.endDate) change.endDate = v.endDate;
+  if (v.scheduled !== c.scheduled) change.scheduled = v.scheduled;
+  if (v.status !== c.status) change.status = v.status;
+  const changed = Object.keys(change).length > 1;
+
+  const done = (n: Notice) => {
+    onNotice(n);
+    onClose();
+  };
+
+  return (
+    <div className="av-changes">
+      <h3>{cancelled ? "Reinstate" : "Change"}</h3>
+      {cancelled && <p className="summary">This course is cancelled. Set a status and save to reinstate it; its bookings stay cancelled.</p>}
+      <CourseFields value={v} onChange={setV} sites={sites} withLoaded={false} disabled={busy} />
+      <div className="row end">
+        <button type="button" className="btn" disabled={busy || !changed || !courseValid(v)}
+                onClick={() => update.mutate(change, {
+                  onSuccess: (r) => done({ text: `${code}: saved.`, warnings: r.warnings }),
+                })}>
+          {cancelled ? "Reinstate" : "Save changes"}
+        </button>
+      </div>
+
+      {!cancelled && (
+        <>
+          <div className="row">
+            <label className="av-field">
+              Loaded (registered so far)
+              <input type="number" min={0} max={9999} value={loaded} disabled={busy}
+                     onChange={(e) => setLoaded(Math.max(0, Math.min(9999, Math.floor(Number(e.target.value)) || 0)))} />
+            </label>
+            <button type="button" className="btn" disabled={busy}
+                    onClick={() => updateLoaded.mutate({ id: c.courseId, loaded }, {
+                      onSuccess: (r) => done({
+                        text: `${c.code}: ${r.loaded} loaded as of now.`,
+                        warnings: r.loaded_above_scheduled ? [`${r.loaded} loaded is above ${c.scheduled} scheduled`] : [],
+                      }),
+                    })}>
+              Update loaded
+            </button>
+          </div>
+          <div className="row end">
+            <button type="button" className="btn danger" disabled={busy}
+                    onClick={() => {
+                      if (window.confirm(`Cancel ${c.code} and its ${c.allocated} ${c.allocated === 1 ? "booking" : "bookings"}? They stay in the history as cancelled.`)) {
+                        cancel.mutate(c.courseId, {
+                          onSuccess: (r) => done({
+                            text: `${c.code} cancelled, with ${r.allocations_cancelled} ${r.allocations_cancelled === 1 ? "booking" : "bookings"}.`,
+                            warnings: [],
+                          }),
+                        });
+                      }
+                    }}>
+              Cancel course
+            </button>
+          </div>
+        </>
+      )}
+      {error && <p className="clash bad">Not saved: {error.message}</p>}
+    </div>
   );
 }
 
@@ -471,20 +651,8 @@ function NewAllocationPopup({ bedKeys, from, to, data, onClose }: {
   const allocate = useAllocateCourse(data.tenant);
   const canAllocate = valid && course !== undefined && !clashes.isPending && !clashes.error && !blocked && !allocate.isPending;
 
-  // After saving: what was written and the warnings the database returned.
   if (allocate.data) {
-    const warnings = allocate.data.flatMap((a) => a.warnings);
-    return (
-      <Dialog kind="Allocated" title={`${course?.code ?? "Course"}: ${allocate.data.length} ${allocate.data.length === 1 ? "bed" : "beds"}`} onClose={onClose}>
-        <p className="clash ok">Saved: {stay(first, departure)}.</p>
-        {warnings.length > 0 && (
-          <div className="clash bad">
-            <strong>Saved with {warnings.length} {warnings.length === 1 ? "warning" : "warnings"}</strong>
-            <ul className="av-list">{warnings.map((w, i) => <li key={i}><WarnIcon /> {w}</li>)}</ul>
-          </div>
-        )}
-      </Dialog>
-    );
+    return <AllocatedResult course={course} result={allocate.data} first={first} departure={departure} onClose={onClose} />;
   }
 
   return (
@@ -557,6 +725,140 @@ function NewAllocationPopup({ bedKeys, from, to, data, onClose }: {
           Allowed with a warning.
         </p>
       )}
+      {allocate.error && <p className="clash bad">Not saved: {allocate.error.message}</p>}
+    </Dialog>
+  );
+}
+
+// After a booking: what was written and the warnings the database returned.
+function AllocatedResult({ course, result, first, departure, onClose }: {
+  course: CourseFigure | undefined; result: Allocated[]; first: string; departure: string; onClose: () => void;
+}) {
+  const warnings = result.flatMap((a) => a.warnings);
+  return (
+    <Dialog kind="Allocated" title={`${course?.code ?? "Course"}: ${result.length} ${result.length === 1 ? "bed" : "beds"}`} onClose={onClose}>
+      <p className="clash ok">Saved: {stay(first, departure)}.</p>
+      {warnings.length > 0 && (
+        <div className="clash bad">
+          <strong>Saved with {warnings.length} {warnings.length === 1 ? "warning" : "warnings"}</strong>
+          <ul className="av-list">{warnings.map((w, i) => <li key={i}><WarnIcon /> {w}</li>)}</ul>
+        </div>
+      )}
+    </Dialog>
+  );
+}
+
+// Course-first booking (D34): from a course, choose the dates and how many beds
+// are needed; the database suggests beds (fn_candidate_beds: free, keeping the
+// course together, filling rooms), the user adjusts, and the booking goes
+// through the same fn_allocate_course as the grid. The suggestion only advises.
+function BookCoursePopup({ courseId, data, onClose }: { courseId: number; data: PopupData; onClose: () => void }) {
+  const c = data.figures.get(courseId);
+  const [first, setFirst] = useState(c?.startDate ?? "");
+  const [departure, setDeparture] = useState(c?.endDate ?? "");
+  // Default: the larger of scheduled and loaded, less what is already allocated.
+  const [need, setNeed] = useState(c ? Math.max(1, Math.max(c.scheduled, c.loaded) - c.allocated) : 1);
+  // Beds ticked by hand, for the dates and quantity they were ticked under;
+  // otherwise the suggestion is followed.
+  const [ticked, setTicked] = useState<{ key: string; ids: Set<number> } | null>(null);
+  const valid = first !== "" && departure !== "" && departure > first;
+  const candidates = useCandidateBeds(data.tenant, courseId, first, departure, need, valid);
+  const allocate = useAllocateCourse(data.tenant);
+  if (!c) return null;
+
+  const rows = candidates.data ?? [];
+  const key = `${first}|${departure}|${need}`;
+  const byHand = ticked !== null && ticked.key === key;
+  const chosen = ticked !== null && ticked.key === key ? ticked.ids : new Set(rows.filter((b) => b.suggested).map((b) => b.bed_id));
+  const toggle = (id: number) => {
+    const next = new Set(chosen);
+    if (next.has(id)) next.delete(id);
+    else next.add(id);
+    setTicked({ key, ids: next });
+  };
+
+  // Rooms in estate order, each with its beds.
+  const rooms: { id: number; name: string; where: string; beds: CandidateBed[] }[] = [];
+  for (const b of rows) {
+    const last = rooms[rooms.length - 1];
+    if (last && last.id === b.room_id) last.beds.push(b);
+    else rooms.push({ id: b.room_id, name: b.room_name, where: `${b.block_name} › ${b.floor_name}`, beds: [b] });
+  }
+  const bedIds = rows.filter((b) => chosen.has(b.bed_id)).map((b) => b.bed_id); // estate order
+  const canBook = valid && bedIds.length > 0 && !candidates.isPending && !candidates.error && !allocate.isPending;
+  const offDates = c.startDate !== first || c.endDate !== departure;
+
+  if (allocate.data) {
+    return <AllocatedResult course={c} result={allocate.data} first={first} departure={departure} onClose={onClose} />;
+  }
+
+  return (
+    <Dialog kind="Book beds" title={`${c.code}: ${c.name}`} onClose={onClose} wide
+            actions={
+              <button type="button" className="btn primary" disabled={!canBook}
+                      onClick={() => allocate.mutate({ courseId, bedIds, from: first, to: departure })}>
+                {allocate.isPending ? "Booking…" : `Book ${bedIds.length} ${bedIds.length === 1 ? "bed" : "beds"}`}
+              </button>
+            }>
+      <p className="summary">
+        {c.allocated} allocated of {c.scheduled} scheduled, {c.loaded} loaded. The suggested beds keep the course
+        together and fill rooms; tick or untick beds as you like.
+      </p>
+
+      <div className="dates three">
+        <label>First night<input type="date" value={first} onChange={(e) => setFirst(e.target.value)} /></label>
+        <label>Departure<input type="date" value={departure} onChange={(e) => setDeparture(e.target.value)} /></label>
+        <label>Beds needed
+          <input type="number" min={0} max={99} value={need}
+                 onChange={(e) => setNeed(Math.max(0, Math.min(99, Number(e.target.value) || 0)))} />
+        </label>
+      </div>
+      {valid ? (
+        <p className="summary">
+          {stay(first, departure)}
+          {offDates && (
+            <>
+              {" "}· Outside the course's dates ({ddmm(c.startDate)}–{ddmm(c.endDate)}): allowed with a warning.{" "}
+              <button type="button" className="link" onClick={() => { setFirst(c.startDate); setDeparture(c.endDate); }}>
+                Use the course's dates
+              </button>
+            </>
+          )}
+        </p>
+      ) : <p className="clash bad">Departure must be after the first night.</p>}
+
+      {valid && (candidates.isPending ? <p className="summary">Finding beds…</p> :
+        candidates.error ? <p className="clash bad">Could not find beds: {candidates.error.message}</p> :
+        rows.length === 0 ? <p className="clash bad">There are no beds on this course's site.</p> : (
+          <>
+            <div className="av-cands-head">
+              <span className={bedIds.length >= need ? "ok" : "short"}>{bedIds.length} of {need} chosen</span>
+              {byHand && <button type="button" className="link" onClick={() => setTicked(null)}>Back to the suggestion</button>}
+            </div>
+            <div className="av-cands">
+              {rooms.map((r) => (
+                <div key={r.id} className="room">
+                  <div className="room-head">
+                    <span className="name">{r.name}</span>
+                    <span className="where">{r.where}</span>
+                    {r.beds.some((b) => b.course_in_room) && <span className="tag">{c.code} is here</span>}
+                  </div>
+                  {r.beds.map((b) => (
+                    <label key={b.bed_id} className={`cand${b.free ? "" : " clash"}`}>
+                      <input type="checkbox" checked={chosen.has(b.bed_id)} disabled={b.blocks || allocate.isPending}
+                             onChange={() => toggle(b.bed_id)} />
+                      <span className="name">{b.bed_name}</span>
+                      {b.suggested && <span className="tag">suggested</span>}
+                      {b.warnings.length > 0 && (
+                        <span className="warn"><WarnIcon /> {b.warnings.join("; ")}{b.blocks ? " · not allowed" : ""}</span>
+                      )}
+                    </label>
+                  ))}
+                </div>
+              ))}
+            </div>
+          </>
+        ))}
       {allocate.error && <p className="clash bad">Not saved: {allocate.error.message}</p>}
     </Dialog>
   );

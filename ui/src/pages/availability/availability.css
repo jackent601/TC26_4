@@ -230,6 +230,31 @@
 .av-modes button + button { border-left: 1px solid var(--border-strong); }
 .av-modes button[aria-pressed="true"] { background: var(--accent); color: var(--accent-text); }
 
+/* Booking from a course (D34): the candidate beds, grouped by room. */
+.av-dialog.wide { max-width: 640px; }
+.av-dialog .dates.three { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.av-cands-head { display: flex; justify-content: space-between; align-items: center; font-size: 13px; }
+.av-cands-head .ok { color: var(--ok-text); font-weight: 600; }
+.av-cands-head .short { color: var(--danger-text); font-weight: 600; }
+.av-cands { max-height: 320px; overflow: auto; border: 1px solid var(--border); border-radius: var(--radius); font-size: 13px; }
+.av-cands .room { border-bottom: 1px solid var(--grid-row-line); }
+.av-cands .room:last-child { border-bottom: 0; }
+.av-cands .room-head { display: flex; align-items: baseline; gap: 8px; padding: 6px 10px; background: var(--lvl-room); font-weight: 600; }
+.av-cands .room-head .where { font-weight: 400; color: var(--muted); font-size: 12px; }
+.av-cands .cand { display: flex; align-items: center; gap: 8px; padding: 5px 10px 5px 22px; cursor: pointer; }
+.av-cands .cand:hover { background: var(--surface-2); }
+.av-cands .cand input { width: 15px; height: 15px; margin: 0; accent-color: var(--accent); flex: none; cursor: pointer; }
+.av-cands .cand.clash .name { color: var(--text-2); }
+.av-cands .cand .warn { display: inline-flex; align-items: center; gap: 4px; color: var(--danger-text); font-size: 12px; min-width: 0; }
+.av-cands .tag {
+  font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em;
+  padding: 1px 6px; border-radius: 999px; background: var(--accent-soft); color: var(--accent); white-space: nowrap;
+}
+
+/* Course forms (D35): two columns of fields. */
+.av-form { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px 12px; }
+.av-form .av-field input, .av-form .av-field select, .av-changes .av-field input { height: 36px; padding: 0 10px; font-size: 13px; }
+
 .av-changes { display: flex; flex-direction: column; gap: 10px; border-top: 1px solid var(--border); padding-top: 12px; }
 .av-changes h3 { margin: 0; font-size: 12px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: 0.06em; }
 .av-changes .row { display: flex; align-items: flex-end; gap: 8px; }

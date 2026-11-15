@@ -126,6 +126,26 @@ Mockup: `docs/pages_pocs/availability.html` (open offline) and its README. Key p
 
 Jason, a software developer in the UK, on Windows with Git Bash and Docker Desktop. Wants to work step by step and check each step himself; likes concise explanations with the reasoning; prefers minimal custom images and keeping the core value visibly in the data model. Asks "why" questions about tooling (Docker targets, `--build`, script lines): answer them directly.
 
+## Course management (0013, 15 Nov 2026, uncommitted at the time of writing)
+
+Branch `phil-dev` (renamed from a short-lived `course-first-booking`), holding 0012 and 0013 uncommitted on top of `main`.
+
+- **Database (`0013_courses_write.sql`, D35):** `api.fn_create_course`, `fn_update_course` (nulls keep values; `p_clear_site` removes the site; `p_notes` empty clears notes; returns warnings for live bookings left outside the dates or on another site), `fn_update_loaded` (stamps `loaded_at`), `fn_cancel_course` (cancels the course and its live allocations, each audited with reason "course cancelled"). Shared checks in `api_internal.check_course` (code unique per tenant, case-insensitive; lengths; dates; non-negative figures; status REQUESTED or CONFIRMED; site in the tenant). A cancelled course is reinstated by `fn_update_course` with a status; its bookings stay cancelled. Tests: `db/tests/011_courses_write.sql` (25 checks; 194 in all), all passing with the rollback check.
+- **UI:** "New course" on the Overview toolbar (`NewCoursePopup`; after saving it offers "Book beds"). The Course popup's placeholder is replaced by `CourseChanges`: the same `CourseFields` form, Save changes (only changed fields are sent), Update loaded, and Cancel course with a confirm; a cancelled course shows a Reinstate form instead. Hooks in `writes.ts` build the request bodies from the generated `paths` types. The Overview notice now lists returned warnings like the Availability one.
+- **Not in the UI:** notes (the API takes them, but `api.course_figures` doesn't return them; add the column to the view when a form needs it).
+- **Checked:** `scripts/db-test.sh` ALL PASSED, `gen:api` and `scripts/api-contract.sh` run, UI build (see below).
+
+## Course-first booking (0012, 15 Nov 2026, uncommitted at the time of writing)
+
+Checked on the Mac: `scripts/db-test.sh` ALL PASSED (169 checks, rollback and re-apply of 12 migrations), `scripts/api-contract.sh --check` unchanged after the hand edit, `scripts/ui-npm.sh run gen:api` regenerated the client, and `scripts/ui-npm.sh run build` passed.
+
+- **Database (`0012_candidate_beds.sql`, D34):**
+  - `api.fn_candidate_beds(p_course_id, p_from, p_to, p_beds)`: every bed on the course's site (all beds when it has no site), in estate order, with `free` (no booking or outage on the nights, whatever the rules say), `warnings` (the clashes the active rules would raise, worded like `bed_clashes`), `blocks`, `course_in_room`, and a suggestion of `p_beds` free beds (`suggested`, `rank`). Greedy: rooms where the course already has a bed first, then rooms with the most free beds, then estate order; a room is taken whole while it fits what is still needed, then the smallest room that can hold the rest is split. `stable`, so no temp tables: the per-bed facts come from `api_internal.candidate_bed_facts` (not an endpoint), called more than once per request.
+  - Tests: `db/tests/010_candidate_beds.sql` (22 checks), with the expected suggestions worked out by hand from the demo estate (Block A floors 1-3, Block B floor 1; rooms 103, 204 and 303 have one bed).
+  - `db/api-contract.txt` and `ui/src/api/schema.d.ts` are the script outputs (contract confirmed unchanged; client regenerated).
+- **UI:** the Course popup has a "Book beds" action (`BookCoursePopup` in `Popups.tsx`; `useCandidateBeds` in `data.ts`; `CandidateBed` and the `bookCourse` popup kind in `types.ts`). First night and departure default to the course's dates; beds needed defaults to the larger of scheduled and loaded less allocated. Candidate beds are listed by room with the suggestion ticked; ticking by hand is remembered per dates-and-quantity until "Back to the suggestion"; blocked beds can't be ticked. Booking calls `fn_allocate_course` with the ticked beds and shows the same result view as the grid's New allocation popup (`AllocatedResult`, shared). Works from the Overview too (it uses the same `PopupView`).
+- **Docs:** D34 in `docs/decisions.md`; build plan phase 4 and the suggestions paragraph; README migrations, tests and UI paragraph.
+
 ## Overview page (0011, 15 Nov 2026, uncommitted at the time of writing)
 
 - **Database (`0011_overview.sql`, D33):**

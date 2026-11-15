@@ -82,6 +82,25 @@ export interface Clash {
   blocks: boolean; // the clash's rule is BLOCK, so saving would be refused (D30)
 }
 
+// api.fn_candidate_beds (0012, D34): every bed a course could be booked into
+// for some nights, in estate order, with the database's suggestion.
+export interface CandidateBed {
+  bed_id: number;
+  bed_name: string;
+  room_id: number;
+  room_name: string;
+  floor_name: string;
+  block_name: string;
+  building_name: string;
+  site_name: string;
+  free: boolean; // no booking or outage on those nights
+  course_in_room: boolean; // the course already has a bed in this room then
+  warnings: string[]; // the clashes the active rules would raise
+  blocks: boolean; // one of them is BLOCK: booking would be refused
+  rank: number | null; // among the suggested beds
+  suggested: boolean;
+}
+
 // What a popup is showing.
 export type Popup =
   | { kind: "location"; key: string }
@@ -89,6 +108,10 @@ export type Popup =
   | { kind: "outage"; bar: BedBar }
   | { kind: "week"; key: string; weekStart: string }
   | { kind: "course"; courseId: number }
+  // Book beds for a course, starting from the course (D34).
+  | { kind: "bookCourse"; courseId: number }
+  // Add a course (D35).
+  | { kind: "newCourse" }
   | { kind: "warning"; warning: Warning }
   // A selection of beds and nights (to = departure day, exclusive).
   | { kind: "new"; bedKeys: string[]; from: string; to: string };
