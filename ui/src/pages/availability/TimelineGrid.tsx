@@ -9,7 +9,7 @@ import { basisOf, Chevron, courseColour, OverIcon, STATE_NAMES, STATE_ORDER, War
 import type { ViewSettings } from "./settings";
 import type { BedBar, CourseFigure, LocationNode, Popup, WeekSummary } from "./types";
 
-export const LABEL_WIDTH = 300;
+export const LABEL_WIDTH = 260; // matches .av-label in availability.css
 
 export interface VisibleRow {
   node: LocationNode;
@@ -68,8 +68,19 @@ interface Props {
 }
 
 export function TimelineGrid({ rows, start, settings, bars, summary, figures, onToggle, onOpen }: Props) {
-  const dayW = settings.dayWidth;
   const nights = settings.weeks * 7;
+  // Fill the available width: days widen to fit, never narrower than the
+  // user's minimum day width (then the grid scrolls sideways).
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const [available, setAvailable] = useState(0);
+  useEffect(() => {
+    const el = scrollRef.current;
+    if (!el) return;
+    const ro = new ResizeObserver(() => setAvailable(el.clientWidth));
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
+  const dayW = Math.max(settings.minDayWidth, Math.floor((available - LABEL_WIDTH) / nights) || 0);
   const bodyWidth = nights * dayW;
   const weekStarts = Array.from({ length: settings.weeks }, (_, w) => addDaysIso(start, w * 7));
 
@@ -164,7 +175,7 @@ export function TimelineGrid({ rows, start, settings, bars, summary, figures, on
   };
 
   return (
-    <div className="av-scroll">
+    <div className="av-scroll" ref={scrollRef}>
       <div className="av-grid" style={{ width: LABEL_WIDTH + bodyWidth }}>
         {rows.map((r, i) => <Row key={r.node.key} row={r} index={i} ctx={ctx} />)}
         <div className="av-axis" style={{ width: LABEL_WIDTH + bodyWidth }}>

@@ -7,7 +7,7 @@ import { WarnIcon } from "./look";
 import { useTenant } from "../../tenant";
 import { Controls } from "./Controls";
 import { useBedBars, useCourseFigures, useLocations, useWarnings, useWeekSummary } from "./data";
-import { Legend, WarningsStrip } from "./LegendAndWarnings";
+import { WarningsStrip } from "./LegendAndWarnings";
 import { addDaysIso, dayLong, dayLongYear, defaultStart, iso, mondayOf } from "./dates";
 import { useCollapsed, useViewSettings } from "./settings";
 import { TimelineGrid, type VisibleRow } from "./TimelineGrid";
@@ -81,24 +81,18 @@ export function AvailabilityPage() {
 
   return (
     <div className="av-page">
-      <header className="av-header">
-        <div>
-          <h1>Availability</h1>
-          <p className="sub">Beds by night. Collapsed rows show each week's busiest night.</p>
-        </div>
-        <Controls
-          rangeText={`${dayLong(start)} – ${dayLongYear(last)}`}
-          settings={settings}
-          onSettings={updateSettings}
-          onPrev={() => setStart(addDaysIso(start, -7))}
-          onNext={() => setStart(addDaysIso(start, 7))}
-          onToday={() => setStart(iso(mondayOf(new Date())))}
-          onExpandAll={() => setCollapsed(new Set())}
-          onCollapseToFloors={collapseToFloors}
-        />
-      </header>
+      {/* The page title is in the app's title bar; the legend is a toolbar popover. */}
+      <Controls
+        rangeText={`${dayLong(start)} – ${dayLongYear(last)}`}
+        settings={settings}
+        onSettings={updateSettings}
+        onPrev={() => setStart(addDaysIso(start, -7))}
+        onNext={() => setStart(addDaysIso(start, 7))}
+        onToday={() => setStart(iso(mondayOf(new Date())))}
+        onExpandAll={() => setCollapsed(new Set())}
+        onCollapseToFloors={collapseToFloors}
+      />
 
-      <Legend settings={settings} />
       <WarningsStrip warnings={warnings.data ?? []} error={warnings.error} onOpen={open} />
       {notice && (
         <div className={`av-notice${notice.warnings.length ? " warn" : ""}`} role="status">

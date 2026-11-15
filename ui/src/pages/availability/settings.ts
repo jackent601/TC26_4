@@ -5,7 +5,7 @@ import type { Basis } from "./types";
 
 export interface ViewSettings {
   weeks: number;
-  dayWidth: number;
+  minDayWidth: number; // days widen to fill the window; never narrower than this
   basis: Basis;
   greenAt: number;
   redBelow: number;
@@ -13,12 +13,12 @@ export interface ViewSettings {
 
 export const LIMITS = {
   weeks: { min: 3, max: 10 },
-  dayWidth: { min: 14, max: 36 },
+  minDayWidth: { min: 10, max: 36 },
   greenAt: { min: 50, max: 150 },
   redBelow: { min: 0, max: 100 },
 } as const;
 
-const DEFAULTS: ViewSettings = { weeks: 6, dayWidth: 22, basis: "scheduled", greenAt: 100, redBelow: 80 };
+const DEFAULTS: ViewSettings = { weeks: 6, minDayWidth: 16, basis: "scheduled", greenAt: 100, redBelow: 80 };
 const SETTINGS_KEY = "accomm.availability.settings";
 const collapsedKey = (tenant: string) => `accomm.availability.collapsed.${tenant}`;
 
@@ -47,7 +47,7 @@ function tidy(s: Partial<ViewSettings>): ViewSettings {
   const greenAt = clamp(Number(v.greenAt) || DEFAULTS.greenAt, LIMITS.greenAt);
   return {
     weeks: clamp(Number(v.weeks) || DEFAULTS.weeks, LIMITS.weeks),
-    dayWidth: clamp(Number(v.dayWidth) || DEFAULTS.dayWidth, LIMITS.dayWidth),
+    minDayWidth: clamp(Number(v.minDayWidth) || DEFAULTS.minDayWidth, LIMITS.minDayWidth),
     basis: v.basis === "loaded" ? "loaded" : "scheduled",
     greenAt,
     // The database refuses red above green; keep them ordered here.

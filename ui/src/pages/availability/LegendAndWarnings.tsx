@@ -5,25 +5,32 @@ import { OverIcon, WarnIcon, type State } from "./look";
 import type { ViewSettings } from "./settings";
 import type { Popup, Warning } from "./types";
 
+// A vertical list, opened from the toolbar's Legend button.
 export function Legend({ settings: s }: { settings: ViewSettings }) {
-  const items: [State, string][] = [
+  const beds: [State, string][] = [
     ["free", "Free"],
     ["out", "Out of action"],
-    ["green", `Allocated ≥ ${s.greenAt}% of ${s.basis}`],
-    ["amber", `Allocated ${s.redBelow}–${s.greenAt}% of ${s.basis}`],
-    ["red", `Allocated < ${s.redBelow}% of ${s.basis}`],
     ["external", "External booking"],
   ];
+  const courses: [State, string][] = [
+    ["green", `${s.greenAt}% or more allocated`],
+    ["amber", `${s.redBelow}% to ${s.greenAt}%`],
+    ["red", `Below ${s.redBelow}%`],
+  ];
+  const row = ([state, label]: [State, string]) => (
+    <li key={state}><span className={`av-sw st-${state}`} />{label}</li>
+  );
   return (
     <div className="av-legend">
-      {items.map(([state, label]) => (
-        <span key={state} className="item">
-          <span className={`av-sw st-${state}`} />
-          {label}
-        </span>
-      ))}
-      <span className="item"><WarnIcon />Booking clashes with an outage</span>
-      <span className="item"><OverIcon />Course loaded above scheduled</span>
+      <h2>Beds</h2>
+      <ul>{beds.map(row)}</ul>
+      <h2>Courses, by {s.basis}</h2>
+      <ul>{courses.map(row)}</ul>
+      <h2>Markers</h2>
+      <ul>
+        <li><WarnIcon />Booking clashes with an outage</li>
+        <li><OverIcon />Course loaded above scheduled</li>
+      </ul>
     </div>
   );
 }

@@ -22,6 +22,14 @@ Context from a long Claude session (in the Claude app, writing to this folder re
 - Checked in this session: build passes; `/`, deep links and `/api/health` through Caddy; LIVE and DEMO switch in the browser; reset refused for LIVE; dev server proxy. "Reset demo data" was not clicked in the browser.
 - Not done: locking down PostgREST's CORS. The `api-docs` page (port 8081) calls the API from another origin, so it needs CORS or a route through Caddy first.
 
+## UI look (15 Nov 2026, uncommitted at the time of writing)
+
+- **Theme:** tokens in `ui/src/styles.css`, as CSS variables for surfaces, text, borders, accent, danger/ok, grid lines, row levels and bar states. They're redefined under `:root[data-theme="dark"]`. `src/theme.tsx` holds Light / System / Dark (stored as `accomm.theme`; System follows the OS live). A small script in `index.html` applies it before React loads, so there's no flash. No hard-coded colours outside the tokens.
+- **Shell** (`src/Layout.tsx`, icons in `src/icons.tsx`): a collapsible side bar (232 px, or 64 px icons only; stored as `accomm.nav.collapsed`) with the pages, then tenant, "Your name" and theme at the bottom. The title bar shows the page name and a DEMO pill; the DEMO banner stays under it. Pages in `FILL` (availability) fill the main area with no page scroll.
+- **Availability:** the page h1 and subtitle are gone (the title bar has them). The toolbar has week navigation on the left and Colour by, Expand all, Collapse to floors, **Legend** and **Settings** on the right; the last two are popovers that close on a click outside or Esc. The legend is a vertical list (beds, courses by basis, markers).
+- **Grid fills the page:** it takes the remaining height, the axis sits at the bottom, and a `ResizeObserver` widens days to fill the width. The setting is now `minDayWidth` (default 16 px, renamed so old stored widths don't carry over); below it the grid scrolls sideways. The label column is 260 px (`LABEL_WIDTH` must match `.av-label`).
+- **Checked in the browser** at 1440×860, in dark and light: no horizontal scroll, the legend popover, and collapsing the side bar (days widen from 21 to 25 px).
+
 ## Phase 1 read API: `0006_availability_read.sql` (built, not yet committed)
 
 Based on the SQL in `claude_availability_page_overview.md`, with the agreed changes:

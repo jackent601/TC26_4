@@ -4,6 +4,7 @@ import { createBrowserRouter, RouterProvider } from "react-router";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { TenantProvider } from "./tenant";
 import { UserProvider } from "./user";
+import { ThemeProvider } from "./theme";
 import { Layout } from "./Layout";
 import { Home } from "./pages/Home";
 import { AvailabilityPage } from "./pages/availability/AvailabilityPage";
@@ -27,11 +28,13 @@ const router = createBrowserRouter([
 createRoot(document.getElementById("root")!).render(
   <StrictMode>
     <QueryClientProvider client={queryClient}>
-      <UserProvider>
-        <TenantProvider>
-          <RouterProvider router={router} />
-        </TenantProvider>
-      </UserProvider>
+      <ThemeProvider>
+        <UserProvider>
+          <TenantProvider>
+            <RouterProvider router={router} />
+          </TenantProvider>
+        </UserProvider>
+      </ThemeProvider>
     </QueryClientProvider>
   </StrictMode>,
 );
