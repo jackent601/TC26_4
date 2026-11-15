@@ -234,3 +234,19 @@
 .av-changes h3 { margin: 0; font-size: 12px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: 0.06em; }
 .av-changes .row { display: flex; align-items: flex-end; gap: 8px; }
 .av-changes .row.end { justify-content: flex-end; }
+
+/* --------------------------- Choosing weeks ---------------------------- */
+.popover-panel.left { right: auto; left: 0; }
+.range-btn { min-width: 220px; justify-content: center; }
+.range-btn .range { min-width: 0; }
+.range-picker { display: grid; gap: 10px; width: 320px; font-size: 13px; }
+.range-picker h2 { margin: 0; font-size: 11px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: 0.06em; }
+.range-picker .dates { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.range-picker .dates label { display: flex; flex-direction: column; gap: 4px; font-size: 12px; font-weight: 500; color: var(--text-2); }
+.range-picker .dates input { height: 32px; padding: 0 8px; }
+.range-picker .hint { margin: 0; color: var(--text-2); font-variant-numeric: tabular-nums; }
+.range-picker .hint.bad { color: var(--danger); }
+.range-picker .quick { display: flex; gap: 6px; flex-wrap: wrap; }
+.range-picker .apply { display: flex; justify-content: flex-end; }
+.tb-btn.primary { background: var(--accent); color: var(--accent-text); border-color: var(--accent); }
+.tb-btn.primary:hover:not(:disabled) { background: var(--accent-hover); color: var(--accent-text); }

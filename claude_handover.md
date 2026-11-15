@@ -29,6 +29,7 @@ Context from a long Claude session (in the Claude app, writing to this folder re
 - **Availability:** the page h1 and subtitle are gone (the title bar has them). The toolbar has week navigation on the left and Colour by, Expand all, Collapse to floors, **Legend** and **Settings** on the right; the last two are popovers that close on a click outside or Esc. The legend is a vertical list (beds, courses by basis, markers).
 - **Grid fills the page:** it takes the remaining height, the axis sits at the bottom, and a `ResizeObserver` widens days to fill the width. The setting is now `minDayWidth` (default 16 px, renamed so old stored widths don't carry over); below it the grid scrolls sideways. The label column is 260 px (`LABEL_WIDTH` must match `.av-label`).
 - **Checked in the browser** at 1440×860, in dark and light: no horizontal scroll, the legend popover, and collapsing the side bar (days widen from 21 to 25 px).
+- **Week range:** the dates in the toolbar open a picker (`RangePicker` in `Controls.tsx`). It takes a first and last week (any date snaps to its Monday; the last week is included) or quick 4, 6, 8 or 12 weeks from the first. Show sets the start and `weeks` (now 1–26; the database allows 52). `Popover` takes a custom trigger and a `close` callback.
 
 ## Phase 1 read API: `0006_availability_read.sql` (built, not yet committed)
 

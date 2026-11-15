@@ -4,12 +4,15 @@
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { CollapseIcon, ExpandIcon, ListIcon, SlidersIcon } from "../../icons";
 import { Legend } from "./LegendAndWarnings";
+import { addDaysIso, dayIndex, dayLong, dayLongYear, iso, mondayOf, parse } from "./dates";
 import { Arrow } from "./look";
 import { LIMITS, type ViewSettings } from "./settings";
 import type { Basis } from "./types";
 
 interface Props {
   rangeText: string;
+  start: string; // Monday of the first week shown
+  onRange: (start: string, weeks: number) => void;
   settings: ViewSettings;
   onSettings: (change: Partial<ViewSettings>) => void;
   onPrev: () => void;
@@ -32,7 +35,13 @@ export function Controls(p: Props) {
         <button type="button" className="tb-btn icon" aria-label="Previous week" onClick={p.onPrev}>
           <Arrow dir="left" />
         </button>
-        <span className="range" aria-live="polite">{p.rangeText}</span>
+        <Popover label="Choose weeks" align="left"
+                 trigger={<span className="range" aria-live="polite">{p.rangeText}</span>} triggerClass="tb-btn range-btn">
+          {(close) => (
+            <RangePicker start={p.start} weeks={p.settings.weeks}
+                         onApply={(start, weeks) => { p.onRange(start, weeks); close(); }} />
+          )}
+        </Popover>
         <button type="button" className="tb-btn icon" aria-label="Next week" onClick={p.onNext}>
           <Arrow dir="right" />
         </button>
@@ -76,8 +85,54 @@ export function Controls(p: Props) {
   );
 }
 
-// A button with a panel under it. Closes on a click outside or Esc.
-function Popover({ label, icon, children }: { label: string; icon: ReactNode; children: ReactNode }) {
+// Choose the weeks shown: a first and a last week (any day picks its week, which
+// runs Monday to Sunday, D9), or a quick length from the first week.
+function RangePicker({ start, weeks, onApply }: { start: string; weeks: number; onApply: (start: string, weeks: number) => void }) {
+  const [from, setFrom] = useState(start);
+  const [to, setTo] = useState(addDaysIso(start, (weeks - 1) * 7));
+  const fromMonday = from ? iso(mondayOf(parse(from))) : "";
+  const toMonday = to ? iso(mondayOf(parse(to))) : "";
+  const count = fromMonday && toMonday ? dayIndex(fromMonday, toMonday) / 7 + 1 : 0;
+  const ok = count >= LIMITS.weeks.min && count <= LIMITS.weeks.max;
+
+  return (
+    <div className="range-picker">
+      <h2>Weeks shown</h2>
+      <div className="dates">
+        <label>First week<input type="date" value={from} onChange={(e) => setFrom(e.target.value)} /></label>
+        <label>Last week<input type="date" value={to} onChange={(e) => setTo(e.target.value)} /></label>
+      </div>
+      <p className={`hint${ok || !fromMonday || !toMonday ? "" : " bad"}`}>
+        {!fromMonday || !toMonday ? "Choose both weeks."
+          : count < 1 ? "The last week must not be before the first."
+          : count > LIMITS.weeks.max ? `At most ${LIMITS.weeks.max} weeks.`
+          : `${dayLong(fromMonday)} – ${dayLongYear(addDaysIso(toMonday, 6))} · ${count} ${count === 1 ? "week" : "weeks"}`}
+      </p>
+      <div className="quick">
+        {[4, 6, 8, 12].map((n) => (
+          <button key={n} type="button" className="tb-btn" disabled={!fromMonday}
+                  onClick={() => onApply(fromMonday, n)}>
+            {n} weeks
+          </button>
+        ))}
+      </div>
+      <div className="apply">
+        <button type="button" className="tb-btn primary" disabled={!ok} onClick={() => onApply(fromMonday, count)}>Show</button>
+      </div>
+    </div>
+  );
+}
+
+// A button with a panel under it. Closes on a click outside or Esc. The panel's
+// content may be a function given `close`, to close it after an action.
+function Popover({ label, icon, trigger, triggerClass = "tb-btn", align = "right", children }: {
+  label: string;
+  icon?: ReactNode;
+  trigger?: ReactNode;
+  triggerClass?: string;
+  align?: "left" | "right";
+  children: ReactNode | ((close: () => void) => ReactNode);
+}) {
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
   useEffect(() => {
@@ -97,10 +152,15 @@ function Popover({ label, icon, children }: { label: string; icon: ReactNode; ch
   }, [open]);
   return (
     <div className="popover" ref={ref}>
-      <button type="button" className={`tb-btn${open ? " on" : ""}`} aria-expanded={open} onClick={() => setOpen(!open)}>
-        {icon} <span className="tb-label">{label}</span>
+      <button type="button" className={`${triggerClass}${open ? " on" : ""}`} aria-expanded={open}
+              aria-label={trigger ? label : undefined} title={trigger ? label : undefined} onClick={() => setOpen(!open)}>
+        {trigger ?? <>{icon} <span className="tb-label">{label}</span></>}
       </button>
-      {open && <div className="popover-panel" role="dialog" aria-label={label}>{children}</div>}
+      {open && (
+        <div className={`popover-panel ${align}`} role="dialog" aria-label={label}>
+          {typeof children === "function" ? children(() => setOpen(false)) : children}
+        </div>
+      )}
     </div>
   );
 }

@@ -84,6 +84,8 @@ export function AvailabilityPage() {
       {/* The page title is in the app's title bar; the legend is a toolbar popover. */}
       <Controls
         rangeText={`${dayLong(start)} – ${dayLongYear(last)}`}
+        start={start}
+        onRange={(s, weeks) => { setStart(s); updateSettings({ weeks }); }}
         settings={settings}
         onSettings={updateSettings}
         onPrev={() => setStart(addDaysIso(start, -7))}

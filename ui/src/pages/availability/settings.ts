@@ -12,7 +12,7 @@ export interface ViewSettings {
 }
 
 export const LIMITS = {
-  weeks: { min: 3, max: 10 },
+  weeks: { min: 1, max: 26 }, // the database allows up to 52 (fn_week_summary)
   minDayWidth: { min: 10, max: 36 },
   greenAt: { min: 50, max: 150 },
   redBelow: { min: 0, max: 100 },
