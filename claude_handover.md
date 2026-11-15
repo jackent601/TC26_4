@@ -126,6 +126,34 @@ Mockup: `docs/pages_pocs/availability.html` (open offline) and its README. Key p
 
 Jason, a software developer in the UK, on Windows with Git Bash and Docker Desktop. Wants to work step by step and check each step himself; likes concise explanations with the reasoning; prefers minimal custom images and keeping the core value visibly in the data model. Asks "why" questions about tooling (Docker targets, `--build`, script lines): answer them directly.
 
+## Audit trail (0015, 15 Nov 2026, uncommitted at the time of writing)
+
+- **Database (`0015_audit_trail.sql`, D37):** `core.audit_log.request_id` (uuid), set per request by `api_internal.pre_request` (`app.request_id`) and written by `api_internal.audit`. `api_internal.audit_summary(table, action, detail, course, bed, bed_to, site)` writes the sentence for each action in use (allocations INSERT/MOVE/STATUS/CANCEL, courses INSERT/UPDATE/LOADED/CANCEL; anything else falls back to "<action> on <table>"); helpers `safe_jsonb`, `ddmm`, `status_name`, `warning_suffix`. `api.audit` resolves course codes, bed names and sites at read time (left joins on current rows, ids as fallback) and exposes `course_id`, `allocation_id`, `bed_id`, `site_id`, `warnings text[]` and the raw `detail` jsonb. `api.audit_requests` groups by `request_id` (or `row-<audit_id>`): a lone row keeps its summary, a course-table row wins (cancel course), all-INSERT bookings become "booked N beds for CODE, dates", otherwise "<first> (and N more)".
+  - **Gotcha found in the browser, not by pgTAP:** functions called inside a view run with the caller's rights, so `api_access` needs `execute` on the wording helpers (granted in 0015). The tests run as superuser and passed anyway; `013_audit.sql` now reads both views as `api_user` (values read with `\gset`, asserted after `reset role`, since pgTAP's `public` schema isn't usable by `api_user`).
+  - Tests: `db/tests/013_audit.sql` (17 checks; 211 in all).
+- **UI:** `useAudit` (per course or per allocation) and `useAuditRequests` (latest 100 at the chosen sites) in `data.ts`; `HistoryList` at the bottom of the course popup and both booking popups; a History tab on the Overview with a "Who" filter (client-side, from the loaded rows) and an "open" link to the course. Rows written before 0015 have no request id and appear one per line.
+- **Checked:** db-test ALL PASSED, gen:api and api-contract run, UI build, `scripts/up.sh`, and the API answered `/audit_requests` with the booking made earlier on DEMO.
+
+## Course management (0014, 15 Nov 2026, uncommitted at the time of writing)
+
+Branch `phil-dev` (renamed from a short-lived `course-first-booking`), holding 0013 and 0014 uncommitted on top of `main`.
+
+- **Database (`0014_courses_write.sql`, D36):** `api.fn_create_course`, `fn_update_course` (nulls keep values; `p_clear_site` removes the site; `p_notes` empty clears notes; returns warnings for live bookings left outside the dates or on another site), `fn_update_loaded` (stamps `loaded_at`), `fn_cancel_course` (cancels the course and its live allocations, each audited with reason "course cancelled"). Shared checks in `api_internal.check_course` (code unique per tenant, case-insensitive; lengths; dates; non-negative figures; status REQUESTED or CONFIRMED; site in the tenant). A cancelled course is reinstated by `fn_update_course` with a status; its bookings stay cancelled. Tests: `db/tests/012_courses_write.sql` (25 checks; 194 in all), all passing with the rollback check.
+- **UI:** "New course" on the Overview toolbar (`NewCoursePopup`; after saving it offers "Book beds"). The Course popup's placeholder is replaced by `CourseChanges`: the same `CourseFields` form, Save changes (only changed fields are sent), Update loaded, and Cancel course with a confirm; a cancelled course shows a Reinstate form instead. Hooks in `writes.ts` build the request bodies from the generated `paths` types. The Overview notice now lists returned warnings like the Availability one.
+- **Not in the UI:** notes (the API takes them, but `api.course_figures` doesn't return them; add the column to the view when a form needs it); reopening a cancelled course (the Courses tab hides them); the audit log (no `api` view); rule severities (changed in `core.rules` directly). All listed in README "Known limitations".
+- **Checked:** `scripts/db-test.sh` ALL PASSED, `gen:api` and `scripts/api-contract.sh` run, UI build (see below).
+
+## Course-first booking (0013, 15 Nov 2026, uncommitted at the time of writing)
+
+Checked on the Mac: `scripts/db-test.sh` ALL PASSED (169 checks, rollback and re-apply of 12 migrations), `scripts/api-contract.sh --check` unchanged after the hand edit, `scripts/ui-npm.sh run gen:api` regenerated the client, and `scripts/ui-npm.sh run build` passed.
+
+- **Database (`0013_candidate_beds.sql`, D35):**
+  - `api.fn_candidate_beds(p_course_id, p_from, p_to, p_beds)`: every bed on the course's site (all beds when it has no site), in estate order, with `free` (no booking or outage on the nights, whatever the rules say), `warnings` (the clashes the active rules would raise, worded like `bed_clashes`), `blocks`, `course_in_room`, and a suggestion of `p_beds` free beds (`suggested`, `rank`). Greedy: rooms where the course already has a bed first, then rooms with the most free beds, then estate order; a room is taken whole while it fits what is still needed, then the smallest room that can hold the rest is split. `stable`, so no temp tables: the per-bed facts come from `api_internal.candidate_bed_facts` (not an endpoint), called more than once per request.
+  - Tests: `db/tests/011_candidate_beds.sql` (22 checks), with the expected suggestions worked out by hand from the demo estate (Block A floors 1-3, Block B floor 1; rooms 103, 204 and 303 have one bed).
+  - `db/api-contract.txt` and `ui/src/api/schema.d.ts` are the script outputs (contract confirmed unchanged; client regenerated).
+- **UI:** the Course popup has a "Book beds" action (`BookCoursePopup` in `Popups.tsx`; `useCandidateBeds` in `data.ts`; `CandidateBed` and the `bookCourse` popup kind in `types.ts`). First night and departure default to the course's dates; beds needed defaults to the larger of scheduled and loaded less allocated. Candidate beds are listed by room with the suggestion ticked; ticking by hand is remembered per dates-and-quantity until "Back to the suggestion"; blocked beds can't be ticked. Booking calls `fn_allocate_course` with the ticked beds and shows the same result view as the grid's New allocation popup (`AllocatedResult`, shared). Works from the Overview too (it uses the same `PopupView`).
+- **Docs:** D35 in `docs/decisions.md`; build plan phase 4 and the suggestions paragraph; README migrations, tests and UI paragraph.
+
 ## Overview page (0011, 15 Nov 2026, uncommitted at the time of writing)
 
 - **Database (`0011_overview.sql`, D33):**

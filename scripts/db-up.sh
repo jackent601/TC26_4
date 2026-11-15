@@ -16,7 +16,7 @@ up_status=$?
 echo
 echo "---- migrate / db-roles output ----"
 # -f follows until both have exited (they are one-shot services).
-docker compose logs -f migrate db-roles
+docker compose logs migrate db-roles
 
 echo
 echo "---- result ----"

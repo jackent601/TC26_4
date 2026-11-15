@@ -3,7 +3,104 @@
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { api, tenantHeaders, unwrap } from "../../api/client";
 import { addDaysIso } from "./dates";
-import type { BedBar, Clash, CourseFigure, Level, LocationNode, Warning, WeekSummary, WeekSummaryRow } from "./types";
+import type {
+  AuditRequest, AuditRow, BedBar, CandidateBed, Clash, CourseFigure, Level, LocationNode, Warning, WeekSummary, WeekSummaryRow,
+} from "./types";
+
+// History of one booking, or of a course and its bookings (api.audit, D37),
+// latest first. The sentences come from the database; the UI only lists them.
+export function useAudit(tenant: string | null, filter: { courseId?: number; allocationId?: number }, limit = 30) {
+  const { courseId, allocationId } = filter;
+  return useQuery({
+    queryKey: ["audit", tenant, courseId ?? null, allocationId ?? null, limit],
+    enabled: tenant !== null && (courseId !== undefined || allocationId !== undefined),
+    queryFn: () =>
+      unwrap(
+        api.GET("/audit", {
+          params: {
+            query: {
+              ...(allocationId !== undefined ? { allocation_id: `eq.${allocationId}` } : { course_id: `eq.${courseId}` }),
+              order: "changed_at.desc,audit_id.desc",
+              limit: String(limit),
+            },
+          },
+          headers: tenantHeaders(tenant!),
+        }),
+      ),
+    select: (rows): AuditRow[] =>
+      rows.map((r) => ({
+        auditId: r.audit_id ?? 0,
+        requestId: r.request_id ?? null,
+        changedAt: r.changed_at ?? "",
+        changedBy: r.changed_by ?? "",
+        tableName: r.table_name ?? "",
+        recordId: r.record_id ?? 0,
+        courseId: r.course_id ?? null,
+        courseCode: r.course_code ?? "",
+        allocationId: r.allocation_id ?? null,
+        bedId: r.bed_id ?? null,
+        siteId: r.site_id ?? null,
+        action: r.action ?? "",
+        summary: r.summary ?? "",
+        warnings: r.warnings ?? [],
+      })),
+  });
+}
+
+// The latest changes, one line per request (api.audit_requests), for the
+// chosen sites: the Overview's History tab.
+export function useAuditRequests(tenant: string | null, siteIds: number[] | null, limit = 100) {
+  return useQuery({
+    queryKey: ["audit_requests", tenant, siteIds, limit],
+    enabled: tenant !== null,
+    placeholderData: keepPreviousData,
+    queryFn: () =>
+      unwrap(
+        api.GET("/audit_requests", {
+          params: {
+            query: {
+              ...(siteIds ? { site_id: `in.(${siteIds.join(",")})` } : {}),
+              order: "changed_at.desc",
+              limit: String(limit),
+            },
+          },
+          headers: tenantHeaders(tenant!),
+        }),
+      ),
+    select: (rows): AuditRequest[] =>
+      rows.map((r) => ({
+        requestKey: r.request_key ?? "",
+        changedAt: r.changed_at ?? "",
+        changedBy: r.changed_by ?? "",
+        changes: r.changes ?? 1,
+        courseId: r.course_id ?? null,
+        courseCode: r.course_code ?? null,
+        siteId: r.site_id ?? null,
+        summary: r.summary ?? "",
+        hasWarnings: r.has_warnings ?? false,
+      })),
+  });
+}
+
+// Beds a course could be booked into for some nights, with the database's
+// suggestion of `beds` of them (api.fn_candidate_beds, D35). No placeholder
+// data: a stale list must not be booked.
+export function useCandidateBeds(tenant: string | null, courseId: number, from: string, to: string, beds: number,
+                                 enabled = true) {
+  return useQuery({
+    queryKey: ["candidate_beds", tenant, courseId, from, to, beds],
+    enabled: enabled && tenant !== null,
+    queryFn: async () => {
+      const rows = await unwrap(
+        api.POST("/rpc/fn_candidate_beds", {
+          body: { p_course_id: courseId, p_from: from, p_to: to, p_beds: beds },
+          headers: tenantHeaders(tenant!),
+        }),
+      );
+      return rows as unknown as CandidateBed[];
+    },
+  });
+}
 
 // Bookings and outages on some beds over some nights (api.fn_check_allocation).
 // Used by the outage popup to list the bookings an outage affects.

@@ -70,6 +70,17 @@
 .ov-warnings .sev { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; padding: 2px 6px; border-radius: 999px; background: var(--danger-soft); color: var(--danger-text); }
 .ov-warnings .sev-info { background: var(--surface-2); color: var(--muted); }
 
+/* ------------------------------ History (D37) ----------------------------- */
+.ov-history { display: flex; flex-direction: column; gap: 10px; }
+.ov-history-bar { display: flex; align-items: flex-end; gap: 12px; }
+.ov-history-bar .av-field select { height: 32px; padding: 0 8px; font-size: 13px; min-width: 160px; }
+.ov-history-bar .summary { margin: 0 0 7px; font-size: 12px; color: var(--muted); }
+.ov-history .av-history { max-height: none; overflow: visible; }
+.ov-history .av-history li { padding: 6px 6px; }
+.ov-history .av-history li + li { border-top: 1px solid var(--border); }
+.ov-history .link { border: 0; background: none; padding: 0; color: var(--accent); text-decoration: underline; text-underline-offset: 3px; font: inherit; font-size: 12px; }
+.ov-history .link:hover:not(:disabled) { background: none; }
+
 /* --------------------------- Courses timeline -------------------------- */
 .ov-course .av-row { height: 36px; }
 .ov-course .av-body { height: 35px; }
