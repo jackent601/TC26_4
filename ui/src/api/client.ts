@@ -9,9 +9,18 @@ export type Schemas = components["schemas"];
 // Same origin: Caddy (built image) or Vite (dev) forwards /api to PostgREST.
 export const api = createClient<paths>({ baseUrl: "/api" });
 
-// Every request names its tenant; the database's pre-request hook applies it.
+// Who is acting, until logins exist: sent as X-User and recorded in the audit
+// log by the database (I5). Set from the "Your name" box (src/user.tsx).
+let apiUser = "";
+export function setApiUser(name: string) {
+  // Header values must be plain ASCII; anything else becomes "?".
+  apiUser = name.trim().replace(/[^\x20-\x7E]/g, "?").slice(0, 100);
+}
+
+// Every request names its tenant (and the user, if set); the database's
+// pre-request hook applies them.
 export function tenantHeaders(tenant: string): Record<string, string> {
-  return { "X-Tenant": tenant };
+  return apiUser ? { "X-Tenant": tenant, "X-User": apiUser } : { "X-Tenant": tenant };
 }
 
 // PostgREST errors look like { code, message, details, hint }. Rule failures

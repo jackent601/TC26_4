@@ -257,7 +257,8 @@ function BedBars({ bars, ctx }: { bars: BedBar[]; ctx: GridContext }) {
         const label =
           b.kind === "external"
             ? `${b.external_ref ?? ""} · ${b.external_name ?? ""}`
-            : `${b.course_code} #${b.individual_no}` + (course ? ` · ${course.allocated}/${basisOf(course, ctx.settings)}` : "");
+            // Individual numbers are internal (D31): the course and its figures only.
+            : `${b.course_code}` + (course ? ` · ${course.allocated}/${basisOf(course, ctx.settings)}` : "");
         const aria = `${label}, ${dates}` + (b.on_outage ? ", clashes with an outage" : "") +
           (over ? ", course loaded above scheduled" : "");
         return (

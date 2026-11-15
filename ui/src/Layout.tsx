@@ -1,8 +1,10 @@
 import { NavLink, Outlet } from "react-router";
 import { useTenant } from "./tenant";
+import { useUser } from "./user";
 
 export function Layout() {
   const { tenants, code, setCode, isDemo, error } = useTenant();
+  const { name, setName } = useUser();
 
   return (
     <div className="app">
@@ -14,6 +16,11 @@ export function Layout() {
           </NavLink>
           <NavLink to="/availability">Availability</NavLink>
         </nav>
+        <label className="user-name">
+          Your name
+          <input value={name} onChange={(e) => setName(e.target.value)} placeholder="for the audit log"
+                 autoComplete="name" maxLength={100} />
+        </label>
         <div className="tenant-switch" role="group" aria-label="Tenant">
           {tenants.map((t) => (
             <button

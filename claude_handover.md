@@ -46,7 +46,7 @@ Rebuilding `docs/pages_pocs/availability.html` on the 0006 endpoints (spec: `cla
 
 Notes: since 0007 (D29) the database returns facts only. `fn_week_summary(p_from, p_weeks)` gives beds by category (free, out_of_action, external, course per `course_id`) on each week's busiest night; `api.course_figures` has `pct_scheduled` and `pct_loaded`. Colour bands exist only in the UI (`look.tsx`, `courseColour`), used by both bars and collapsed rows, so switching Colour by or a threshold makes no request. pgTAP for 0007 is in `db/tests/006_availability_read.sql` (36 checks; 84 in all). The first week shown defaults to the Monday two weeks ago and isn't remembered. The mockup's "Departure day" and "Allow clashes" settings were left out: D9 fixes the week block, and D11 is a database rule.
 
-## Phase 3 write API: `0009_write_allocations.sql` (database done, UI not started)
+## Phase 3 write API: `0009_write_allocations.sql` (database and course-booking UI done)
 
 Agreed with the user (D30–D32):
 - **Clashes are rules (D30):** new rule type `BED_CLASH`, a `DOUBLE_BOOKING` rule per tenant (WARNING). With `OUT_OF_ACTION`, each rule's severity decides: WARNING saves with a warning, BLOCK refuses the whole request. An inactive rule isn't checked. `core.load_reference_data` now wraps the 0003 loader (renamed `load_reference_data_0003`) and adds the rule.
@@ -55,12 +55,14 @@ Agreed with the user (D30–D32):
 - **Helpers** in `api_internal` (not endpoints): `bed_clashes`, `audit`, `require_tenant`.
 - **Tests:** `db/tests/007_write_api.sql` (43 checks). A pgTAP gotcha: one statement can't see rows its own function call inserted, so tests read back in a second statement.
 - **Tried on the user's stack** through Caddy with `X-User`, then DEMO was reset.
-- **Next (UI):**
-  - a "Your name" box in the header that sends `X-User`;
-  - the New allocation popup: two boxes, Course booking (now) and one-off booking (later, needs `LOCAL` bookings without a course), with a course picker and a working Allocate. It shows "Not allowed" when `blocks` is true;
-  - cancel, move and status in the booking popup;
-  - bar labels without "#n", showing attribute badges once rule warnings exist;
-  - refresh bars, summary, warnings and figures after each write.
+- **UI (done):**
+  - **Your name:** a "Your name" box in the header (`src/user.tsx`, kept in local storage). `tenantHeaders` adds it as `X-User`, with non-ASCII characters replaced by "?".
+  - **Writes** in `pages/availability/writes.ts`. Each one refreshes every query on success.
+  - **New allocation popup:** "Course booking" and "One-off booking" boxes; one-off is disabled until it's built (needs `LOCAL` bookings without a course). It has a course picker (courses on those nights first, defaulting to the first of them) and "Use the course's dates". The clash list says "Not allowed" and disables Allocate when any clash `blocks`. After saving, the popup shows what was saved and the warnings returned.
+  - **Booking popup** (course allocations only, not external bookings): a Change section with status, move (bed and/or dates) and cancel (with a confirm). Results and returned warnings go to a dismissible notice under the warnings strip.
+  - **No "#n" shown:** bars read e.g. `TEC-07 · 6/10`, and the popup title is the course. Attribute badges wait for the parked rule warnings.
+  - **Checked in the browser on DEMO** (reset afterwards): booking a free week; booking onto INT-22 (saved with a warning); the same with `DOUBLE_BOOKING` set to BLOCK ("Not allowed", Allocate disabled); then status, move and cancel. The audit log showed all four as "UI tester".
+- **Not built:** one-off bookings, outage editing (`set_location_attribute`), course create/update and `update_loaded`. Status transitions are deferred (D31).
 - **Known limitation:** the same individual in two beds on the same night isn't checked (README).
 
 ## The availability page (agreed in the mockup)

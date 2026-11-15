@@ -74,6 +74,7 @@ export interface Clash {
   start_date: string;
   end_date: string;
   message: string;
+  blocks: boolean; // the clash's rule is BLOCK, so saving would be refused (D30)
 }
 
 // What a popup is showing.

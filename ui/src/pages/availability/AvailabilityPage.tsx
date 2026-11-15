@@ -1,8 +1,9 @@
-// Availability page (phase 2): header controls, legend, warnings strip, the
-// grid and its read-only popups.
+// Availability page: header controls, legend, warnings strip, the grid, its
+// popups (phase 2) and course booking through them (phase 3).
 // Spec: claude_availability_page_overview.md; mockup: docs/pages_pocs/availability.html.
 import { useCallback, useMemo, useState } from "react";
-import { PopupView } from "./Popups";
+import { PopupView, type Notice } from "./Popups";
+import { WarnIcon } from "./look";
 import { useTenant } from "../../tenant";
 import { Controls } from "./Controls";
 import { useBedBars, useCourseFigures, useLocations, useWarnings, useWeekSummary } from "./data";
@@ -28,6 +29,8 @@ export function AvailabilityPage() {
   // The open popup; `seq` gives each opening a fresh dialog.
   const [popup, setPopup] = useState<{ p: Popup; seq: number } | null>(null);
   const open = useCallback((p: Popup) => setPopup((cur) => ({ p, seq: (cur?.seq ?? 0) + 1 })), []);
+  // The result of the last change made from a popup, until dismissed.
+  const [notice, setNotice] = useState<Notice | null>(null);
 
   // Every location by key, for paths and lookups in popups.
   const nodes = useMemo(() => {
@@ -97,6 +100,17 @@ export function AvailabilityPage() {
 
       <Legend settings={settings} />
       <WarningsStrip warnings={warnings.data ?? []} error={warnings.error} onOpen={open} />
+      {notice && (
+        <div className={`av-notice${notice.warnings.length ? " warn" : ""}`} role="status">
+          <div>
+            <strong>{notice.text}</strong>
+            {notice.warnings.length > 0 && (
+              <ul className="av-list">{notice.warnings.map((w, i) => <li key={i}><WarnIcon /> Saved with a warning: {w}</li>)}</ul>
+            )}
+          </div>
+          <button type="button" className="x" aria-label="Dismiss" onClick={() => setNotice(null)}>×</button>
+        </div>
+      )}
 
       {error && <p className="error">Could not load availability: {error.message}</p>}
       {!tenant || loading ? (
@@ -121,6 +135,7 @@ export function AvailabilityPage() {
           key={popup.seq}
           popup={popup.p}
           onOpen={open}
+          onNotice={setNotice}
           onClose={() => setPopup(null)}
           data={{
             tenant,

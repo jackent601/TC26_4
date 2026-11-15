@@ -1,6 +1,7 @@
-// Read-only popups (phase 2, step 4). Everything shown comes from data the page
-// already has, except the outage popup's affected bookings (fn_check_allocation).
-// Edit forms come with the write API (phase 3).
+// Popups (phase 2 step 4, writes from phase 3). What's shown comes from data the
+// page already has, except clashes (fn_check_allocation). Course allocations
+// can be booked, moved, cancelled and have their status set (0009); other edit
+// forms come later.
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { format, parseISO } from "date-fns";
 import { useClashes } from "./data";
@@ -9,6 +10,7 @@ import { basisOf, courseColour, OverIcon, STATE_NAMES, STATE_ORDER, WarnIcon } f
 import type { ViewSettings } from "./settings";
 import { weekCounts } from "./TimelineGrid";
 import type { BedBar, CourseFigure, Level, LocationNode, Popup, Warning, WeekSummary } from "./types";
+import { STATUSES, useAllocateCourse, useCancelAllocation, useMoveAllocation, useSetStatus } from "./writes";
 
 export interface PopupData {
   tenant: string | null;
@@ -24,17 +26,18 @@ interface Props {
   popup: Popup;
   data: PopupData;
   onOpen: (p: Popup) => void;
+  onNotice: (n: Notice) => void;
   onClose: () => void;
 }
 
-export function PopupView({ popup, data, onOpen, onClose }: Props) {
+export function PopupView({ popup, data, onOpen, onNotice, onClose }: Props) {
   switch (popup.kind) {
     case "location": return <LocationPopup nodeKey={popup.key} data={data} onClose={onClose} />;
-    case "booking": return <BookingPopup bar={popup.bar} data={data} onOpen={onOpen} onClose={onClose} />;
+    case "booking": return <BookingPopup bar={popup.bar} data={data} onOpen={onOpen} onNotice={onNotice} onClose={onClose} />;
     case "outage": return <OutagePopup bar={popup.bar} data={data} onClose={onClose} />;
     case "week": return <WeekPopup nodeKey={popup.key} weekStart={popup.weekStart} data={data} onOpen={onOpen} onClose={onClose} />;
     case "course": return <CoursePopup courseId={popup.courseId} data={data} onClose={onClose} />;
-    case "warning": return <WarningPopup warning={popup.warning} data={data} onOpen={onOpen} onClose={onClose} />;
+    case "warning": return <WarningPopup warning={popup.warning} data={data} onOpen={onOpen} onNotice={onNotice} onClose={onClose} />;
     case "new": return <NewAllocationPopup bedKeys={popup.bedKeys} from={popup.from} to={popup.to} data={data} onClose={onClose} />;
   }
 }
@@ -202,7 +205,9 @@ function LocationPopup({ nodeKey, data, onClose }: { nodeKey: string; data: Popu
   );
 }
 
-function BookingPopup({ bar, data, onOpen, onClose }: { bar: BedBar; data: PopupData; onOpen: (p: Popup) => void; onClose: () => void }) {
+function BookingPopup({ bar, data, onOpen, onNotice, onClose }: {
+  bar: BedBar; data: PopupData; onOpen: (p: Popup) => void; onNotice: (n: Notice) => void; onClose: () => void;
+}) {
   const bedPath = pathOf(data.nodes, `bed:${bar.bed_id}`);
   const warnings = data.warnings.filter(
     (w) => w.allocationId === bar.id || (bar.course_id !== null && w.allocationId === null && w.courseId === bar.course_id),
@@ -222,13 +227,12 @@ function BookingPopup({ bar, data, onOpen, onClose }: { bar: BedBar; data: Popup
     );
   }
 
+  // Individual numbers are internal (D31): the title names the course only.
   const c = bar.course_id !== null ? data.figures.get(bar.course_id) : undefined;
   return (
-    <Dialog kind="Allocation" title={`${bar.course_code} #${bar.individual_no}`} onClose={onClose}
+    <Dialog kind="Allocation" title={c ? `${c.code}: ${c.name}` : bar.course_code ?? "Allocation"} onClose={onClose}
             actions={c && <button type="button" className="btn" onClick={() => onOpen({ kind: "course", courseId: c.courseId })}>Open course</button>}>
       <Facts rows={[
-        ["Course", c ? `${c.code}: ${c.name}` : bar.course_code ?? ""],
-        ["Individual", `#${bar.individual_no}`],
         ["Bed", bedPath],
         ["Nights", stay(bar.start_date, bar.end_date)],
         ["Status", titleCase(bar.status ?? "")],
@@ -239,9 +243,93 @@ function BookingPopup({ bar, data, onOpen, onClose }: { bar: BedBar; data: Popup
         ] as [string, ReactNode][]) : []),
         ["Warnings", <WarningList list={warnings} />],
       ]} />
-      <Later what="Moving, changing or cancelling an allocation" />
+      <BookingChanges bar={bar} data={data} onNotice={onNotice} onClose={onClose} />
     </Dialog>
   );
+}
+
+// Change a course allocation: status, move (bed and/or dates), cancel. The
+// database checks and audits each (0009); results go to the page's notice.
+function BookingChanges({ bar, data, onNotice, onClose }: {
+  bar: BedBar; data: PopupData; onNotice: (n: Notice) => void; onClose: () => void;
+}) {
+  const [status, setStatus] = useState(bar.status ?? "ALLOCATED");
+  const [bedKey, setBedKey] = useState(`bed:${bar.bed_id}`);
+  const [first, setFirst] = useState(bar.start_date);
+  const [departure, setDeparture] = useState(bar.end_date);
+  const setStatusCall = useSetStatus(data.tenant);
+  const move = useMoveAllocation(data.tenant);
+  const cancel = useCancelAllocation(data.tenant);
+  const busy = setStatusCall.isPending || move.isPending || cancel.isPending;
+  const error = setStatusCall.error ?? move.error ?? cancel.error;
+
+  const beds = [...data.nodes.values()].filter((n) => n.level === "Bed"); // tree order
+  const bed = data.nodes.get(bedKey);
+  const moved = bedKey !== `bed:${bar.bed_id}` || first !== bar.start_date || departure !== bar.end_date;
+  const datesOk = first !== "" && departure !== "" && departure > first;
+  const label = bar.course_code ?? "Allocation";
+
+  const done = (n: Notice) => {
+    onNotice(n);
+    onClose();
+  };
+
+  return (
+    <div className="av-changes">
+      <h3>Change</h3>
+      <div className="row">
+        <label className="av-field">
+          Status
+          <select value={status} onChange={(e) => setStatus(e.target.value)}>
+            {STATUSES.map((s) => <option key={s} value={s}>{titleCase(s)}</option>)}
+          </select>
+        </label>
+        <button type="button" className="btn" disabled={busy || status === bar.status}
+                onClick={() => setStatusCall.mutate({ id: bar.id, status }, {
+                  onSuccess: (r) => done({ text: `${label}: status set to ${titleCase(r.status)}.`, warnings: [] }),
+                })}>
+          Set status
+        </button>
+      </div>
+
+      <div className="row">
+        <label className="av-field grow">
+          Bed
+          <select value={bedKey} onChange={(e) => setBedKey(e.target.value)}>
+            {beds.map((b) => <option key={b.key} value={b.key}>{pathOf(data.nodes, b.key).split(" › ").slice(-3).join(" › ")}</option>)}
+          </select>
+        </label>
+      </div>
+      <div className="dates">
+        <label>First night<input type="date" value={first} onChange={(e) => setFirst(e.target.value)} /></label>
+        <label>Departure<input type="date" value={departure} onChange={(e) => setDeparture(e.target.value)} /></label>
+      </div>
+      <div className="row end">
+        <button type="button" className="btn" disabled={busy || !moved || !datesOk || !bed}
+                onClick={() => bed && move.mutate({ id: bar.id, bedId: bed.id, from: first, to: departure }, {
+                  onSuccess: (r) => done({ text: `${label}: moved to ${bedName(data.nodes, bed)}, ${stay(r.start_date, r.end_date)}.`, warnings: r.warnings }),
+                })}>
+          Move
+        </button>
+        <button type="button" className="btn danger" disabled={busy}
+                onClick={() => {
+                  if (window.confirm(`Cancel this ${label} allocation? It stays in the history as cancelled.`)) {
+                    cancel.mutate(bar.id, { onSuccess: () => done({ text: `${label}: allocation cancelled.`, warnings: [] }) });
+                  }
+                }}>
+          Cancel allocation
+        </button>
+      </div>
+      {!datesOk && <p className="clash bad">Departure must be after the first night.</p>}
+      {error && <p className="clash bad">Not saved: {error.message}</p>}
+    </div>
+  );
+}
+
+// A message for the page after a write, with any warnings the database returned.
+export interface Notice {
+  text: string;
+  warnings: string[];
 }
 
 function OutagePopup({ bar, data, onClose }: { bar: BedBar; data: PopupData; onClose: () => void }) {
@@ -320,16 +408,18 @@ function CoursePopup({ courseId, data, onClose }: { courseId: number; data: Popu
         ["Colour", allocatedText(c, data.settings)],
         ["Warnings", <WarningList list={warnings} />],
       ]} />
-      <Later what="Editing the course and allocating its individuals" />
+      <Later what="Editing the course (dates, figures, attributes)" />
     </Dialog>
   );
 }
 
 // From the warnings strip: a booking warning opens the booking if it's in the
 // weeks loaded; otherwise the warning's own details.
-function WarningPopup({ warning: w, data, onOpen, onClose }: { warning: Warning; data: PopupData; onOpen: (p: Popup) => void; onClose: () => void }) {
+function WarningPopup({ warning: w, data, onOpen, onNotice, onClose }: {
+  warning: Warning; data: PopupData; onOpen: (p: Popup) => void; onNotice: (n: Notice) => void; onClose: () => void;
+}) {
   const bar = w.allocationId !== null ? findBar(data.bars, w.allocationId) : undefined;
-  if (bar) return <BookingPopup bar={bar} data={data} onOpen={onOpen} onClose={onClose} />;
+  if (bar) return <BookingPopup bar={bar} data={data} onOpen={onOpen} onNotice={onNotice} onClose={onClose} />;
   const c = w.courseId !== null ? data.figures.get(w.courseId) : undefined;
   return (
     <Dialog kind="Warning" title={w.message} onClose={onClose}
@@ -344,9 +434,10 @@ function WarningPopup({ warning: w, data, onOpen, onClose }: { warning: Warning;
   );
 }
 
-// A selection from the grid (D8-D10): the beds, editable exact dates, and every
-// clash on those beds from the database (fn_check_allocation). Clashes warn by
-// default (D11). Saving needs the write API (phase 3), so Allocate is disabled.
+// A selection from the grid (D8-D10): the beds, editable exact dates, every
+// clash on those beds (fn_check_allocation), and the booking itself. Course
+// booking first (D32); one-off bookings come later. The database decides what
+// is allowed: a clash whose rule is BLOCK says "Not allowed" (D30).
 function NewAllocationPopup({ bedKeys, from, to, data, onClose }: {
   bedKeys: string[]; from: string; to: string; data: PopupData; onClose: () => void;
 }) {
@@ -355,18 +446,75 @@ function NewAllocationPopup({ bedKeys, from, to, data, onClose }: {
   const valid = first !== "" && departure !== "" && departure > first;
 
   const beds = bedKeys.map((k) => data.nodes.get(k)).filter((n): n is LocationNode => n !== undefined);
-  const bedName = (n: LocationNode) => {
-    const room = n.parentKey ? data.nodes.get(n.parentKey) : undefined;
-    return room ? `${room.name} ${n.name}` : n.name;
-  };
   const byId = new Map(beds.map((b) => [b.id, b]));
   const clashes = useClashes(data.tenant, beds.map((b) => b.id), first, departure, valid);
   const list = clashes.data ?? [];
+  const blocked = list.some((c) => c.blocks);
+
+  // Courses to choose from: not cancelled; those running on these nights first.
+  const courses = [...data.figures.values()]
+    .filter((c) => c.status !== "CANCELLED")
+    .map((c) => ({ c, overlaps: c.startDate < departure && first < c.endDate }))
+    .sort((a, b) => Number(b.overlaps) - Number(a.overlaps) || a.c.startDate.localeCompare(b.c.startDate));
+  const [courseId, setCourseId] = useState<number | null>(() => courses.find((x) => x.overlaps)?.c.courseId ?? null);
+  const course = courseId !== null ? data.figures.get(courseId) : undefined;
+
+  const allocate = useAllocateCourse(data.tenant);
+  const canAllocate = valid && course !== undefined && !clashes.isPending && !clashes.error && !blocked && !allocate.isPending;
+
+  // After saving: what was written and the warnings the database returned.
+  if (allocate.data) {
+    const warnings = allocate.data.flatMap((a) => a.warnings);
+    return (
+      <Dialog kind="Allocated" title={`${course?.code ?? "Course"}: ${allocate.data.length} ${allocate.data.length === 1 ? "bed" : "beds"}`} onClose={onClose}>
+        <p className="clash ok">Saved: {stay(first, departure)}.</p>
+        {warnings.length > 0 && (
+          <div className="clash bad">
+            <strong>Saved with {warnings.length} {warnings.length === 1 ? "warning" : "warnings"}</strong>
+            <ul className="av-list">{warnings.map((w, i) => <li key={i}><WarnIcon /> {w}</li>)}</ul>
+          </div>
+        )}
+      </Dialog>
+    );
+  }
 
   return (
     <Dialog kind="New allocation" title={`${beds.length} ${beds.length === 1 ? "bed" : "beds"}`} onClose={onClose}
-            actions={<button type="button" className="btn primary" disabled title="Saving comes with the write API (phase 3)">Allocate</button>}>
-      <Facts rows={[["Beds", beds.map(bedName).join(", ")]]} />
+            actions={
+              <button type="button" className="btn primary" disabled={!canAllocate}
+                      onClick={() => course && allocate.mutate({ courseId: course.courseId, bedIds: beds.map((b) => b.id), from: first, to: departure })}>
+                {allocate.isPending ? "Allocating…" : "Allocate"}
+              </button>
+            }>
+      <div className="av-modes" role="group" aria-label="Kind of booking">
+        <button type="button" aria-pressed="true">Course booking</button>
+        <button type="button" aria-pressed="false" disabled title="Comes later (D32)">One-off booking</button>
+      </div>
+
+      <Facts rows={[["Beds", beds.map((b) => bedName(data.nodes, b)).join(", ")]]} />
+
+      <label className="av-field">
+        Course
+        <select value={courseId ?? ""} onChange={(e) => setCourseId(e.target.value ? Number(e.target.value) : null)}>
+          <option value="">Choose a course…</option>
+          {courses.map(({ c, overlaps }) => (
+            <option key={c.courseId} value={c.courseId}>
+              {c.code}: {c.name} ({ddmm(c.startDate)}–{ddmm(c.endDate)}){overlaps ? "" : " · not on these nights"}
+            </option>
+          ))}
+        </select>
+      </label>
+      {course && (
+        <p className="summary">
+          {course.allocated} allocated of {course.scheduled} scheduled, {course.loaded} loaded. Allocating beyond these is allowed.{" "}
+          {(course.startDate !== first || course.endDate !== departure) && (
+            <button type="button" className="link" onClick={() => { setFirst(course.startDate); setDeparture(course.endDate); }}>
+              Use the course's dates ({ddmm(course.startDate)}–{ddmm(course.endDate)})
+            </button>
+          )}
+        </p>
+      )}
+
       <div className="dates">
         <label>First night<input type="date" value={first} onChange={(e) => setFirst(e.target.value)} /></label>
         <label>Departure<input type="date" value={departure} onChange={(e) => setDeparture(e.target.value)} /></label>
@@ -376,21 +524,30 @@ function NewAllocationPopup({ bedKeys, from, to, data, onClose }: {
         clashes.error ? <p className="clash bad">Could not check clashes: {clashes.error.message}</p> :
         list.length === 0 ? <p className="clash ok">No clashes on these beds for these nights.</p> : (
           <div className="clash bad">
-            <strong>{list.length} {list.length === 1 ? "clash" : "clashes"}</strong> (allowed with a warning, D11)
+            <strong>
+              {blocked ? "Not allowed: " : ""}{list.length} {list.length === 1 ? "clash" : "clashes"}
+            </strong>{" "}
+            {blocked ? "(a clash rule is set to block)" : "(allowed with a warning)"}
             <ul className="av-list">
               {list.map((c, i) => {
                 const bed = byId.get(c.bed_id);
                 return (
                   <li key={i}>
-                    {bed ? bedName(bed) : `Bed ${c.bed_id}`}: {c.kind === "BOOKING" ? c.ref : `out of action, ${c.ref}`} ·{" "}
-                    {ddmm(c.start_date)}–{ddmm(c.end_date)}
+                    {bed ? bedName(data.nodes, bed) : `Bed ${c.bed_id}`}: {c.kind === "BOOKING" ? c.ref : `out of action, ${c.ref}`} ·{" "}
+                    {ddmm(c.start_date)}–{ddmm(c.end_date)}{c.blocks ? " · blocks" : ""}
                   </li>
                 );
               })}
             </ul>
           </div>
         ))}
-      <Later what="Choosing the course and individuals to allocate" />
+      {allocate.error && <p className="clash bad">Not saved: {allocate.error.message}</p>}
     </Dialog>
   );
+}
+
+// "Room 101 Bed A"
+function bedName(nodes: Map<string, LocationNode>, n: LocationNode) {
+  const room = n.parentKey ? nodes.get(n.parentKey) : undefined;
+  return room ? `${room.name} ${n.name}` : n.name;
 }

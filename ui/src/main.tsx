@@ -3,6 +3,7 @@ import { createRoot } from "react-dom/client";
 import { createBrowserRouter, RouterProvider } from "react-router";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { TenantProvider } from "./tenant";
+import { UserProvider } from "./user";
 import { Layout } from "./Layout";
 import { Home } from "./pages/Home";
 import { AvailabilityPage } from "./pages/availability/AvailabilityPage";
@@ -26,9 +27,11 @@ const router = createBrowserRouter([
 createRoot(document.getElementById("root")!).render(
   <StrictMode>
     <QueryClientProvider client={queryClient}>
-      <TenantProvider>
-        <RouterProvider router={router} />
-      </TenantProvider>
+      <UserProvider>
+        <TenantProvider>
+          <RouterProvider router={router} />
+        </TenantProvider>
+      </UserProvider>
     </QueryClientProvider>
   </StrictMode>,
 );

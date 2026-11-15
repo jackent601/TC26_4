@@ -72,3 +72,9 @@ button:disabled { opacity: 0.6; cursor: default; }
 button.danger { border-color: var(--danger); color: var(--danger); }
 .error { color: var(--danger); padding: 0 20px; }
 .card .error { padding: 0; }
+
+.user-name { display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--muted); }
+.user-name input {
+  font: inherit; width: 170px; padding: 5px 8px; border: 1px solid var(--border); border-radius: 6px;
+  color: var(--text); background: var(--surface);
+}
