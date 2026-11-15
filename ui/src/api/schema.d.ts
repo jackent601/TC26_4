@@ -251,6 +251,83 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/audit": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** The audit trail, one row per change: who (changed_by), when (changed_at), what (table_name, record_id, action) and a summary sentence without the user, e.g. "booked FIN-03 into Room 101 bed A, 23/11 to 28/11". course_id covers a course and its bookings; allocation_id is set for booking rows; site_id is the bed's site, or the course's. request_id groups the rows of one request (see audit_requests). detail is the raw JSON; warnings are those the change was saved with. Filter and order with PostgREST (D36). */
+        get: {
+            parameters: {
+                query?: {
+                    audit_id?: components["parameters"]["rowFilter.audit.audit_id"];
+                    request_id?: components["parameters"]["rowFilter.audit.request_id"];
+                    changed_at?: components["parameters"]["rowFilter.audit.changed_at"];
+                    changed_by?: components["parameters"]["rowFilter.audit.changed_by"];
+                    table_name?: components["parameters"]["rowFilter.audit.table_name"];
+                    record_id?: components["parameters"]["rowFilter.audit.record_id"];
+                    course_id?: components["parameters"]["rowFilter.audit.course_id"];
+                    course_code?: components["parameters"]["rowFilter.audit.course_code"];
+                    allocation_id?: components["parameters"]["rowFilter.audit.allocation_id"];
+                    bed_id?: components["parameters"]["rowFilter.audit.bed_id"];
+                    site_id?: components["parameters"]["rowFilter.audit.site_id"];
+                    action?: components["parameters"]["rowFilter.audit.action"];
+                    summary?: components["parameters"]["rowFilter.audit.summary"];
+                    detail?: components["parameters"]["rowFilter.audit.detail"];
+                    warnings?: components["parameters"]["rowFilter.audit.warnings"];
+                    /** @description Filtering Columns */
+                    select?: components["parameters"]["select"];
+                    /** @description Ordering */
+                    order?: components["parameters"]["order"];
+                    /** @description Limiting and Pagination */
+                    offset?: components["parameters"]["offset"];
+                    /** @description Limiting and Pagination */
+                    limit?: components["parameters"]["limit"];
+                };
+                header?: {
+                    /** @description Limiting and Pagination */
+                    Range?: components["parameters"]["range"];
+                    /** @description Limiting and Pagination */
+                    "Range-Unit"?: components["parameters"]["rangeUnit"];
+                    /** @description Preference */
+                    Prefer?: components["parameters"]["preferCount"];
+                };
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["audit"][];
+                        "application/vnd.pgrst.object+json;nulls=stripped": components["schemas"]["audit"][];
+                        "application/vnd.pgrst.object+json": components["schemas"]["audit"][];
+                        "text/csv": components["schemas"]["audit"][];
+                    };
+                };
+                /** @description Partial Content */
+                206: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/locations": {
         parameters: {
             query?: never;
@@ -457,6 +534,77 @@ export interface paths {
                 };
             };
         };
+        trace?: never;
+    };
+    "/audit_requests": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** The audit trail with the rows of one request rolled into one line, e.g. "booked 6 beds for FIN-03, 23/11 to 28/11" or "cancelled course INT-22 and 4 bookings". request_key matches audit.request_id (or "row-<audit_id>" for rows written outside a request); changes counts the rows. Filter by course_id, site_id, changed_by or changed_at with PostgREST (D36). */
+        get: {
+            parameters: {
+                query?: {
+                    request_key?: components["parameters"]["rowFilter.audit_requests.request_key"];
+                    changed_at?: components["parameters"]["rowFilter.audit_requests.changed_at"];
+                    changed_by?: components["parameters"]["rowFilter.audit_requests.changed_by"];
+                    changes?: components["parameters"]["rowFilter.audit_requests.changes"];
+                    course_id?: components["parameters"]["rowFilter.audit_requests.course_id"];
+                    course_code?: components["parameters"]["rowFilter.audit_requests.course_code"];
+                    site_id?: components["parameters"]["rowFilter.audit_requests.site_id"];
+                    summary?: components["parameters"]["rowFilter.audit_requests.summary"];
+                    has_warnings?: components["parameters"]["rowFilter.audit_requests.has_warnings"];
+                    /** @description Filtering Columns */
+                    select?: components["parameters"]["select"];
+                    /** @description Ordering */
+                    order?: components["parameters"]["order"];
+                    /** @description Limiting and Pagination */
+                    offset?: components["parameters"]["offset"];
+                    /** @description Limiting and Pagination */
+                    limit?: components["parameters"]["limit"];
+                };
+                header?: {
+                    /** @description Limiting and Pagination */
+                    Range?: components["parameters"]["range"];
+                    /** @description Limiting and Pagination */
+                    "Range-Unit"?: components["parameters"]["rangeUnit"];
+                    /** @description Preference */
+                    Prefer?: components["parameters"]["preferCount"];
+                };
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["audit_requests"][];
+                        "application/vnd.pgrst.object+json;nulls=stripped": components["schemas"]["audit_requests"][];
+                        "application/vnd.pgrst.object+json": components["schemas"]["audit_requests"][];
+                        "text/csv": components["schemas"]["audit_requests"][];
+                    };
+                };
+                /** @description Partial Content */
+                206: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
         trace?: never;
     };
     "/rpc/use_tenant": {
@@ -1756,6 +1904,43 @@ export interface components {
             /** Format: int32 */
             site_id?: number;
         };
+        /** @description The audit trail, one row per change: who (changed_by), when (changed_at), what (table_name, record_id, action) and a summary sentence without the user, e.g. "booked FIN-03 into Room 101 bed A, 23/11 to 28/11". course_id covers a course and its bookings; allocation_id is set for booking rows; site_id is the bed's site, or the course's. request_id groups the rows of one request (see audit_requests). detail is the raw JSON; warnings are those the change was saved with. Filter and order with PostgREST (D36). */
+        audit: {
+            /**
+             * Format: int32
+             * @description Note:
+             *     This is a Primary Key.<pk/>
+             */
+            audit_id?: number;
+            /** Format: uuid */
+            request_id?: string;
+            /** Format: timestamp without time zone */
+            changed_at?: string;
+            /** Format: text */
+            changed_by?: string;
+            /** Format: text */
+            table_name?: string;
+            /** Format: int32 */
+            record_id?: number;
+            /** Format: int32 */
+            course_id?: number;
+            /** Format: text */
+            course_code?: string;
+            /** Format: int32 */
+            allocation_id?: number;
+            /** Format: int32 */
+            bed_id?: number;
+            /** Format: int32 */
+            site_id?: number;
+            /** Format: text */
+            action?: string;
+            /** Format: text */
+            summary?: string;
+            /** Format: jsonb */
+            detail?: unknown;
+            /** Format: text[] */
+            warnings?: string[];
+        };
         /** @description The estate as a tree: one row per site, building, block, floor, room and bed. key is unique (e.g. "room:12"), parent_key points to the row above, sort_order orders siblings, bed_count is the number of beds at or below. */
         locations: {
             /** Format: text */
@@ -1781,6 +1966,27 @@ export interface components {
             name?: string;
             /** Format: character */
             is_demo?: string;
+        };
+        /** @description The audit trail with the rows of one request rolled into one line, e.g. "booked 6 beds for FIN-03, 23/11 to 28/11" or "cancelled course INT-22 and 4 bookings". request_key matches audit.request_id (or "row-<audit_id>" for rows written outside a request); changes counts the rows. Filter by course_id, site_id, changed_by or changed_at with PostgREST (D36). */
+        audit_requests: {
+            /** Format: text */
+            request_key?: string;
+            /** Format: timestamp without time zone */
+            changed_at?: string;
+            /** Format: text */
+            changed_by?: string;
+            /** Format: int32 */
+            changes?: number;
+            /** Format: int32 */
+            course_id?: number;
+            /** Format: text */
+            course_code?: string;
+            /** Format: int32 */
+            site_id?: number;
+            /** Format: text */
+            summary?: string;
+            /** Format: boolean */
+            has_warnings?: boolean;
         };
     };
     responses: never;
@@ -1834,6 +2040,21 @@ export interface components {
         "rowFilter.course_figures.pct_scheduled": string;
         "rowFilter.course_figures.pct_loaded": string;
         "rowFilter.course_figures.site_id": string;
+        "rowFilter.audit.audit_id": string;
+        "rowFilter.audit.request_id": string;
+        "rowFilter.audit.changed_at": string;
+        "rowFilter.audit.changed_by": string;
+        "rowFilter.audit.table_name": string;
+        "rowFilter.audit.record_id": string;
+        "rowFilter.audit.course_id": string;
+        "rowFilter.audit.course_code": string;
+        "rowFilter.audit.allocation_id": string;
+        "rowFilter.audit.bed_id": string;
+        "rowFilter.audit.site_id": string;
+        "rowFilter.audit.action": string;
+        "rowFilter.audit.summary": string;
+        "rowFilter.audit.detail": string;
+        "rowFilter.audit.warnings": string;
         "rowFilter.locations.key": string;
         "rowFilter.locations.parent_key": string;
         "rowFilter.locations.level": string;
@@ -1844,6 +2065,15 @@ export interface components {
         "rowFilter.tenants.code": string;
         "rowFilter.tenants.name": string;
         "rowFilter.tenants.is_demo": string;
+        "rowFilter.audit_requests.request_key": string;
+        "rowFilter.audit_requests.changed_at": string;
+        "rowFilter.audit_requests.changed_by": string;
+        "rowFilter.audit_requests.changes": string;
+        "rowFilter.audit_requests.course_id": string;
+        "rowFilter.audit_requests.course_code": string;
+        "rowFilter.audit_requests.site_id": string;
+        "rowFilter.audit_requests.summary": string;
+        "rowFilter.audit_requests.has_warnings": string;
     };
     requestBodies: {
         /** @description tenants */

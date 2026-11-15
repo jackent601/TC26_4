@@ -5,7 +5,8 @@ import { useCallback, useMemo, useState } from "react";
 import { FilterIcon } from "../../icons";
 import { useTenant } from "../../tenant";
 import { Popover, RangePicker } from "../availability/Controls";
-import { useBedBars, useCourseFigures, useLocations, useWarnings } from "../availability/data";
+import { format, parseISO } from "date-fns";
+import { useAuditRequests, useBedBars, useCourseFigures, useLocations, useWarnings } from "../availability/data";
 import { addDaysIso, dayLong, dayLongYear, ddmm, defaultStart, iso, mondayOf } from "../availability/dates";
 import { Arrow, OverIcon, WarnIcon } from "../availability/look";
 import { PopupView, type Notice } from "../availability/Popups";
@@ -23,7 +24,8 @@ export function OverviewPage() {
   const [start, setStart] = useState(defaultStart);
   const [weeks, setWeeks] = useState(8);
   const [sites, setSites] = useSiteFilter(tenant);
-  const [tab, setTab] = useState<"warnings" | "courses">("warnings");
+  const [tab, setTab] = useState<"warnings" | "courses" | "history">("warnings");
+  const [who, setWho] = useState<string>(""); // history filtered to one user ("" = everyone)
   const to = addDaysIso(start, weeks * 7);
 
   const locations = useLocations(tenant);
@@ -42,6 +44,10 @@ export function OverviewPage() {
   const warnings = useWarnings(tenant, start, to, sites);
   const figures = useCourseFigures(tenant);
   const bars = useBedBars(tenant, start, weeks); // for opening bookings from warnings
+  // The latest changes at the chosen sites, one line per request (D36).
+  const history = useAuditRequests(tenant, sites);
+  const users = [...new Set((history.data ?? []).map((h) => h.changedBy))].sort();
+  const shown = (history.data ?? []).filter((h) => who === "" || h.changedBy === who);
 
   // Courses running in the weeks shown, at the chosen sites, earliest first.
   const courses = [...(figures.data?.values() ?? [])]
@@ -134,9 +140,45 @@ export function OverviewPage() {
           <button type="button" role="tab" aria-selected={tab === "courses"} onClick={() => setTab("courses")}>
             Courses <span className="count">{courses.length}</span>
           </button>
+          <button type="button" role="tab" aria-selected={tab === "history"} onClick={() => setTab("history")}>
+            History <span className="count">{(history.data ?? []).length}</span>
+          </button>
         </div>
         <div className="tab-panel" role="tabpanel">
-          {tab === "warnings" ? (
+          {tab === "history" ? (
+            <div className="ov-history">
+              <div className="ov-history-bar">
+                <label className="av-field">
+                  Who
+                  <select value={who} onChange={(e) => setWho(e.target.value)}>
+                    <option value="">Everyone</option>
+                    {users.map((u) => <option key={u} value={u}>{u}</option>)}
+                  </select>
+                </label>
+                <span className="summary">
+                  {history.data ? `Latest ${history.data.length} ${history.data.length === 1 ? "change" : "changes"} at these sites` : ""}
+                </span>
+              </div>
+              {history.isPending ? <p className="av-empty">Loading…</p> :
+                history.error ? <p className="error">Could not load the history: {history.error.message}</p> :
+                shown.length === 0 ? <p className="av-empty">No changes recorded.</p> : (
+                  <ul className="av-history">
+                    {shown.map((h) => (
+                      <li key={h.requestKey}>
+                        <span className="when">{format(parseISO(h.changedAt), "dd/MM HH:mm")}</span>
+                        <span className="who">{h.changedBy}</span>
+                        <span className="what">
+                          {h.hasWarnings && <WarnIcon />} {h.summary}
+                          {h.courseId !== null && figures.data?.has(h.courseId) && (
+                            <>{" "}<button type="button" className="link" onClick={() => open({ kind: "course", courseId: h.courseId! })}>open</button></>
+                          )}
+                        </span>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+            </div>
+          ) : tab === "warnings" ? (
             list.length === 0 ? <p className="av-empty">No warnings for these sites and weeks.</p> : (
               <ul className="ov-warnings">
                 {list.map((w, i) => (

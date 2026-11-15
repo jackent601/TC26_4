@@ -5,7 +5,7 @@
 // (0012, D34); other edit forms come later.
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { format, parseISO } from "date-fns";
-import { useCandidateBeds, useClashes } from "./data";
+import { useAudit, useCandidateBeds, useClashes } from "./data";
 import { addDaysIso, dayIndex, dayLong, ddmm, iso, mondayOf } from "./dates";
 import { basisOf, courseColour, OverIcon, STATE_NAMES, STATE_ORDER, WarnIcon } from "./look";
 import type { ViewSettings } from "./settings";
@@ -169,6 +169,32 @@ function WarningList({ list }: { list: Warning[] }) {
   );
 }
 
+// "15/11 16:02"
+const when = (s: string) => format(parseISO(s), "dd/MM HH:mm");
+
+// The history of a course or a booking (api.audit, D36): who, when, what.
+function HistoryList({ tenant, courseId, allocationId }: { tenant: string | null; courseId?: number; allocationId?: number }) {
+  const history = useAudit(tenant, { courseId, allocationId });
+  return (
+    <div className="av-changes">
+      <h3>History</h3>
+      {history.isPending ? <p className="summary">Loading…</p> :
+        history.error ? <p className="clash bad">Could not load the history: {history.error.message}</p> :
+        history.data.length === 0 ? <p className="summary">No changes recorded.</p> : (
+          <ul className="av-history">
+            {history.data.map((h) => (
+              <li key={h.auditId}>
+                <span className="when">{when(h.changedAt)}</span>
+                <span className="who">{h.changedBy}</span>
+                <span className="what">{h.warnings.length > 0 && <WarnIcon />} {h.summary}</span>
+              </li>
+            ))}
+          </ul>
+        )}
+    </div>
+  );
+}
+
 function findBar(bars: Map<number, BedBar[]>, allocationId: number): BedBar | undefined {
   for (const list of bars.values()) {
     const b = list.find((x) => x.kind !== "outage" && x.id === allocationId);
@@ -229,6 +255,7 @@ function BookingPopup({ bar, data, onOpen, onNotice, onClose }: {
           ["Status", titleCase(bar.status ?? "")],
           ["Warnings", <WarningList list={warnings} />],
         ]} />
+        <HistoryList tenant={data.tenant} allocationId={bar.id} />
       </Dialog>
     );
   }
@@ -250,6 +277,7 @@ function BookingPopup({ bar, data, onOpen, onNotice, onClose }: {
         ["Warnings", <WarningList list={warnings} />],
       ]} />
       <BookingChanges bar={bar} data={data} onNotice={onNotice} onClose={onClose} />
+      <HistoryList tenant={data.tenant} allocationId={bar.id} />
     </Dialog>
   );
 }
@@ -420,6 +448,7 @@ function CoursePopup({ courseId, data, onOpen, onNotice, onClose }: {
         ["Warnings", <WarningList list={warnings} />],
       ]} />
       <CourseChanges c={c} data={data} onNotice={onNotice} onClose={onClose} />
+      <HistoryList tenant={data.tenant} courseId={courseId} />
     </Dialog>
   );
 }

@@ -101,6 +101,37 @@ export interface CandidateBed {
   suggested: boolean;
 }
 
+// api.audit (0014, D36): one change, with its summary sentence (no user in it).
+export interface AuditRow {
+  auditId: number;
+  requestId: string | null;
+  changedAt: string;
+  changedBy: string;
+  tableName: string;
+  recordId: number;
+  courseId: number | null;
+  courseCode: string;
+  allocationId: number | null;
+  bedId: number | null;
+  siteId: number | null;
+  action: string;
+  summary: string;
+  warnings: string[];
+}
+
+// api.audit_requests: the rows of one request rolled into one line.
+export interface AuditRequest {
+  requestKey: string;
+  changedAt: string;
+  changedBy: string;
+  changes: number;
+  courseId: number | null;
+  courseCode: string | null;
+  siteId: number | null;
+  summary: string;
+  hasWarnings: boolean;
+}
+
 // What a popup is showing.
 export type Popup =
   | { kind: "location"; key: string }

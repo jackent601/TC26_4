@@ -126,6 +126,14 @@ Mockup: `docs/pages_pocs/availability.html` (open offline) and its README. Key p
 
 Jason, a software developer in the UK, on Windows with Git Bash and Docker Desktop. Wants to work step by step and check each step himself; likes concise explanations with the reasoning; prefers minimal custom images and keeping the core value visibly in the data model. Asks "why" questions about tooling (Docker targets, `--build`, script lines): answer them directly.
 
+## Audit trail (0014, 15 Nov 2026, uncommitted at the time of writing)
+
+- **Database (`0014_audit_trail.sql`, D36):** `core.audit_log.request_id` (uuid), set per request by `api_internal.pre_request` (`app.request_id`) and written by `api_internal.audit`. `api_internal.audit_summary(table, action, detail, course, bed, bed_to, site)` writes the sentence for each action in use (allocations INSERT/MOVE/STATUS/CANCEL, courses INSERT/UPDATE/LOADED/CANCEL; anything else falls back to "<action> on <table>"); helpers `safe_jsonb`, `ddmm`, `status_name`, `warning_suffix`. `api.audit` resolves course codes, bed names and sites at read time (left joins on current rows, ids as fallback) and exposes `course_id`, `allocation_id`, `bed_id`, `site_id`, `warnings text[]` and the raw `detail` jsonb. `api.audit_requests` groups by `request_id` (or `row-<audit_id>`): a lone row keeps its summary, a course-table row wins (cancel course), all-INSERT bookings become "booked N beds for CODE, dates", otherwise "<first> (and N more)".
+  - **Gotcha found in the browser, not by pgTAP:** functions called inside a view run with the caller's rights, so `api_access` needs `execute` on the wording helpers (granted in 0014). The tests run as superuser and passed anyway; `012_audit.sql` now reads both views as `api_user` (values read with `\gset`, asserted after `reset role`, since pgTAP's `public` schema isn't usable by `api_user`).
+  - Tests: `db/tests/012_audit.sql` (17 checks; 211 in all).
+- **UI:** `useAudit` (per course or per allocation) and `useAuditRequests` (latest 100 at the chosen sites) in `data.ts`; `HistoryList` at the bottom of the course popup and both booking popups; a History tab on the Overview with a "Who" filter (client-side, from the loaded rows) and an "open" link to the course. Rows written before 0014 have no request id and appear one per line.
+- **Checked:** db-test ALL PASSED, gen:api and api-contract run, UI build, `scripts/up.sh`, and the API answered `/audit_requests` with the booking made earlier on DEMO.
+
 ## Course management (0013, 15 Nov 2026, uncommitted at the time of writing)
 
 Branch `phil-dev` (renamed from a short-lived `course-first-booking`), holding 0012 and 0013 uncommitted on top of `main`.

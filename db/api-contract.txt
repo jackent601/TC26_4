@@ -58,6 +58,36 @@ function api.use_tenant(p_code text, p_local boolean DEFAULT true)
   -- Select a tenant for the current transaction. Normally done for you from the X-Tenant header.
   returns text
 
+view api.audit
+  -- The audit trail, one row per change: who (changed_by), when (changed_at), what (table_name, record_id, action) and a summary sentence without the user, e.g. "booked FIN-03 into Room 101 bed A, 23/11 to 28/11". course_id covers a course and its bookings; allocation_id is set for booking rows; site_id is the bed's site, or the course's. request_id groups the rows of one request (see audit_requests). detail is the raw JSON; warnings are those the change was saved with. Filter and order with PostgREST (D36).
+  audit_id integer
+  request_id uuid
+  changed_at timestamp without time zone
+  changed_by text
+  table_name text
+  record_id integer
+  course_id integer
+  course_code text
+  allocation_id integer
+  bed_id integer
+  site_id integer
+  action text
+  summary text
+  detail jsonb
+  warnings text[]
+
+view api.audit_requests
+  -- The audit trail with the rows of one request rolled into one line, e.g. "booked 6 beds for FIN-03, 23/11 to 28/11" or "cancelled course INT-22 and 4 bookings". request_key matches audit.request_id (or "row-<audit_id>" for rows written outside a request); changes counts the rows. Filter by course_id, site_id, changed_by or changed_at with PostgREST (D36).
+  request_key text
+  changed_at timestamp without time zone
+  changed_by text
+  changes integer
+  course_id integer
+  course_code text
+  site_id integer
+  summary text
+  has_warnings boolean
+
 view api.course_figures
   -- Per course: scheduled (planned), loaded (registered, as of loaded_at) and allocated (individuals with a bed, not cancelled). pct_scheduled and pct_loaded are allocated as a percentage of each, to 1 decimal place, null when that figure is 0. Colour bands are applied by the UI from the user's thresholds (D29). site_id is the course's site (0011).
   course_id integer

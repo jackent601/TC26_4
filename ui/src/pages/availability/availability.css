@@ -251,6 +251,13 @@
   padding: 1px 6px; border-radius: 999px; background: var(--accent-soft); color: var(--accent); white-space: nowrap;
 }
 
+/* History (D36): who, when, what. */
+.av-history { margin: 0; padding: 0; list-style: none; display: grid; gap: 6px; font-size: 13px; max-height: 240px; overflow: auto; }
+.av-history li { display: grid; grid-template-columns: 84px minmax(60px, 120px) minmax(0, 1fr); gap: 10px; align-items: baseline; }
+.av-history .when { color: var(--muted); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.av-history .who { font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.av-history .what { color: var(--text); }
+
 /* Course forms (D35): two columns of fields. */
 .av-form { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px 12px; }
 .av-form .av-field input, .av-form .av-field select, .av-changes .av-field input { height: 36px; padding: 0 10px; font-size: 13px; }
