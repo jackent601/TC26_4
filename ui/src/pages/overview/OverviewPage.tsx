@@ -195,10 +195,11 @@ export function OverviewPage() {
                 ))}
               </ul>
             )
-          ) : courses.length === 0 ? (
-            <p className="av-empty">No courses run at these sites in these weeks.</p>
           ) : (
-            <CourseTimeline courses={courses} start={start} weeks={weeks} settings={settings} onOpen={open} />
+            <>
+              <CourseTimeline courses={courses} start={start} weeks={weeks} settings={settings} onOpen={open} />
+              {courses.length === 0 && <p className="av-empty">No courses run at these sites in these weeks.</p>}
+            </>
           )}
         </div>
       </section>

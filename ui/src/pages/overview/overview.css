@@ -91,3 +91,15 @@
 .ov-course .cname { color: var(--muted); font-size: 12px; overflow: hidden; text-overflow: ellipsis; }
 .ov-course .figs { display: flex; gap: 6px; flex: none; font-size: 11px; color: var(--text-2); font-variant-numeric: tabular-nums; }
 .ov-course .figs span { padding: 1px 5px; border-radius: 4px; background: var(--surface-2); }
+
+/* The "New course" row: fainter than the courses; drag across its weeks. */
+.ov-course .ov-new-row .av-label,
+.ov-course .ov-new-row .av-body { opacity: 0.6; transition: opacity 0.12s; }
+.ov-course .ov-new-row:hover .av-label,
+.ov-course .ov-new-row:hover .av-body,
+.ov-course .ov-new-row:focus-within .av-label,
+.ov-course .ov-new-row:focus-within .av-body { opacity: 1; }
+.ov-course .ov-new-row .av-body { background-color: var(--surface-2); }
+.ov-course .ov-new-row .code { font-weight: 600; color: var(--muted); }
+.ov-course .ov-new-row .plus { color: var(--accent); font-weight: 700; }
+.ov-course .ov-new-row .hint { margin-left: auto; font-size: 11px; color: var(--muted); }

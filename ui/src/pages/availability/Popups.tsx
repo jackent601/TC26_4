@@ -42,7 +42,7 @@ export function PopupView({ popup, data, onOpen, onNotice, onClose }: Props) {
     case "week": return <WeekPopup nodeKey={popup.key} weekStart={popup.weekStart} data={data} onOpen={onOpen} onClose={onClose} />;
     case "course": return <CoursePopup courseId={popup.courseId} data={data} onOpen={onOpen} onNotice={onNotice} onClose={onClose} />;
     case "bookCourse": return <BookCoursePopup courseId={popup.courseId} data={data} onClose={onClose} />;
-    case "newCourse": return <NewCoursePopup data={data} onOpen={onOpen} onClose={onClose} />;
+    case "newCourse": return <NewCoursePopup from={popup.from} to={popup.to} data={data} onOpen={onOpen} onClose={onClose} />;
     case "warning": return <WarningPopup warning={popup.warning} data={data} onOpen={onOpen} onNotice={onNotice} onClose={onClose} />;
     case "new": return <NewAllocationPopup bedKeys={popup.bedKeys} from={popup.from} to={popup.to} data={data} onClose={onClose} />;
   }
@@ -495,12 +495,15 @@ function CourseFields({ value: v, onChange, sites, withLoaded, disabled }: {
 }
 
 // Add a course (fn_create_course), then offer to book its beds straight away.
-function NewCoursePopup({ data, onOpen, onClose }: { data: PopupData; onOpen: (p: Popup) => void; onClose: () => void }) {
+function NewCoursePopup({ from, to, data, onOpen, onClose }: {
+  from?: string; to?: string; data: PopupData; onOpen: (p: Popup) => void; onClose: () => void;
+}) {
   const sites = sitesOf(data.nodes);
-  const monday = addDaysIso(iso(mondayOf(new Date())), 7); // next week
+  // Dates from weeks dragged on the Courses tab, else next week.
+  const monday = addDaysIso(iso(mondayOf(new Date())), 7);
   const [v, setV] = useState<CourseInput>({
     code: "", name: "", siteId: sites.length === 1 ? sites[0].id : null,
-    startDate: monday, endDate: addDaysIso(monday, 5), scheduled: 0, loaded: 0, status: "REQUESTED",
+    startDate: from ?? monday, endDate: to ?? addDaysIso(monday, 5), scheduled: 0, loaded: 0, status: "REQUESTED",
   });
   const create = useCreateCourse(data.tenant);
   const valid = courseValid(v);

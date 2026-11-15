@@ -141,8 +141,8 @@ export type Popup =
   | { kind: "course"; courseId: number }
   // Book beds for a course, starting from the course (D35).
   | { kind: "bookCourse"; courseId: number }
-  // Add a course (D36).
-  | { kind: "newCourse" }
+  // Add a course (D36); from/to pre-fill its dates (weeks dragged on the Courses tab).
+  | { kind: "newCourse"; from?: string; to?: string }
   | { kind: "warning"; warning: Warning }
   // A selection of beds and nights (to = departure day, exclusive).
   | { kind: "new"; bedKeys: string[]; from: string; to: string };
