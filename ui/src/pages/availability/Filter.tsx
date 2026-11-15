@@ -3,6 +3,7 @@
 // blocks ticked shows a half-ticked box. Display only: it narrows the rows
 // shown, not what the database returns.
 import { useEffect, useRef, type ReactNode } from "react";
+import { levelPrefix } from "./look";
 import type { LocationFilter } from "./settings";
 import { NO_FILTER } from "./settings";
 import type { LocationNode } from "./types";
@@ -79,7 +80,7 @@ export function FilterPanel({ filter, roots, onFilter, close }: {
         <label style={{ paddingLeft: depth * 18 }} className={`lvl-${n.level.toLowerCase()}`}>
           <TriCheck checked={on === blocks.length} mixed={on > 0 && on < blocks.length} onChange={() => toggle(n)} />
           <span className="name">{n.name}</span>
-          <span className="meta">{n.level} · {n.bedCount} {n.bedCount === 1 ? "bed" : "beds"}</span>
+          <span className="meta">{levelPrefix(n)}{n.bedCount} {n.bedCount === 1 ? "bed" : "beds"}</span>
         </label>
         {n.level !== "Block" && <ul>{n.children.map((c) => row(c, depth + 1))}</ul>}
       </li>

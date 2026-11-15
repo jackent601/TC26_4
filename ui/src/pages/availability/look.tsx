@@ -65,3 +65,9 @@ export function Arrow({ dir }: { dir: "left" | "right" }) {
     </svg>
   );
 }
+
+// "Site · " before a row's bed count, unless the name already says the level
+// ("Room 101", "Block A", "Floor 1"), so the label doesn't read "Room 101 Room".
+export function levelPrefix(n: { level: string; name: string }) {
+  return n.name.toLowerCase().startsWith(n.level.toLowerCase()) ? "" : `${n.level} · `;
+}

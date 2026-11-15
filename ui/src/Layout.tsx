@@ -1,5 +1,6 @@
 // App shell: a collapsible side nav (pages, then tenant, your name and theme at
-// the bottom) and a title bar for the current page. The DEMO banner stays.
+// the bottom) and a title bar for the current page, with a DEMO pill on demo
+// tenants (its tooltip explains the data is sample data and can be reset).
 import { useState, type ReactNode } from "react";
 import { NavLink, Outlet, useLocation } from "react-router";
 import { BedIcon, GridIcon, HomeIcon, MonitorIcon, MoonIcon, PanelIcon, SunIcon } from "./icons";
@@ -99,13 +100,12 @@ export function Layout() {
       <div className="content">
         <header className="topbar">
           <h1>{page?.label ?? "Not found"}</h1>
-          {isDemo && <span className="pill">DEMO</span>}
+          {isDemo && (
+            <span className="pill" role="status" title="Demo data: sample data only, and it can be reset at any time.">
+              DEMO
+            </span>
+          )}
         </header>
-        {isDemo && (
-          <div className="demo-banner" role="status">
-            DEMO DATA: sample data only, and it can be reset at any time.
-          </div>
-        )}
         {error && <div className="demo-banner error">Could not load tenants: {error.message}</div>}
 
         <main className={`main${FILL.has(pathname) ? " fill" : ""}`}>

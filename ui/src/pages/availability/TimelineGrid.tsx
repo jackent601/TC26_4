@@ -5,7 +5,7 @@
 // week blocks for a new allocation (D8-D10).
 import { useEffect, useRef, useState, type CSSProperties, type PointerEvent as ReactPointerEvent } from "react";
 import { addDaysIso, dayIndex, dayLong, ddmm } from "./dates";
-import { basisOf, Chevron, courseColour, OverIcon, STATE_NAMES, STATE_ORDER, WarnIcon, type State } from "./look";
+import { basisOf, Chevron, courseColour, levelPrefix, OverIcon, STATE_NAMES, STATE_ORDER, WarnIcon, type State } from "./look";
 import type { ViewSettings } from "./settings";
 import type { BedBar, CourseFigure, LocationNode, Popup, WeekSummary } from "./types";
 
@@ -216,7 +216,7 @@ function Row({ row, index, ctx }: { row: VisibleRow; index: number; ctx: GridCon
         </button>
         {!isBed && (
           <span className="av-meta">
-            {node.level} · {node.bedCount} {node.bedCount === 1 ? "bed" : "beds"}{node.partial ? " · filtered" : ""}
+            {levelPrefix(node)}{node.bedCount} {node.bedCount === 1 ? "bed" : "beds"}{node.partial ? " · filtered" : ""}
           </span>
         )}
       </div>
