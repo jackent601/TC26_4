@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
-# Load or reset the DEMO tenant's sample data by calling api.reset_demo_data()
-# (the same function the UI's "Reset demo data" will use). Wipes and reloads
+# Reset the DEMO tenant's sample data by calling api.reset_demo_data() (the same
+# function as the UI's "Reset demo data"), e.g. to bring its dates up to today.
+# A new install already has it (migration 0012). Wipes and reloads
 # DEMO only; other tenants are untouched. Needs the db service running
 # (scripts/db-up.sh). For a completely clean database use scripts/db-reset.sh.
 # Usage (from anywhere in the repo, e.g. Git Bash):  scripts/db-seed.sh

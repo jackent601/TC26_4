@@ -44,7 +44,8 @@ The tool needs to:
 │   │   ├── 0008_bars_full_dates.sql           fn_bed_bars returns full dates; the UI fits bars to the weeks shown
 │   │   ├── 0009_write_allocations.sql         Write API for course bookings: allocate, cancel, move, set status; clash rules (D30)
 │   │   ├── 0010_course_dates_warning.sql      Warning for course bookings outside their course dates (strict)
-│   │   └── 0011_overview.sql                  Overview page: site_id on course figures and warnings; weekly overview function
+│   │   ├── 0011_overview.sql                  Overview page: site_id on course figures and warnings; weekly overview function
+│   │   └── 0012_load_demo_data.sql            Loads DEMO's sample data on a new install (only if DEMO has no beds)
 │   ├── test/
 │   │   ├── Dockerfile                         Test-only image: PostgreSQL 16 + pgTAP + pg_prove + dbmate
 │   │   └── run-tests.sh                       Throwaway database, migrations, tests, rollback check
@@ -55,7 +56,7 @@ The tool needs to:
 │       └── api_contract.sql                   Lists the api schema's views and functions (used by scripts/api-contract.sh)
 ├── scripts/
 │   ├── db-up.sh                               Starts db, runs migrate and db-roles, shows their output and result
-│   ├── db-seed.sh                             Loads or resets the DEMO tenant's sample data (calls api.reset_demo_data)
+│   ├── db-seed.sh                             Resets the DEMO tenant's sample data to today (calls api.reset_demo_data)
 │   ├── db-reset.sh                            Wipes the local database and rebuilds it with sample data
 │   ├── db-test.sh                             Runs the database tests in a throwaway database
 │   ├── api-contract.sh                        Updates or checks the API contract snapshot (db/api-contract.txt)
@@ -69,10 +70,22 @@ The tool needs to:
 
 ## Running it
 
-Needs Docker (or Podman / Rancher Desktop).
+Needs Git and Docker with Compose v2 (Docker Desktop, Podman or Rancher Desktop). Nothing else: the database, API and UI all run in containers. On Windows, run the commands in Git Bash.
+
+**Quick start**
 
 ```
-cp .env.example .env          # then change the passwords
+git clone https://github.com/jackent601/TC26_4.git
+cd TC26_4
+cp .env.example .env          # then set POSTGRES_PASSWORD and API_DB_PASSWORD to anything
+scripts/up.sh                 # first run takes a few minutes; ends with "All up. Open http://localhost:8080"
+```
+
+Open `http://localhost:8080`, choose **DEMO** in the side bar (it comes with sample data, D34) and type your name under "Your name". Stop with `docker compose down` (data is kept); start again with `scripts/up.sh`. If a port is taken (8080 UI, 8000 API, 8081 API docs, 5432 database), change it in `.env`.
+
+**Database only**
+
+```
 docker compose up db migrate db-roles  # PostgreSQL, then migrations, then role passwords
 # or, detached with the output and a pass/fail summary (Git Bash):
 scripts/db-up.sh
@@ -89,7 +102,7 @@ curl -X POST -H "X-Tenant: DEMO" http://localhost:8000/rpc/reset_demo_data
 
 Every view in the `api` schema is a `GET /<view>` (filters like `?col=eq.value`, `select=`, `order=`, `limit=`, `offset=`), and every function is a `POST /rpc/<function>` with its arguments as JSON. The browser reaches the same paths under `/api/` through the UI's Caddy. New views and functions appear after the next migration run (`db-roles` tells PostgREST to reload).
 
-**Tenants and demo data.** The database is multi-tenant: LIVE and DEMO to start with (decisions D24, D25). Every query sees one tenant at a time, selected with `api.use_tenant('LIVE')` or `api.use_tenant('DEMO')`; with none selected nothing is visible. Sample data only ever goes into the DEMO tenant: `scripts/db-seed.sh` loads or resets it (the same `api.reset_demo_data()` as the UI's "Reset demo data" button), and it refuses for any non-demo tenant. `scripts/db-reset.sh` wipes the whole local volume and rebuilds everything. Demo dates are relative to the day it is loaded: five weeks from the Monday two weeks ago, with today in the middle week.
+**Tenants and demo data.** The database is multi-tenant: LIVE and DEMO to start with (decisions D24, D25). Every query sees one tenant at a time, selected with `api.use_tenant('LIVE')` or `api.use_tenant('DEMO')`; with none selected nothing is visible. Sample data only ever goes into the DEMO tenant: a new install loads it (migration 0012, D34), and `scripts/db-seed.sh` resets it (the same `api.reset_demo_data()` as the UI's "Reset demo data" button), and it refuses for any non-demo tenant. `scripts/db-reset.sh` wipes the whole local volume and rebuilds everything. Demo dates are relative to the day it is loaded: five weeks from the Monday two weeks ago, with today in the middle week.
 
 **Database tests** run in their own throwaway database, never the one above: `scripts/db-test.sh` (or `docker compose --profile test build db-test` then `docker compose --profile test run --rm db-test`). It applies every migration to an empty database, runs the pgTAP tests in `db/tests/`, checks every migration rolls back and re-applies, and ends with `ALL PASSED` or `FAILED`. pgTAP is only in the test image, never in the deployed database.
 

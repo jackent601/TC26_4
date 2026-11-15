@@ -36,7 +36,7 @@ Roles: `app_owner` owns every object (not a superuser, so row-level security alw
 ```
 cp .env.example .env            # first time; set the passwords
 scripts/db-up.sh                # db, migrations, role passwords; prints pass/fail
-scripts/db-seed.sh              # load/reset the DEMO tenant's sample data
+scripts/db-seed.sh              # reset DEMO's sample data (a new install loads it, 0012)
 scripts/db-reset.sh             # wipe the local volume and rebuild everything (asks first)
 docker compose up -d api api-docs
 scripts/db-test.sh              # pgTAP tests in a throwaway database; must end ALL PASSED

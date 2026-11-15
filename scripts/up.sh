@@ -2,7 +2,7 @@
 # Start everything: database (with migrations and role passwords), API, API docs
 # and the UI (rebuilt from ui/), then check each answers and print the URLs.
 # Usage (Git Bash):  scripts/up.sh
-# Sample data is separate: scripts/db-seed.sh loads or resets the DEMO tenant.
+# DEMO sample data is loaded on a new install (migration 0012); scripts/db-seed.sh reloads it.
 set -uo pipefail
 cd "$(dirname "$0")/.."
 

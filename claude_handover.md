@@ -140,3 +140,11 @@ Jason, a software developer in the UK, on Windows with Git Bash and Docker Deskt
   - Tabs: Warnings (`useWarnings` now takes an optional `to` and site ids, filtered in PostgREST) and Courses (`CourseTimeline.tsx`). Both open the same popups as Availability, through `PopupView`.
   - Course colours use the shared view settings (basis and thresholds).
 - **Checked in the browser:** the chart matches the tested figures; tooltip, legend toggles, opening a warning and a course, and the site filter (None empties both).
+
+## Demo data on install (0012, D34)
+
+- `0012_load_demo_data.sql` loads `core.load_sample_data` into DEMO when DEMO has no beds, so a fresh clone has sample data straight after `scripts/up.sh`. Existing data is left alone. Its down section deletes DEMO's estate, courses and bookings, but keeps reference data and the audit log.
+- Test: `db/tests/010_demo_on_install.sql` (4 checks; 151 in all) checks the fresh-install state: DEMO has 23 beds and 5 courses dated from that day, and LIVE has none.
+- `scripts/db-seed.sh` now just resets DEMO to today. `scripts/db-reset.sh` still calls it after rebuilding, which is redundant but harmless.
+- README has a Quick start (clone, `.env`, `scripts/up.sh`, open the UI).
+- Not done: the scripts are stored without the executable bit (mode 100644). That's fine in Windows Git Bash, but Mac and Linux need `git update-index --chmod=+x scripts/*.sh`.
