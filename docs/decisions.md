@@ -32,6 +32,9 @@ Short entries, newest last. Earlier data-model decisions are in the README under
 | D27 | 2026-11-14 | **The API is the official PostgREST image, configured only.** It serves the `api` schema as HTTP (`GET /<view>`, `POST /rpc/<function>`); a SQL pre-request hook applies the `X-Tenant` and `X-User` headers. There is no application code in the API layer. Anything beyond allocation management (optimiser, file parsing, notifications) is a separate app using the same API (D26). Supersedes D16; the FastAPI generic layer remains in git history as the reference for a non-PostgreSQL back end. | Shows beyond doubt that the only way into the data is through SQL-defined views and functions: the core product is the data model and functions (D22). Fewer custom images, less code to maintain; testing concentrates in pgTAP. |
 | D28 | 2026-11-14 | Availability page details: collapsed rows count beds by state on each week's busiest night; course colour thresholds and the scheduled/loaded basis are per-user view settings in the UI (passed to the API where summaries need them); the tree keeps the Block level; external bookings are grey with a dashed border. Confirms D9 as first night Monday, departure Sunday (6 nights). Full page spec: `claude_availability_page_overview.md`. | Agreed from the mockup. |
 | D29 | 2026-11-14 | **Display bands are a UI concern.** The database returns facts: allocated, scheduled, loaded and allocation percentages per course, and per-course bed counts on each week's busiest night. Colour bands (green/amber/red) and their thresholds are applied in the UI from the user's view settings. Supersedes the part of D28 that passed the basis and thresholds to the API. | Keeps presentation out of the core product; thresholds can change without a request; one place for the colour rule. |
+| D30 | 2026-11-15 | **Clashes are rules.** Double booking becomes a rule in `core.rules` (new rule type `BED_CLASH`) alongside `OUT_OF_ACTION`; each rule's `severity` decides whether a clash saves with a warning (`WARNING`, the default) or is refused (`BLOCK`). Resolves D11's open question. | One mechanism for both clashes, set per tenant. |
+| D31 | 2026-11-15 | **Individuals stay anonymous and internal.** `individual_no` identifies an occupant for attributes and rules but is not shown in the UI; allocations show the occupant's effective attributes instead. Courses may be allocated beyond scheduled or loaded; extra individuals take the course defaults. Status is per allocation (one bed, one stay); transition rules are deferred. | Lets attributes be known and planned before beds are assigned (rules, suggestions), while users see only what matters. |
+| D32 | 2026-11-15 | **The write API starts with course booking:** allocate a course into selected beds and dates, cancel, move and set status, each audited and returning current warnings. One-off bookings without a course (allowing `LOCAL` bookings with no course) follow later. | Smallest useful write path first. |
 
 ## Implementation decisions
 
@@ -48,7 +51,9 @@ How the solution is built and run. These can change without affecting the design
 
 ## Open
 
-- Where the D11 flag lives: a severity on new built-in rows in `rules` (e.g. rule types `DOUBLE_BOOKING`, `OUT_OF_ACTION`) or a small settings table. The first reuses existing BLOCK/WARNING handling.
+- ~~Where the D11 flag lives~~: resolved by D30 (rule severity).
+
+- Status transitions on allocations: deferred (D31). Any status change is allowed and audited for now.
 
 - Status order: requirements sheet says Booked → Allocated; README/schema say ALLOCATED → BOOKED. Confirm with the team.
 

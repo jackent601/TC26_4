@@ -9,8 +9,8 @@ select results_eq($$ select t.code::text, count(a.*)::int from core.tenants t
                   'each tenant has the 6 starter attribute types');
 select results_eq($$ select t.code::text, count(r.*)::int from core.tenants t
                       left join core.rules r using (tenant_id) group by t.code order by 1 $$,
-                  $$ values ('DEMO', 5), ('LIVE', 5) $$,
-                  'each tenant has the 5 starter rules');
+                  $$ values ('DEMO', 6), ('LIVE', 6) $$,
+                  'each tenant has the 6 starter rules (5 from 0003, DOUBLE_BOOKING from 0009)');
 
 select is((select inherit_mode || '/' || comment_required from core.attribute_types a
             join core.tenants t using (tenant_id) where t.code = 'LIVE' and a.attr_code = 'OUT_OF_ACTION'),

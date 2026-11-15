@@ -4,11 +4,13 @@ Context from a long Claude session (in the Claude app, writing to this folder re
 
 ## Where things stand
 
-- **Branch:** `postgrest` (branched from `master` after D26). It swaps the FastAPI API for the official PostgREST image (D27).
+- **Branch:** `write-operations`, branched from `postgrest` on 15 Nov 2026 for phase 3 (write API). `postgrest` holds everything up to the finished read-only availability page; neither is merged into `master` yet.
+- **Parked:** rule warnings (rest of phase 1: gender, grade, step-free, work pattern), so the write API could come first. See README "Known limitations".
 - **Done:** step 1 (database) and the API.
   - Migrations 0001–0005: multi-tenant core model (15 tables, row-level security), `api` schema and roles, per-tenant reference data, demo data loader and `api.reset_demo_data`, PostgREST pre-request hook.
   - Migration 0006: availability read API (see below).
-  - pgTAP: 6 files, 83 checks, plus a rollback/re-apply check; all passing.
+  - Migrations 0007–0008: facts not colour bands (D29); full bar dates. Migration 0009: write API (below).
+  - pgTAP: 7 files, 127 checks, plus a rollback/re-apply check; all passing.
   - PostgREST v14.18 tested against the database (tenants, errors, health check, CORS, OpenAPI).
 - FastAPI leftovers removed and the PostgREST switch committed; PostgREST v14.18 runs on the user's machine (DEMO health shows 23 beds). `postgrest` is not merged into `master` yet.
 
@@ -44,6 +46,23 @@ Rebuilding `docs/pages_pocs/availability.html` on the 0006 endpoints (spec: `cla
 
 Notes: since 0007 (D29) the database returns facts only. `fn_week_summary(p_from, p_weeks)` gives beds by category (free, out_of_action, external, course per `course_id`) on each week's busiest night; `api.course_figures` has `pct_scheduled` and `pct_loaded`. Colour bands exist only in the UI (`look.tsx`, `courseColour`), used by both bars and collapsed rows, so switching Colour by or a threshold makes no request. pgTAP for 0007 is in `db/tests/006_availability_read.sql` (36 checks; 84 in all). The first week shown defaults to the Monday two weeks ago and isn't remembered. The mockup's "Departure day" and "Allow clashes" settings were left out: D9 fixes the week block, and D11 is a database rule.
 
+## Phase 3 write API: `0009_write_allocations.sql` (database done, UI not started)
+
+Agreed with the user (D30–D32):
+- **Clashes are rules (D30):** new rule type `BED_CLASH`, a `DOUBLE_BOOKING` rule per tenant (WARNING). With `OUT_OF_ACTION`, each rule's severity decides: WARNING saves with a warning, BLOCK refuses the whole request. An inactive rule isn't checked. `core.load_reference_data` now wraps the 0003 loader (renamed `load_reference_data_0003`) and adds the rule.
+- **Individuals are internal (D31):** `individual_no` is kept for attributes and rules but never shown. Course booking assigns the course's lowest number not already in a bed on those nights, with no upper limit, so a course can be allocated beyond scheduled or loaded. Messages from `api.warnings` and `fn_check_allocation` name the course, not "#n". Status is per allocation (one bed, one stay); any change is allowed for now, and transition rules are deferred.
+- **Course booking first (D32):** `api.fn_allocate_course(course, bed_ids[], from, to)` returns `(allocation_id, bed_id, warnings[])`. `fn_cancel_allocation(id)` keeps the row as CANCELLED. `fn_move_allocation(id, bed?, from?, to?)` takes whatever is left null from the current values. `fn_set_status(id, status)` sets or clears the check-in and check-out times. All are audited to `core.audit_log` (detail is JSON; the user comes from `X-User`). Beds are locked (`for update`) while allocating. `fn_check_allocation` gained `blocks`.
+- **Helpers** in `api_internal` (not endpoints): `bed_clashes`, `audit`, `require_tenant`.
+- **Tests:** `db/tests/007_write_api.sql` (43 checks). A pgTAP gotcha: one statement can't see rows its own function call inserted, so tests read back in a second statement.
+- **Tried on the user's stack** through Caddy with `X-User`, then DEMO was reset.
+- **Next (UI):**
+  - a "Your name" box in the header that sends `X-User`;
+  - the New allocation popup: two boxes, Course booking (now) and one-off booking (later, needs `LOCAL` bookings without a course), with a course picker and a working Allocate. It shows "Not allowed" when `blocks` is true;
+  - cancel, move and status in the booking popup;
+  - bar labels without "#n", showing attribute badges once rule warnings exist;
+  - refresh bars, summary, warnings and figures after each write.
+- **Known limitation:** the same individual in two beds on the same night isn't checked (README).
+
 ## The availability page (agreed in the mockup)
 
 Full spec: `claude_availability_page_overview.md`. In short:
@@ -78,8 +97,8 @@ Mockup: `docs/pages_pocs/availability.html` (open offline) and its README. Key p
 
 ## Open questions
 
-- Where the D11 "clashes block" setting lives: severity on built-in rules (needs new rule types, e.g. `DOUBLE_BOOKING`) or a settings table. Decide with the write functions (phase 3).
-- Status order: the requirements sheet says Booked → Allocated; the schema says ALLOCATED → BOOKED. Confirm with the team.
+- ~~Where the D11 "clashes block" setting lives~~: rule severity (D30).
+- Status order and transitions: deferred (D31). The requirements sheet says Booked → Allocated; the schema says ALLOCATED → BOOKED. Confirm with the team.
 - How users log in at work (e.g. Entra ID): decides PostgREST JWT setup.
 - Hosting: on-premises or cloud.
 - The booking-system export format (phase 5 import).

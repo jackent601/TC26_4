@@ -184,7 +184,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Warnings for the warnings strip, whatever the colour basis: courses with loaded above scheduled (D14), bookings on out-of-action beds, and double bookings (one row per booking involved). */
+        /** Warnings for the warnings strip, whatever the colour basis: courses with loaded above scheduled (D14), bookings on out-of-action beds, and double bookings (one row per booking involved). Clash severities come from their rules (D30). */
         get: {
             parameters: {
                 query?: {
@@ -464,7 +464,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Clashes for allocating the given beds from p_from to p_to (exclusive), before anything is saved: existing bookings and outages on those beds. Clashes warn by default (D11). */
+        /** Clashes for allocating the given beds from p_from to p_to (exclusive), before anything is saved: existing bookings and outages on those beds. blocks is true when the clash's rule is BLOCK, so saving would be refused (D30); otherwise it saves with a warning. */
         get: {
             parameters: {
                 query: {
@@ -488,7 +488,7 @@ export interface paths {
             };
         };
         put?: never;
-        /** Clashes for allocating the given beds from p_from to p_to (exclusive), before anything is saved: existing bookings and outages on those beds. Clashes warn by default (D11). */
+        /** Clashes for allocating the given beds from p_from to p_to (exclusive), before anything is saved: existing bookings and outages on those beds. blocks is true when the clash's rule is BLOCK, so saving would be refused (D30); otherwise it saves with a warning. */
         post: {
             parameters: {
                 query?: never;
@@ -532,6 +532,70 @@ export interface paths {
                         p_from: string;
                         /** Format: date */
                         p_to: string;
+                    };
+                };
+            };
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/rpc/fn_set_status": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Set an allocation's status: ALLOCATED, BOOKED, CHECKED_IN, CHECKED_OUT, NO_SHOW or CANCELLED. Any change is allowed for now (transitions deferred, D31). Sets or clears the check-in and check-out times to match. Audited when the status changes. */
+        post: {
+            parameters: {
+                query?: never;
+                header?: {
+                    /** @description Preference */
+                    Prefer?: components["parameters"]["preferParams"];
+                };
+                path?: never;
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": {
+                        /** Format: int32 */
+                        p_allocation_id: number;
+                        /** Format: text */
+                        p_status: string;
+                    };
+                    "application/vnd.pgrst.object+json;nulls=stripped": {
+                        /** Format: int32 */
+                        p_allocation_id: number;
+                        /** Format: text */
+                        p_status: string;
+                    };
+                    "application/vnd.pgrst.object+json": {
+                        /** Format: int32 */
+                        p_allocation_id: number;
+                        /** Format: text */
+                        p_status: string;
+                    };
+                    "text/csv": {
+                        /** Format: int32 */
+                        p_allocation_id: number;
+                        /** Format: text */
+                        p_status: string;
                     };
                 };
             };
@@ -700,6 +764,142 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/rpc/fn_allocate_course": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Allocate a course into the given beds from p_from (first night) to p_to (departure day). One allocation per bed, status ALLOCATED, each given the course's next free individual (no upper limit, D31). Clashes warn unless their rule is BLOCK, which refuses the whole request (D30). Audited. Returns each new allocation with its warnings. */
+        post: {
+            parameters: {
+                query?: never;
+                header?: {
+                    /** @description Preference */
+                    Prefer?: components["parameters"]["preferParams"];
+                };
+                path?: never;
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": {
+                        /** Format: integer[] */
+                        p_bed_ids: number[];
+                        /** Format: int32 */
+                        p_course_id: number;
+                        /** Format: date */
+                        p_from: string;
+                        /** Format: date */
+                        p_to: string;
+                    };
+                    "application/vnd.pgrst.object+json;nulls=stripped": {
+                        /** Format: integer[] */
+                        p_bed_ids: number[];
+                        /** Format: int32 */
+                        p_course_id: number;
+                        /** Format: date */
+                        p_from: string;
+                        /** Format: date */
+                        p_to: string;
+                    };
+                    "application/vnd.pgrst.object+json": {
+                        /** Format: integer[] */
+                        p_bed_ids: number[];
+                        /** Format: int32 */
+                        p_course_id: number;
+                        /** Format: date */
+                        p_from: string;
+                        /** Format: date */
+                        p_to: string;
+                    };
+                    "text/csv": {
+                        /** Format: integer[] */
+                        p_bed_ids: number[];
+                        /** Format: int32 */
+                        p_course_id: number;
+                        /** Format: date */
+                        p_from: string;
+                        /** Format: date */
+                        p_to: string;
+                    };
+                };
+            };
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/rpc/fn_cancel_allocation": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Cancel one allocation (kept, with status CANCELLED, so it stays in the audit history). Audited. */
+        post: {
+            parameters: {
+                query?: never;
+                header?: {
+                    /** @description Preference */
+                    Prefer?: components["parameters"]["preferParams"];
+                };
+                path?: never;
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": {
+                        /** Format: int32 */
+                        p_allocation_id: number;
+                    };
+                    "application/vnd.pgrst.object+json;nulls=stripped": {
+                        /** Format: int32 */
+                        p_allocation_id: number;
+                    };
+                    "application/vnd.pgrst.object+json": {
+                        /** Format: int32 */
+                        p_allocation_id: number;
+                    };
+                    "text/csv": {
+                        /** Format: int32 */
+                        p_allocation_id: number;
+                    };
+                };
+            };
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/rpc/reset_demo_data": {
         parameters: {
             query?: never;
@@ -829,6 +1029,86 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/rpc/fn_move_allocation": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Move an allocation to another bed and/or other dates (any argument left null stays as it is). Clashes warn unless their rule is BLOCK (D30). Audited. Returns the allocation with its warnings. */
+        post: {
+            parameters: {
+                query?: never;
+                header?: {
+                    /** @description Preference */
+                    Prefer?: components["parameters"]["preferParams"];
+                };
+                path?: never;
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": {
+                        /** Format: int32 */
+                        p_allocation_id: number;
+                        /** Format: int32 */
+                        p_bed_id?: number;
+                        /** Format: date */
+                        p_from?: string;
+                        /** Format: date */
+                        p_to?: string;
+                    };
+                    "application/vnd.pgrst.object+json;nulls=stripped": {
+                        /** Format: int32 */
+                        p_allocation_id: number;
+                        /** Format: int32 */
+                        p_bed_id?: number;
+                        /** Format: date */
+                        p_from?: string;
+                        /** Format: date */
+                        p_to?: string;
+                    };
+                    "application/vnd.pgrst.object+json": {
+                        /** Format: int32 */
+                        p_allocation_id: number;
+                        /** Format: int32 */
+                        p_bed_id?: number;
+                        /** Format: date */
+                        p_from?: string;
+                        /** Format: date */
+                        p_to?: string;
+                    };
+                    "text/csv": {
+                        /** Format: int32 */
+                        p_allocation_id: number;
+                        /** Format: int32 */
+                        p_bed_id?: number;
+                        /** Format: date */
+                        p_from?: string;
+                        /** Format: date */
+                        p_to?: string;
+                    };
+                };
+            };
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -842,7 +1122,7 @@ export interface components {
             /** Format: character */
             is_demo?: string;
         };
-        /** @description Warnings for the warnings strip, whatever the colour basis: courses with loaded above scheduled (D14), bookings on out-of-action beds, and double bookings (one row per booking involved). */
+        /** @description Warnings for the warnings strip, whatever the colour basis: courses with loaded above scheduled (D14), bookings on out-of-action beds, and double bookings (one row per booking involved). Clash severities come from their rules (D30). */
         warnings: {
             /** Format: text */
             kind?: string;

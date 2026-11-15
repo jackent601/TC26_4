@@ -41,11 +41,12 @@ The tool needs to:
 │   │   ├── 0005_postgrest.sql                 PostgREST request hook (X-Tenant, X-User) and API descriptions
 │   │   ├── 0006_availability_read.sql         Read API for the availability page: locations, course figures, bars, week summary, warnings, clash check
 │   │   ├── 0007_facts_not_bands.sql           Facts, not colour bands (D29): allocation percentages; week summary by course
-│   │   └── 0008_bars_full_dates.sql           fn_bed_bars returns full dates; the UI fits bars to the weeks shown
+│   │   ├── 0008_bars_full_dates.sql           fn_bed_bars returns full dates; the UI fits bars to the weeks shown
+│   │   └── 0009_write_allocations.sql         Write API for course bookings: allocate, cancel, move, set status; clash rules (D30)
 │   ├── test/
 │   │   ├── Dockerfile                         Test-only image: PostgreSQL 16 + pgTAP + pg_prove + dbmate
 │   │   └── run-tests.sh                       Throwaway database, migrations, tests, rollback check
-│   ├── tests/                                 pgTAP tests (schemas and roles, tenancy, reference data, demo reset, PostgREST hook, availability read API)
+│   ├── tests/                                 pgTAP tests (schemas and roles, tenancy, reference data, demo reset, PostgREST hook, availability read API, write API)
 │   ├── api-contract.txt                       Snapshot of the API contract: the api schema's views and functions
 │   └── setup/
 │       ├── roles.sql                          Sets api_user's password from .env; tells PostgREST to reload (run by db-roles)
@@ -131,13 +132,13 @@ If the model changes, add a new migration in `db/migrations/` (or, before anythi
 
 These were settled while simplifying an earlier, Oracle APEX-based proof of concept. Keep them unless there's a reason to revisit.
 
-1. **No named individuals.** There is no people table. A course's attendees are anonymous and numbered 1 to the greater of `scheduled` and `loaded` (`individual_no`). `scheduled` is the planned headcount; `loaded` is the number actually registered, updated as registrations come in. Their attributes (e.g. individual 3 is female, needs step-free access) live in `course_individual_attributes` and override the course defaults in `course_attributes`.
+1. **No named individuals.** There is no people table. A course's attendees are anonymous and numbered (`individual_no`), an internal identifier the UI never shows (D31); a course may be allocated beyond `scheduled` or `loaded`, and extra individuals take the course defaults. `scheduled` is the planned headcount; `loaded` is the number actually registered, updated as registrations come in. Their attributes (e.g. individual 3 is female, needs step-free access) live in `course_individual_attributes` and override the course defaults in `course_attributes`.
 2. **The allocation is the booking.** There is no separate attendance or booking table. `allocations` carries the status (`ALLOCATED` → `BOOKED` → `CHECKED_IN` → `CHECKED_OUT`, or `NO_SHOW` / `CANCELLED`) and the check-in/out times. An individual can have several allocations, e.g. a room move mid-stay.
 3. **External bookings** (made outside the tool, e.g. in the booking system) are allocations with no course and no individual number, `source = 'EXTERNAL'`.
 4. **Location attributes apply at any level.** Each `location_attributes` row sets exactly one of `site_id` … `bed_id`, with a date range. Attributes are inherited down to beds. `attribute_types.inherit_mode` says how: `NEAREST` (the value set nearest the bed wins, so a room can override its floor) or `ANY` (applies if set at any level above, and can't be overridden).
 5. **Outages are attributes, not a separate table.** Taking somewhere out of action is a location attribute `OUT_OF_ACTION = 'Y'` with dates and the reason in `comments`. Its attribute type is `inherit_mode = ANY`, `allow_overlap = Y`, `comment_required = Y`, and a `LOCATION_BLOCKS` rule makes it block every allocation. Both rows are created for every tenant by migration 0003.
 6. **Rules are data.** `rules` holds suitability rules of five types: `COMPARE` (individual attribute vs location attribute, e.g. grade ≥ floor minimum), `REQUIRES` (individual flag needs location flag, e.g. step-free), `MATCH_WITHIN` (everyone in a room, floor or block shares an attribute, e.g. no mixed-gender rooms), `SOLE_USE` (individual should not share a room) and `LOCATION_BLOCKS` (location flag blocks everyone, e.g. out of action). Each has a severity: `BLOCK`, `WARNING` or `INFO`.
-7. **Warn, don't block.** Only physical impossibilities block an allocation: two people in one bed, one individual in two beds at once, or an out-of-action bed. Everything else saves and is shown as a warning.
+7. **Warn, don't block.** Everything saves and is shown as a warning, including double bookings and out-of-action beds; a tenant can make those two clashes block by setting their rule's severity to `BLOCK` (D11, D30).
 8. **Warnings are never stored.** Conflicts and warnings are worked out by queries every time they're shown. For the MVP there is no way to accept or dismiss a warning.
 9. **Dates are half-open.** Start is the first night; end is the departure day (exclusive). Two stays overlap when `a.start_date < b.end_date and b.start_date < a.end_date`. Use this everywhere.
 10. **Generate nights, don't store them.** Availability ("free beds per night") generates the nights for the requested period in the query (e.g. `generate_series` in PostgreSQL, a recursive query elsewhere). There is no calendar table.
@@ -155,10 +156,9 @@ These were settled while simplifying an earlier, Oracle APEX-based proof of conc
 
 ### Enforced in application logic, not the schema
 
-- `individual_no` is between 1 and the greater of the course's `scheduled` and `loaded` (it isn't a foreign key, as individuals have no table).
 - `attribute_types.allow_overlap = 'N'`: no two rows for the same attribute and location with overlapping dates.
 - `attribute_types.comment_required = 'Y'`: every row of that attribute has a comment.
-- Status transitions on `allocations` follow the order above.
+- Status transitions on `allocations`: deferred (D31); any change is allowed and audited.
 - Writing to `audit_log` when allocations change.
 - Warning when a course has `loaded > scheduled` (over-subscribed).
 
@@ -186,6 +186,8 @@ From `docs/Accommodation System Requirements.xlsx`:
   - `GRADE_SUITABLE`: seniority checks, an individual's grade below a location's minimum grade;
   - `STEP_FREE_NEEDED`: an individual who needs step-free access placed where there isn't any;
   - `WORK_PATTERN_FLOOR`: full-time and part-time individuals sharing a floor.
+
+  Also not checked: the same individual (course and individual number) in two beds on the same night, e.g. from a room move that overlaps.
 
   These need the effective attributes of each bed (inherited down the estate) and of each individual (course defaults plus individual overrides) first. Once added, they also belong in the bar flags and in `api.fn_check_allocation`, which today checks only bookings and outages. The DEMO data already contains a case of each. Planned for the rest of phase 1 (`docs/build_plan.md`).
 

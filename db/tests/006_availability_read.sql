@@ -145,8 +145,8 @@ insert into core.allocations (course_id, individual_no, bed_id, start_date, end_
 select course_id, 9, :r101a, :'w0'::date + 22, :'w0'::date + 24 from core.courses
  where tenant_id = core.current_tenant_id() and code = 'TEC-07';
 select results_eq($$ select message from api.warnings where kind = 'DOUBLE_BOOKING' order by message $$,
-                  $$ values ('INT-22 #1 is double-booked (Room 101 bed A)'),
-                            ('TEC-07 #9 is double-booked (Room 101 bed A)') $$,
+                  $$ values ('INT-22 is double-booked (Room 101 bed A)'),
+                            ('TEC-07 is double-booked (Room 101 bed A)') $$,
                   'a double booking warns on both bookings');
 select is((select count(*)::int from api.fn_check_allocation(array[:r101a], :'w0'::date + 21, :'w0'::date + 28)), 2,
           'the clash check lists both bookings on a double-booked bed');
