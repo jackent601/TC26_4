@@ -4,7 +4,7 @@
 import { useCallback, useMemo, useState } from "react";
 import { FilterIcon } from "../../icons";
 import { useTenant } from "../../tenant";
-import { Popover, RangePicker } from "../availability/Controls";
+import { NewMenu, Popover, RangePicker } from "../availability/Controls";
 import { format, parseISO } from "date-fns";
 import { useAuditRequests, useBedBars, useCourseFigures, useLocations, useWarnings } from "../availability/data";
 import { addDaysIso, dayLong, dayLongYear, ddmm, defaultStart, iso, mondayOf } from "../availability/dates";
@@ -87,7 +87,7 @@ export function OverviewPage() {
             <Arrow dir="right" />
           </button>
           <button type="button" className="tb-btn" onClick={() => setStart(iso(mondayOf(new Date())))}>Today</button>
-          <button type="button" className="tb-btn" onClick={() => open({ kind: "newCourse" })}>New course</button>
+          <NewMenu onOpen={open} align="left" />
           <Popover label="Filter sites" align="left" triggerClass={`tb-btn${sites !== null ? " active" : ""}`}
                    trigger={<><FilterIcon /> <span className="filter-label">{siteLabel}</span></>}>
             <div className="filter-panel">

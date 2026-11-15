@@ -1,3 +1,7 @@
+function api.fn_add_outage(p_level text, p_location_id integer, p_from date, p_to date, p_reason text)
+  -- Put a location out of action (an outage, D38): p_level is Site, Building, Block, Floor, Room or Bed and p_location_id its id (as in api.locations), from p_from to p_to (exclusive), with a reason. It applies to every bed under the location. Saved even when it lands on live bookings: each one is returned as a warning and listed in api.warnings from then on. Audited. Returns the outage id with its warnings.
+  returns TABLE(outage_id integer, warnings text[])
+
 function api.fn_allocate_course(p_course_id integer, p_bed_ids integer[], p_from date, p_to date)
   -- Allocate a course into the given beds from p_from (first night) to p_to (departure day). One allocation per bed, status ALLOCATED, each given the course's next free individual (no upper limit, D31). Clashes warn unless their rule is BLOCK, which refuses the whole request (D30). Nights outside the course dates warn (0010). Audited. Returns each new allocation with its warnings.
   returns TABLE(allocation_id integer, bed_id integer, warnings text[])
@@ -5,6 +9,10 @@ function api.fn_allocate_course(p_course_id integer, p_bed_ids integer[], p_from
 function api.fn_bed_bars(p_from date, p_to date)
   -- Bars for every bed that overlap p_from to p_to (exclusive): kind allocation, external or outage, with their full dates (end exclusive). on_outage flags a booking that falls on an out-of-action bed.
   returns TABLE(bed_id integer, kind text, id integer, start_date date, end_date date, course_id integer, course_code text, individual_no integer, external_ref text, external_name text, status text, set_on_level text, reason text, on_outage boolean)
+
+function api.fn_book_external(p_ref text, p_name text, p_bed_ids integer[], p_from date, p_to date)
+  -- Book beds for someone outside the courses (an external booking, D38): p_ref is the booking reference, p_name who it is for, from p_from (first night) to p_to (departure day). One allocation per bed, status BOOKED, source EXTERNAL. Clashes warn unless their rule is BLOCK, which refuses the whole request (D30). Audited. Returns each new allocation with its warnings.
+  returns TABLE(allocation_id integer, bed_id integer, warnings text[])
 
 function api.fn_cancel_allocation(p_allocation_id integer)
   -- Cancel one allocation (kept, with status CANCELLED, so it stays in the audit history). Audited.

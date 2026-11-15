@@ -10,9 +10,9 @@ import { addDaysIso, dayIndex, dayLong, ddmm, iso, mondayOf } from "./dates";
 import { basisOf, courseColour, OverIcon, STATE_NAMES, STATE_ORDER, WarnIcon } from "./look";
 import type { ViewSettings } from "./settings";
 import { weekCounts } from "./TimelineGrid";
-import type { BedBar, CandidateBed, CourseFigure, Level, LocationNode, Popup, Warning, WeekSummary } from "./types";
+import type { BedBar, CandidateBed, Clash, CourseFigure, Level, LocationNode, Popup, Warning, WeekSummary } from "./types";
 import {
-  COURSE_STATUSES, STATUSES, useAllocateCourse, useCancelAllocation, useCancelCourse, useCreateCourse, useMoveAllocation,
+  COURSE_STATUSES, STATUSES, useAddOutage, useAllocateCourse, useBookExternal, useCancelAllocation, useCancelCourse, useCreateCourse, useMoveAllocation,
   useSetStatus, useUpdateCourse, useUpdateLoaded, type Allocated, type CourseChange, type CourseInput,
 } from "./writes";
 
@@ -44,7 +44,9 @@ export function PopupView({ popup, data, onOpen, onNotice, onClose }: Props) {
     case "bookCourse": return <BookCoursePopup courseId={popup.courseId} data={data} onClose={onClose} />;
     case "newCourse": return <NewCoursePopup from={popup.from} to={popup.to} data={data} onOpen={onOpen} onClose={onClose} />;
     case "warning": return <WarningPopup warning={popup.warning} data={data} onOpen={onOpen} onNotice={onNotice} onClose={onClose} />;
-    case "new": return <NewAllocationPopup bedKeys={popup.bedKeys} from={popup.from} to={popup.to} data={data} onClose={onClose} />;
+    case "newExternal": return <NewExternalPopup bedKeys={popup.bedKeys} from={popup.from} to={popup.to} data={data} onClose={onClose} />;
+    case "newOutage": return <NewOutagePopup nodeKey={popup.key} from={popup.from} to={popup.to} data={data} onClose={onClose} />;
+    case "new": return <NewAllocationPopup bedKeys={popup.bedKeys} from={popup.from} to={popup.to} data={data} onOpen={onOpen} onClose={onClose} />;
   }
 }
 
@@ -648,10 +650,11 @@ function WarningPopup({ warning: w, data, onOpen, onNotice, onClose }: {
 
 // A selection from the grid (D8-D10): the beds, editable exact dates, every
 // clash on those beds (fn_check_allocation), and the booking itself. Course
-// booking first (D32); one-off bookings come later. The database decides what
-// is allowed: a clash whose rule is BLOCK says "Not allowed" (D30).
-function NewAllocationPopup({ bedKeys, from, to, data, onClose }: {
-  bedKeys: string[]; from: string; to: string; data: PopupData; onClose: () => void;
+// booking here; "External booking" switches to that popup with the same beds and
+// dates (D38). The database decides what is allowed: a clash whose rule is
+// BLOCK says "Not allowed" (D30).
+function NewAllocationPopup({ bedKeys, from, to, data, onOpen, onClose }: {
+  bedKeys: string[]; from: string; to: string; data: PopupData; onOpen: (p: Popup) => void; onClose: () => void;
 }) {
   const [first, setFirst] = useState(from);
   const [departure, setDeparture] = useState(to);
@@ -697,7 +700,8 @@ function NewAllocationPopup({ bedKeys, from, to, data, onClose }: {
             }>
       <div className="av-modes" role="group" aria-label="Kind of booking">
         <button type="button" aria-pressed="true">Course booking</button>
-        <button type="button" aria-pressed="false" disabled title="Comes later (D32)">One-off booking</button>
+        <button type="button" aria-pressed="false"
+                onClick={() => onOpen({ kind: "newExternal", bedKeys, from: first, to: departure })}>External booking</button>
       </div>
 
       <Facts rows={[["Beds", beds.map((b) => bedName(data.nodes, b)).join(", ")]]} />
@@ -892,6 +896,237 @@ function BookCoursePopup({ courseId, data, onClose }: { courseId: number; data: 
           </>
         ))}
       {allocate.error && <p className="clash bad">Not saved: {allocate.error.message}</p>}
+    </Dialog>
+  );
+}
+
+// ------------------ External bookings and outages (D38) ------------------
+
+// What a save wrote, and the warnings the database returned with it.
+function SavedResult({ kind, title, saved, warnings, onClose }: {
+  kind: string; title: string; saved: string; warnings: string[]; onClose: () => void;
+}) {
+  return (
+    <Dialog kind={kind} title={title} onClose={onClose}>
+      <p className="clash ok">Saved: {saved}.</p>
+      {warnings.length > 0 && (
+        <div className="clash bad">
+          <strong>Saved with {warnings.length} {warnings.length === 1 ? "warning" : "warnings"}</strong>
+          <ul className="av-list">{warnings.map((w, i) => <li key={i}><WarnIcon /> {w}</li>)}</ul>
+        </div>
+      )}
+    </Dialog>
+  );
+}
+
+// Defaults for a new booking or outage: next week's block, Monday to Sunday (D9).
+const nextMonday = () => addDaysIso(iso(mondayOf(new Date())), 7);
+
+// What fn_check_allocation found on one bed, in a few words.
+const clashText = (c: Clash) =>
+  (c.kind === "BOOKING" ? `booked: ${c.ref}` : `out of action: ${c.ref}`) +
+  ` ${ddmm(c.start_date)}–${ddmm(c.end_date)}` + (c.blocks ? " · not allowed" : "");
+
+// Book beds for someone outside the courses (fn_book_external): a reference, a
+// name, the dates, and beds ticked on one site, each with what it clashes with.
+function NewExternalPopup({ bedKeys, from, to, data, onClose }: {
+  bedKeys?: string[]; from?: string; to?: string; data: PopupData; onClose: () => void;
+}) {
+  const sites = sitesOf(data.nodes).sort((a, b) => a.sortOrder - b.sortOrder);
+  const given = (bedKeys ?? []).map((k) => data.nodes.get(k)).filter((n): n is LocationNode => n !== undefined);
+  const [ref, setRef] = useState("");
+  const [name, setName] = useState("");
+  const [first, setFirst] = useState(from ?? nextMonday());
+  const [departure, setDeparture] = useState(to ?? addDaysIso(nextMonday(), 6));
+  const [siteId, setSiteId] = useState<number | null>(
+    () => (given[0] ? ancestorAt(data.nodes, given[0].key, "Site")?.id : undefined) ?? sites[0]?.id ?? null);
+  const [chosen, setChosen] = useState<Set<number>>(() => new Set(given.map((b) => b.id)));
+  const valid = first !== "" && departure !== "" && departure > first;
+
+  const site = sites.find((s) => s.id === siteId);
+  const beds = site ? bedsUnder(site) : [];
+  const clashes = useClashes(data.tenant, beds.map((b) => b.id), first, departure, valid);
+  const clashesOn = new Map<number, Clash[]>();
+  for (const c of clashes.data ?? []) if (c.bed_id !== null) clashesOn.set(c.bed_id, [...(clashesOn.get(c.bed_id) ?? []), c]);
+
+  // Rooms in estate order, each with its beds.
+  const rooms: { key: string; name: string; where: string; beds: LocationNode[] }[] = [];
+  for (const b of beds) {
+    const last = rooms[rooms.length - 1];
+    if (last && last.key === b.parentKey) { last.beds.push(b); continue; }
+    const room = b.parentKey ? data.nodes.get(b.parentKey) : undefined;
+    const block = ancestorAt(data.nodes, b.key, "Block");
+    const floor = ancestorAt(data.nodes, b.key, "Floor");
+    rooms.push({ key: b.parentKey ?? b.key, name: room?.name ?? "", where: [block?.name, floor?.name].filter(Boolean).join(" › "), beds: [b] });
+  }
+
+  const toggle = (id: number) => {
+    const next = new Set(chosen);
+    if (next.has(id)) next.delete(id);
+    else next.add(id);
+    setChosen(next);
+  };
+  const bedIds = beds.filter((b) => chosen.has(b.id)).map((b) => b.id); // this site, estate order
+  const blocked = bedIds.some((id) => (clashesOn.get(id) ?? []).some((c) => c.blocks));
+  const book = useBookExternal(data.tenant);
+  const canBook = valid && ref.trim() !== "" && name.trim() !== "" && bedIds.length > 0 &&
+    !clashes.isPending && !clashes.error && !blocked && !book.isPending;
+
+  if (book.data) {
+    return <SavedResult kind="External booking" title={`${ref.trim()}: ${book.data.length} ${book.data.length === 1 ? "bed" : "beds"}`}
+                        saved={`${name.trim()}, ${stay(first, departure)}`} warnings={book.data.flatMap((a) => a.warnings)} onClose={onClose} />;
+  }
+
+  return (
+    <Dialog kind="New external booking" title="Book beds for someone outside the courses" onClose={onClose} wide
+            actions={
+              <button type="button" className="btn primary" disabled={!canBook}
+                      onClick={() => book.mutate({ ref: ref.trim(), name: name.trim(), bedIds, from: first, to: departure })}>
+                {book.isPending ? "Booking…" : `Book ${bedIds.length} ${bedIds.length === 1 ? "bed" : "beds"}`}
+              </button>
+            }>
+      <div className="av-form">
+        <label className="av-field">Reference<input type="text" maxLength={50} value={ref} placeholder="e.g. BK-4600"
+                                                     disabled={book.isPending} onChange={(e) => setRef(e.target.value)} /></label>
+        <label className="av-field">For<input type="text" maxLength={200} value={name} placeholder="e.g. Visiting assessors"
+                                               disabled={book.isPending} onChange={(e) => setName(e.target.value)} /></label>
+        <label className="av-field">First night<input type="date" value={first} disabled={book.isPending} onChange={(e) => setFirst(e.target.value)} /></label>
+        <label className="av-field">Departure<input type="date" value={departure} disabled={book.isPending} onChange={(e) => setDeparture(e.target.value)} /></label>
+      </div>
+      {valid ? <p className="summary">{stay(first, departure)}</p> : <p className="clash bad">Departure must be after the first night.</p>}
+
+      {sites.length > 1 && (
+        <label className="av-field">Site
+          <select value={siteId ?? ""} onChange={(e) => setSiteId(Number(e.target.value))}>
+            {sites.map((s) => <option key={s.key} value={s.id}>{s.name}</option>)}
+          </select>
+        </label>
+      )}
+      {valid && (clashes.isPending ? <p className="summary">Checking the beds…</p> :
+        clashes.error ? <p className="clash bad">Could not check the beds: {clashes.error.message}</p> :
+        beds.length === 0 ? <p className="clash bad">There are no beds on this site.</p> : (
+          <>
+            <div className="av-cands-head">
+              <span className={bedIds.length > 0 ? "ok" : "short"}>{bedIds.length} {bedIds.length === 1 ? "bed" : "beds"} ticked</span>
+              {blocked && <span className="short">A ticked bed is not allowed (a clash rule is set to block)</span>}
+            </div>
+            <div className="av-cands">
+              {rooms.map((r) => (
+                <div key={r.key} className="room">
+                  <div className="room-head"><span className="name">{r.name}</span><span className="where">{r.where}</span></div>
+                  {r.beds.map((b) => {
+                    const list = clashesOn.get(b.id) ?? [];
+                    const blocks = list.some((c) => c.blocks);
+                    return (
+                      <label key={b.id} className={`cand${list.length > 0 ? " clash" : ""}`}>
+                        <input type="checkbox" checked={chosen.has(b.id)} disabled={(blocks && !chosen.has(b.id)) || book.isPending}
+                               onChange={() => toggle(b.id)} />
+                        <span className="name">{b.name}</span>
+                        {list.length > 0 && <span className="warn"><WarnIcon /> {list.map(clashText).join("; ")}</span>}
+                      </label>
+                    );
+                  })}
+                </div>
+              ))}
+            </div>
+            <p className="summary">Beds with a clash can be booked with a warning, unless the clash rule is set to block.</p>
+          </>
+        ))}
+      {book.error && <p className="clash bad">Not saved: {book.error.message}</p>}
+    </Dialog>
+  );
+}
+
+// Put a site, building, block, floor, room or bed out of action
+// (fn_add_outage). Shows the beds it covers and the bookings it would land on;
+// saving is allowed, with those bookings as warnings (D38).
+function NewOutagePopup({ nodeKey, from, to, data, onClose }: {
+  nodeKey?: string; from?: string; to?: string; data: PopupData; onClose: () => void;
+}) {
+  // Every location, in tree order, indented by depth.
+  const options: { node: LocationNode; depth: number }[] = [];
+  const walk = (list: LocationNode[], depth: number) => {
+    for (const n of [...list].sort((a, b) => a.sortOrder - b.sortOrder)) {
+      options.push({ node: n, depth });
+      walk(n.children, depth + 1);
+    }
+  };
+  walk([...data.nodes.values()].filter((n) => n.parentKey === null), 0);
+
+  const [key, setKey] = useState(nodeKey ?? "");
+  const [first, setFirst] = useState(from ?? nextMonday());
+  const [back, setBack] = useState(to ?? addDaysIso(nextMonday(), 7));
+  const [reason, setReason] = useState("");
+  const valid = first !== "" && back !== "" && back > first;
+
+  const node = data.nodes.get(key);
+  const beds = node ? bedsUnder(node) : [];
+  const clashes = useClashes(data.tenant, beds.map((b) => b.id), first, back, valid && beds.length > 0);
+  const bookings = (clashes.data ?? []).filter((c) => c.kind === "BOOKING");
+  const already = (clashes.data ?? []).filter((c) => c.kind === "OUT_OF_ACTION");
+  const byId = new Map(beds.map((b) => [b.id, b]));
+  const add = useAddOutage(data.tenant);
+  const canSave = valid && node !== undefined && reason.trim() !== "" && !add.isPending;
+
+  if (add.data && node) {
+    return <SavedResult kind="Outage added" title={`${node.name}: out of action`}
+                        saved={`${dayLong(first)} until ${dayLong(back)}, ${reason.trim()}`} warnings={add.data.warnings} onClose={onClose} />;
+  }
+
+  return (
+    <Dialog kind="New outage" title="Put a location out of action" onClose={onClose} wide
+            actions={
+              <button type="button" className="btn primary" disabled={!canSave}
+                      onClick={() => node && add.mutate({ level: node.level, locationId: node.id, from: first, to: back, reason: reason.trim() })}>
+                {add.isPending ? "Saving…" : "Add outage"}
+              </button>
+            }>
+      <label className="av-field">Location
+        <select value={key} disabled={add.isPending} onChange={(e) => setKey(e.target.value)}>
+          <option value="">Choose a site, building, block, floor, room or bed</option>
+          {options.map(({ node: n, depth }) => (
+            <option key={n.key} value={n.key}>
+              {"   ".repeat(depth)}{n.name}{n.level === "Site" || n.level === "Building" ? ` (${n.level.toLowerCase()})` : ""}
+            </option>
+          ))}
+        </select>
+      </label>
+      <div className="av-form">
+        <label className="av-field">Out of action from<input type="date" value={first} disabled={add.isPending} onChange={(e) => setFirst(e.target.value)} /></label>
+        <label className="av-field">Back in service on<input type="date" value={back} disabled={add.isPending} onChange={(e) => setBack(e.target.value)} /></label>
+      </div>
+      <label className="av-field">Reason<input type="text" maxLength={1000} value={reason} placeholder="e.g. Heating failure"
+                                                disabled={add.isPending} onChange={(e) => setReason(e.target.value)} /></label>
+      {!valid && <p className="clash bad">"Back in service" must be after the first day out of action.</p>}
+
+      {node && valid && (
+        <>
+          <p className="summary">
+            {pathOf(data.nodes, node.key)}: {beds.length} {beds.length === 1 ? "bed" : "beds"}, out of action
+            for {dayIndex(first, back)} {dayIndex(first, back) === 1 ? "night" : "nights"}.
+          </p>
+          {clashes.isPending ? <p className="summary">Checking bookings…</p> :
+            clashes.error ? <p className="clash bad">Could not check bookings: {clashes.error.message}</p> :
+            bookings.length === 0 ? <p className="clash ok">No bookings on these beds then.</p> : (
+              <div className="clash bad">
+                <strong>{bookings.length} {bookings.length === 1 ? "booking" : "bookings"} would be in an out-of-action bed</strong>{" "}
+                (allowed; they will show as warnings)
+                <ul className="av-list">
+                  {bookings.map((c, i) => {
+                    const bed = c.bed_id !== null ? byId.get(c.bed_id) : undefined;
+                    return <li key={i}>{bed ? bedName(data.nodes, bed) : `Bed ${c.bed_id}`}: {c.ref} · {ddmm(c.start_date)}–{ddmm(c.end_date)}</li>;
+                  })}
+                </ul>
+              </div>
+            )}
+          {already.length > 0 && (
+            <p className="summary">
+              Already out of action then: {[...new Set(already.map((c) => `${c.ref} (${ddmm(c.start_date)}–${ddmm(c.end_date)})`))].join("; ")}.
+            </p>
+          )}
+        </>
+      )}
+      {add.error && <p className="clash bad">Not saved: {add.error.message}</p>}
     </Dialog>
   );
 }

@@ -38,365 +38,6 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/warnings": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** Warnings for the warnings strip, whatever the colour basis: courses with loaded above scheduled (D14), bookings on out-of-action beds, double bookings (one row per booking involved), and course bookings with nights outside their course's dates (strict, 0010). Clash severities come from their rules (D30). site_id is the bed's site, or the course's for course-level warnings (0011). */
-        get: {
-            parameters: {
-                query?: {
-                    kind?: components["parameters"]["rowFilter.warnings.kind"];
-                    severity?: components["parameters"]["rowFilter.warnings.severity"];
-                    message?: components["parameters"]["rowFilter.warnings.message"];
-                    course_id?: components["parameters"]["rowFilter.warnings.course_id"];
-                    allocation_id?: components["parameters"]["rowFilter.warnings.allocation_id"];
-                    bed_id?: components["parameters"]["rowFilter.warnings.bed_id"];
-                    start_date?: components["parameters"]["rowFilter.warnings.start_date"];
-                    end_date?: components["parameters"]["rowFilter.warnings.end_date"];
-                    site_id?: components["parameters"]["rowFilter.warnings.site_id"];
-                    /** @description Filtering Columns */
-                    select?: components["parameters"]["select"];
-                    /** @description Ordering */
-                    order?: components["parameters"]["order"];
-                    /** @description Limiting and Pagination */
-                    offset?: components["parameters"]["offset"];
-                    /** @description Limiting and Pagination */
-                    limit?: components["parameters"]["limit"];
-                };
-                header?: {
-                    /** @description Limiting and Pagination */
-                    Range?: components["parameters"]["range"];
-                    /** @description Limiting and Pagination */
-                    "Range-Unit"?: components["parameters"]["rangeUnit"];
-                    /** @description Preference */
-                    Prefer?: components["parameters"]["preferCount"];
-                };
-                path?: never;
-                cookie?: never;
-            };
-            requestBody?: never;
-            responses: {
-                /** @description OK */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["warnings"][];
-                        "application/vnd.pgrst.object+json;nulls=stripped": components["schemas"]["warnings"][];
-                        "application/vnd.pgrst.object+json": components["schemas"]["warnings"][];
-                        "text/csv": components["schemas"]["warnings"][];
-                    };
-                };
-                /** @description Partial Content */
-                206: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content?: never;
-                };
-            };
-        };
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/health": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** Health check: status, time, the selected tenant and its bed count. */
-        get: {
-            parameters: {
-                query?: {
-                    status?: components["parameters"]["rowFilter.health.status"];
-                    checked_at?: components["parameters"]["rowFilter.health.checked_at"];
-                    tenant?: components["parameters"]["rowFilter.health.tenant"];
-                    bed_count?: components["parameters"]["rowFilter.health.bed_count"];
-                    /** @description Filtering Columns */
-                    select?: components["parameters"]["select"];
-                    /** @description Ordering */
-                    order?: components["parameters"]["order"];
-                    /** @description Limiting and Pagination */
-                    offset?: components["parameters"]["offset"];
-                    /** @description Limiting and Pagination */
-                    limit?: components["parameters"]["limit"];
-                };
-                header?: {
-                    /** @description Limiting and Pagination */
-                    Range?: components["parameters"]["range"];
-                    /** @description Limiting and Pagination */
-                    "Range-Unit"?: components["parameters"]["rangeUnit"];
-                    /** @description Preference */
-                    Prefer?: components["parameters"]["preferCount"];
-                };
-                path?: never;
-                cookie?: never;
-            };
-            requestBody?: never;
-            responses: {
-                /** @description OK */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["health"][];
-                        "application/vnd.pgrst.object+json;nulls=stripped": components["schemas"]["health"][];
-                        "application/vnd.pgrst.object+json": components["schemas"]["health"][];
-                        "text/csv": components["schemas"]["health"][];
-                    };
-                };
-                /** @description Partial Content */
-                206: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content?: never;
-                };
-            };
-        };
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/course_figures": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** Per course: scheduled (planned), loaded (registered, as of loaded_at) and allocated (individuals with a bed, not cancelled). pct_scheduled and pct_loaded are allocated as a percentage of each, to 1 decimal place, null when that figure is 0. Colour bands are applied by the UI from the user's thresholds (D29). site_id is the course's site (0011). */
-        get: {
-            parameters: {
-                query?: {
-                    course_id?: components["parameters"]["rowFilter.course_figures.course_id"];
-                    code?: components["parameters"]["rowFilter.course_figures.code"];
-                    name?: components["parameters"]["rowFilter.course_figures.name"];
-                    start_date?: components["parameters"]["rowFilter.course_figures.start_date"];
-                    end_date?: components["parameters"]["rowFilter.course_figures.end_date"];
-                    status?: components["parameters"]["rowFilter.course_figures.status"];
-                    scheduled?: components["parameters"]["rowFilter.course_figures.scheduled"];
-                    loaded?: components["parameters"]["rowFilter.course_figures.loaded"];
-                    loaded_at?: components["parameters"]["rowFilter.course_figures.loaded_at"];
-                    allocated?: components["parameters"]["rowFilter.course_figures.allocated"];
-                    loaded_above_scheduled?: components["parameters"]["rowFilter.course_figures.loaded_above_scheduled"];
-                    pct_scheduled?: components["parameters"]["rowFilter.course_figures.pct_scheduled"];
-                    pct_loaded?: components["parameters"]["rowFilter.course_figures.pct_loaded"];
-                    site_id?: components["parameters"]["rowFilter.course_figures.site_id"];
-                    /** @description Filtering Columns */
-                    select?: components["parameters"]["select"];
-                    /** @description Ordering */
-                    order?: components["parameters"]["order"];
-                    /** @description Limiting and Pagination */
-                    offset?: components["parameters"]["offset"];
-                    /** @description Limiting and Pagination */
-                    limit?: components["parameters"]["limit"];
-                };
-                header?: {
-                    /** @description Limiting and Pagination */
-                    Range?: components["parameters"]["range"];
-                    /** @description Limiting and Pagination */
-                    "Range-Unit"?: components["parameters"]["rangeUnit"];
-                    /** @description Preference */
-                    Prefer?: components["parameters"]["preferCount"];
-                };
-                path?: never;
-                cookie?: never;
-            };
-            requestBody?: never;
-            responses: {
-                /** @description OK */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["course_figures"][];
-                        "application/vnd.pgrst.object+json;nulls=stripped": components["schemas"]["course_figures"][];
-                        "application/vnd.pgrst.object+json": components["schemas"]["course_figures"][];
-                        "text/csv": components["schemas"]["course_figures"][];
-                    };
-                };
-                /** @description Partial Content */
-                206: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content?: never;
-                };
-            };
-        };
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/audit": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** The audit trail, one row per change: who (changed_by), when (changed_at), what (table_name, record_id, action) and a summary sentence without the user, e.g. "booked FIN-03 into Room 101 bed A, 23/11 to 28/11". course_id covers a course and its bookings; allocation_id is set for booking rows; site_id is the bed's site, or the course's. request_id groups the rows of one request (see audit_requests). detail is the raw JSON; warnings are those the change was saved with. Filter and order with PostgREST (D37). */
-        get: {
-            parameters: {
-                query?: {
-                    audit_id?: components["parameters"]["rowFilter.audit.audit_id"];
-                    request_id?: components["parameters"]["rowFilter.audit.request_id"];
-                    changed_at?: components["parameters"]["rowFilter.audit.changed_at"];
-                    changed_by?: components["parameters"]["rowFilter.audit.changed_by"];
-                    table_name?: components["parameters"]["rowFilter.audit.table_name"];
-                    record_id?: components["parameters"]["rowFilter.audit.record_id"];
-                    course_id?: components["parameters"]["rowFilter.audit.course_id"];
-                    course_code?: components["parameters"]["rowFilter.audit.course_code"];
-                    allocation_id?: components["parameters"]["rowFilter.audit.allocation_id"];
-                    bed_id?: components["parameters"]["rowFilter.audit.bed_id"];
-                    site_id?: components["parameters"]["rowFilter.audit.site_id"];
-                    action?: components["parameters"]["rowFilter.audit.action"];
-                    summary?: components["parameters"]["rowFilter.audit.summary"];
-                    detail?: components["parameters"]["rowFilter.audit.detail"];
-                    warnings?: components["parameters"]["rowFilter.audit.warnings"];
-                    /** @description Filtering Columns */
-                    select?: components["parameters"]["select"];
-                    /** @description Ordering */
-                    order?: components["parameters"]["order"];
-                    /** @description Limiting and Pagination */
-                    offset?: components["parameters"]["offset"];
-                    /** @description Limiting and Pagination */
-                    limit?: components["parameters"]["limit"];
-                };
-                header?: {
-                    /** @description Limiting and Pagination */
-                    Range?: components["parameters"]["range"];
-                    /** @description Limiting and Pagination */
-                    "Range-Unit"?: components["parameters"]["rangeUnit"];
-                    /** @description Preference */
-                    Prefer?: components["parameters"]["preferCount"];
-                };
-                path?: never;
-                cookie?: never;
-            };
-            requestBody?: never;
-            responses: {
-                /** @description OK */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["audit"][];
-                        "application/vnd.pgrst.object+json;nulls=stripped": components["schemas"]["audit"][];
-                        "application/vnd.pgrst.object+json": components["schemas"]["audit"][];
-                        "text/csv": components["schemas"]["audit"][];
-                    };
-                };
-                /** @description Partial Content */
-                206: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content?: never;
-                };
-            };
-        };
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/locations": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** The estate as a tree: one row per site, building, block, floor, room and bed. key is unique (e.g. "room:12"), parent_key points to the row above, sort_order orders siblings, bed_count is the number of beds at or below. */
-        get: {
-            parameters: {
-                query?: {
-                    key?: components["parameters"]["rowFilter.locations.key"];
-                    parent_key?: components["parameters"]["rowFilter.locations.parent_key"];
-                    level?: components["parameters"]["rowFilter.locations.level"];
-                    id?: components["parameters"]["rowFilter.locations.id"];
-                    name?: components["parameters"]["rowFilter.locations.name"];
-                    sort_order?: components["parameters"]["rowFilter.locations.sort_order"];
-                    bed_count?: components["parameters"]["rowFilter.locations.bed_count"];
-                    /** @description Filtering Columns */
-                    select?: components["parameters"]["select"];
-                    /** @description Ordering */
-                    order?: components["parameters"]["order"];
-                    /** @description Limiting and Pagination */
-                    offset?: components["parameters"]["offset"];
-                    /** @description Limiting and Pagination */
-                    limit?: components["parameters"]["limit"];
-                };
-                header?: {
-                    /** @description Limiting and Pagination */
-                    Range?: components["parameters"]["range"];
-                    /** @description Limiting and Pagination */
-                    "Range-Unit"?: components["parameters"]["rangeUnit"];
-                    /** @description Preference */
-                    Prefer?: components["parameters"]["preferCount"];
-                };
-                path?: never;
-                cookie?: never;
-            };
-            requestBody?: never;
-            responses: {
-                /** @description OK */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["locations"][];
-                        "application/vnd.pgrst.object+json;nulls=stripped": components["schemas"]["locations"][];
-                        "application/vnd.pgrst.object+json": components["schemas"]["locations"][];
-                        "text/csv": components["schemas"]["locations"][];
-                    };
-                };
-                /** @description Partial Content */
-                206: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content?: never;
-                };
-            };
-        };
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
     "/tenants": {
         parameters: {
             query?: never;
@@ -536,6 +177,288 @@ export interface paths {
         };
         trace?: never;
     };
+    "/warnings": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Warnings for the warnings strip, whatever the colour basis: courses with loaded above scheduled (D14), bookings on out-of-action beds, double bookings (one row per booking involved), and course bookings with nights outside their course's dates (strict, 0010). Clash severities come from their rules (D30). site_id is the bed's site, or the course's for course-level warnings (0011). */
+        get: {
+            parameters: {
+                query?: {
+                    kind?: components["parameters"]["rowFilter.warnings.kind"];
+                    severity?: components["parameters"]["rowFilter.warnings.severity"];
+                    message?: components["parameters"]["rowFilter.warnings.message"];
+                    course_id?: components["parameters"]["rowFilter.warnings.course_id"];
+                    allocation_id?: components["parameters"]["rowFilter.warnings.allocation_id"];
+                    bed_id?: components["parameters"]["rowFilter.warnings.bed_id"];
+                    start_date?: components["parameters"]["rowFilter.warnings.start_date"];
+                    end_date?: components["parameters"]["rowFilter.warnings.end_date"];
+                    site_id?: components["parameters"]["rowFilter.warnings.site_id"];
+                    /** @description Filtering Columns */
+                    select?: components["parameters"]["select"];
+                    /** @description Ordering */
+                    order?: components["parameters"]["order"];
+                    /** @description Limiting and Pagination */
+                    offset?: components["parameters"]["offset"];
+                    /** @description Limiting and Pagination */
+                    limit?: components["parameters"]["limit"];
+                };
+                header?: {
+                    /** @description Limiting and Pagination */
+                    Range?: components["parameters"]["range"];
+                    /** @description Limiting and Pagination */
+                    "Range-Unit"?: components["parameters"]["rangeUnit"];
+                    /** @description Preference */
+                    Prefer?: components["parameters"]["preferCount"];
+                };
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["warnings"][];
+                        "application/vnd.pgrst.object+json;nulls=stripped": components["schemas"]["warnings"][];
+                        "application/vnd.pgrst.object+json": components["schemas"]["warnings"][];
+                        "text/csv": components["schemas"]["warnings"][];
+                    };
+                };
+                /** @description Partial Content */
+                206: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/health": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Health check: status, time, the selected tenant and its bed count. */
+        get: {
+            parameters: {
+                query?: {
+                    status?: components["parameters"]["rowFilter.health.status"];
+                    checked_at?: components["parameters"]["rowFilter.health.checked_at"];
+                    tenant?: components["parameters"]["rowFilter.health.tenant"];
+                    bed_count?: components["parameters"]["rowFilter.health.bed_count"];
+                    /** @description Filtering Columns */
+                    select?: components["parameters"]["select"];
+                    /** @description Ordering */
+                    order?: components["parameters"]["order"];
+                    /** @description Limiting and Pagination */
+                    offset?: components["parameters"]["offset"];
+                    /** @description Limiting and Pagination */
+                    limit?: components["parameters"]["limit"];
+                };
+                header?: {
+                    /** @description Limiting and Pagination */
+                    Range?: components["parameters"]["range"];
+                    /** @description Limiting and Pagination */
+                    "Range-Unit"?: components["parameters"]["rangeUnit"];
+                    /** @description Preference */
+                    Prefer?: components["parameters"]["preferCount"];
+                };
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["health"][];
+                        "application/vnd.pgrst.object+json;nulls=stripped": components["schemas"]["health"][];
+                        "application/vnd.pgrst.object+json": components["schemas"]["health"][];
+                        "text/csv": components["schemas"]["health"][];
+                    };
+                };
+                /** @description Partial Content */
+                206: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/locations": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** The estate as a tree: one row per site, building, block, floor, room and bed. key is unique (e.g. "room:12"), parent_key points to the row above, sort_order orders siblings, bed_count is the number of beds at or below. */
+        get: {
+            parameters: {
+                query?: {
+                    key?: components["parameters"]["rowFilter.locations.key"];
+                    parent_key?: components["parameters"]["rowFilter.locations.parent_key"];
+                    level?: components["parameters"]["rowFilter.locations.level"];
+                    id?: components["parameters"]["rowFilter.locations.id"];
+                    name?: components["parameters"]["rowFilter.locations.name"];
+                    sort_order?: components["parameters"]["rowFilter.locations.sort_order"];
+                    bed_count?: components["parameters"]["rowFilter.locations.bed_count"];
+                    /** @description Filtering Columns */
+                    select?: components["parameters"]["select"];
+                    /** @description Ordering */
+                    order?: components["parameters"]["order"];
+                    /** @description Limiting and Pagination */
+                    offset?: components["parameters"]["offset"];
+                    /** @description Limiting and Pagination */
+                    limit?: components["parameters"]["limit"];
+                };
+                header?: {
+                    /** @description Limiting and Pagination */
+                    Range?: components["parameters"]["range"];
+                    /** @description Limiting and Pagination */
+                    "Range-Unit"?: components["parameters"]["rangeUnit"];
+                    /** @description Preference */
+                    Prefer?: components["parameters"]["preferCount"];
+                };
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["locations"][];
+                        "application/vnd.pgrst.object+json;nulls=stripped": components["schemas"]["locations"][];
+                        "application/vnd.pgrst.object+json": components["schemas"]["locations"][];
+                        "text/csv": components["schemas"]["locations"][];
+                    };
+                };
+                /** @description Partial Content */
+                206: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/course_figures": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Per course: scheduled (planned), loaded (registered, as of loaded_at) and allocated (individuals with a bed, not cancelled). pct_scheduled and pct_loaded are allocated as a percentage of each, to 1 decimal place, null when that figure is 0. Colour bands are applied by the UI from the user's thresholds (D29). site_id is the course's site (0011). */
+        get: {
+            parameters: {
+                query?: {
+                    course_id?: components["parameters"]["rowFilter.course_figures.course_id"];
+                    code?: components["parameters"]["rowFilter.course_figures.code"];
+                    name?: components["parameters"]["rowFilter.course_figures.name"];
+                    start_date?: components["parameters"]["rowFilter.course_figures.start_date"];
+                    end_date?: components["parameters"]["rowFilter.course_figures.end_date"];
+                    status?: components["parameters"]["rowFilter.course_figures.status"];
+                    scheduled?: components["parameters"]["rowFilter.course_figures.scheduled"];
+                    loaded?: components["parameters"]["rowFilter.course_figures.loaded"];
+                    loaded_at?: components["parameters"]["rowFilter.course_figures.loaded_at"];
+                    allocated?: components["parameters"]["rowFilter.course_figures.allocated"];
+                    loaded_above_scheduled?: components["parameters"]["rowFilter.course_figures.loaded_above_scheduled"];
+                    pct_scheduled?: components["parameters"]["rowFilter.course_figures.pct_scheduled"];
+                    pct_loaded?: components["parameters"]["rowFilter.course_figures.pct_loaded"];
+                    site_id?: components["parameters"]["rowFilter.course_figures.site_id"];
+                    /** @description Filtering Columns */
+                    select?: components["parameters"]["select"];
+                    /** @description Ordering */
+                    order?: components["parameters"]["order"];
+                    /** @description Limiting and Pagination */
+                    offset?: components["parameters"]["offset"];
+                    /** @description Limiting and Pagination */
+                    limit?: components["parameters"]["limit"];
+                };
+                header?: {
+                    /** @description Limiting and Pagination */
+                    Range?: components["parameters"]["range"];
+                    /** @description Limiting and Pagination */
+                    "Range-Unit"?: components["parameters"]["rangeUnit"];
+                    /** @description Preference */
+                    Prefer?: components["parameters"]["preferCount"];
+                };
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["course_figures"][];
+                        "application/vnd.pgrst.object+json;nulls=stripped": components["schemas"]["course_figures"][];
+                        "application/vnd.pgrst.object+json": components["schemas"]["course_figures"][];
+                        "text/csv": components["schemas"]["course_figures"][];
+                    };
+                };
+                /** @description Partial Content */
+                206: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/audit_requests": {
         parameters: {
             query?: never;
@@ -607,206 +530,49 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/rpc/use_tenant": {
+    "/audit": {
         parameters: {
             query?: never;
             header?: never;
             path?: never;
             cookie?: never;
         };
-        get?: never;
-        put?: never;
-        /** Select a tenant for the current transaction. Normally done for you from the X-Tenant header. */
-        post: {
-            parameters: {
-                query?: never;
-                header?: {
-                    /** @description Preference */
-                    Prefer?: components["parameters"]["preferParams"];
-                };
-                path?: never;
-                cookie?: never;
-            };
-            requestBody: {
-                content: {
-                    "application/json": {
-                        /** Format: text */
-                        p_code: string;
-                        /** Format: boolean */
-                        p_local?: boolean;
-                    };
-                    "application/vnd.pgrst.object+json;nulls=stripped": {
-                        /** Format: text */
-                        p_code: string;
-                        /** Format: boolean */
-                        p_local?: boolean;
-                    };
-                    "application/vnd.pgrst.object+json": {
-                        /** Format: text */
-                        p_code: string;
-                        /** Format: boolean */
-                        p_local?: boolean;
-                    };
-                    "text/csv": {
-                        /** Format: text */
-                        p_code: string;
-                        /** Format: boolean */
-                        p_local?: boolean;
-                    };
-                };
-            };
-            responses: {
-                /** @description OK */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content?: never;
-                };
-            };
-        };
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/rpc/fn_cancel_allocation": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /** Cancel one allocation (kept, with status CANCELLED, so it stays in the audit history). Audited. */
-        post: {
-            parameters: {
-                query?: never;
-                header?: {
-                    /** @description Preference */
-                    Prefer?: components["parameters"]["preferParams"];
-                };
-                path?: never;
-                cookie?: never;
-            };
-            requestBody: {
-                content: {
-                    "application/json": {
-                        /** Format: int32 */
-                        p_allocation_id: number;
-                    };
-                    "application/vnd.pgrst.object+json;nulls=stripped": {
-                        /** Format: int32 */
-                        p_allocation_id: number;
-                    };
-                    "application/vnd.pgrst.object+json": {
-                        /** Format: int32 */
-                        p_allocation_id: number;
-                    };
-                    "text/csv": {
-                        /** Format: int32 */
-                        p_allocation_id: number;
-                    };
-                };
-            };
-            responses: {
-                /** @description OK */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content?: never;
-                };
-            };
-        };
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/rpc/fn_set_status": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /** Set an allocation's status: ALLOCATED, BOOKED, CHECKED_IN, CHECKED_OUT, NO_SHOW or CANCELLED. Any change is allowed for now (transitions deferred, D31). Sets or clears the check-in and check-out times to match. Audited when the status changes. */
-        post: {
-            parameters: {
-                query?: never;
-                header?: {
-                    /** @description Preference */
-                    Prefer?: components["parameters"]["preferParams"];
-                };
-                path?: never;
-                cookie?: never;
-            };
-            requestBody: {
-                content: {
-                    "application/json": {
-                        /** Format: int32 */
-                        p_allocation_id: number;
-                        /** Format: text */
-                        p_status: string;
-                    };
-                    "application/vnd.pgrst.object+json;nulls=stripped": {
-                        /** Format: int32 */
-                        p_allocation_id: number;
-                        /** Format: text */
-                        p_status: string;
-                    };
-                    "application/vnd.pgrst.object+json": {
-                        /** Format: int32 */
-                        p_allocation_id: number;
-                        /** Format: text */
-                        p_status: string;
-                    };
-                    "text/csv": {
-                        /** Format: int32 */
-                        p_allocation_id: number;
-                        /** Format: text */
-                        p_status: string;
-                    };
-                };
-            };
-            responses: {
-                /** @description OK */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content?: never;
-                };
-            };
-        };
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/rpc/fn_weekly_overview": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** One row per week from p_from (p_weeks weeks), for beds in the given sites (all when p_site_ids is null). beds_available: beds not out of action on the week's busiest night (fewest free beds, earliest on a tie), split into allocated (course bookings), external and free. scheduled and loaded: totals for courses running on at least one night of the week. */
+        /** The audit trail, one row per change: who (changed_by), when (changed_at), what (table_name, record_id, action) and a summary sentence without the user, e.g. "booked FIN-03 into Room 101 bed A, 23/11 to 28/11". course_id covers a course and its bookings; allocation_id is set for booking rows; site_id is the bed's site, or the course's. request_id groups the rows of one request (see audit_requests). detail is the raw JSON; warnings are those the change was saved with. Filter and order with PostgREST (D37). */
         get: {
             parameters: {
-                query: {
-                    p_from: string;
-                    p_weeks: number;
-                    p_site_ids?: string;
+                query?: {
+                    audit_id?: components["parameters"]["rowFilter.audit.audit_id"];
+                    request_id?: components["parameters"]["rowFilter.audit.request_id"];
+                    changed_at?: components["parameters"]["rowFilter.audit.changed_at"];
+                    changed_by?: components["parameters"]["rowFilter.audit.changed_by"];
+                    table_name?: components["parameters"]["rowFilter.audit.table_name"];
+                    record_id?: components["parameters"]["rowFilter.audit.record_id"];
+                    course_id?: components["parameters"]["rowFilter.audit.course_id"];
+                    course_code?: components["parameters"]["rowFilter.audit.course_code"];
+                    allocation_id?: components["parameters"]["rowFilter.audit.allocation_id"];
+                    bed_id?: components["parameters"]["rowFilter.audit.bed_id"];
+                    site_id?: components["parameters"]["rowFilter.audit.site_id"];
+                    action?: components["parameters"]["rowFilter.audit.action"];
+                    summary?: components["parameters"]["rowFilter.audit.summary"];
+                    detail?: components["parameters"]["rowFilter.audit.detail"];
+                    warnings?: components["parameters"]["rowFilter.audit.warnings"];
+                    /** @description Filtering Columns */
+                    select?: components["parameters"]["select"];
+                    /** @description Ordering */
+                    order?: components["parameters"]["order"];
+                    /** @description Limiting and Pagination */
+                    offset?: components["parameters"]["offset"];
+                    /** @description Limiting and Pagination */
+                    limit?: components["parameters"]["limit"];
                 };
-                header?: never;
+                header?: {
+                    /** @description Limiting and Pagination */
+                    Range?: components["parameters"]["range"];
+                    /** @description Limiting and Pagination */
+                    "Range-Unit"?: components["parameters"]["rangeUnit"];
+                    /** @description Preference */
+                    Prefer?: components["parameters"]["preferCount"];
+                };
                 path?: never;
                 cookie?: never;
             };
@@ -817,98 +583,15 @@ export interface paths {
                     headers: {
                         [name: string]: unknown;
                     };
-                    content?: never;
-                };
-            };
-        };
-        put?: never;
-        /** One row per week from p_from (p_weeks weeks), for beds in the given sites (all when p_site_ids is null). beds_available: beds not out of action on the week's busiest night (fewest free beds, earliest on a tie), split into allocated (course bookings), external and free. scheduled and loaded: totals for courses running on at least one night of the week. */
-        post: {
-            parameters: {
-                query?: never;
-                header?: {
-                    /** @description Preference */
-                    Prefer?: components["parameters"]["preferParams"];
-                };
-                path?: never;
-                cookie?: never;
-            };
-            requestBody: {
-                content: {
-                    "application/json": {
-                        /** Format: date */
-                        p_from: string;
-                        /** Format: integer[] */
-                        p_site_ids?: number[];
-                        /** Format: int32 */
-                        p_weeks: number;
-                    };
-                    "application/vnd.pgrst.object+json;nulls=stripped": {
-                        /** Format: date */
-                        p_from: string;
-                        /** Format: integer[] */
-                        p_site_ids?: number[];
-                        /** Format: int32 */
-                        p_weeks: number;
-                    };
-                    "application/vnd.pgrst.object+json": {
-                        /** Format: date */
-                        p_from: string;
-                        /** Format: integer[] */
-                        p_site_ids?: number[];
-                        /** Format: int32 */
-                        p_weeks: number;
-                    };
-                    "text/csv": {
-                        /** Format: date */
-                        p_from: string;
-                        /** Format: integer[] */
-                        p_site_ids?: number[];
-                        /** Format: int32 */
-                        p_weeks: number;
+                    content: {
+                        "application/json": components["schemas"]["audit"][];
+                        "application/vnd.pgrst.object+json;nulls=stripped": components["schemas"]["audit"][];
+                        "application/vnd.pgrst.object+json": components["schemas"]["audit"][];
+                        "text/csv": components["schemas"]["audit"][];
                     };
                 };
-            };
-            responses: {
-                /** @description OK */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content?: never;
-                };
-            };
-        };
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/rpc/fn_check_allocation": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** Clashes for allocating the given beds from p_from to p_to (exclusive), before anything is saved: existing bookings and outages on those beds. blocks is true when the clash's rule is BLOCK, so saving would be refused (D30); otherwise it saves with a warning. Given p_course_id, also a COURSE_DATES row (bed_id null) when the nights go outside that course's dates (0010). */
-        get: {
-            parameters: {
-                query: {
-                    p_bed_ids: string;
-                    p_from: string;
-                    p_to: string;
-                    p_course_id?: number;
-                };
-                header?: never;
-                path?: never;
-                cookie?: never;
-            };
-            requestBody?: never;
-            responses: {
-                /** @description OK */
-                200: {
+                /** @description Partial Content */
+                206: {
                     headers: {
                         [name: string]: unknown;
                     };
@@ -917,156 +600,7 @@ export interface paths {
             };
         };
         put?: never;
-        /** Clashes for allocating the given beds from p_from to p_to (exclusive), before anything is saved: existing bookings and outages on those beds. blocks is true when the clash's rule is BLOCK, so saving would be refused (D30); otherwise it saves with a warning. Given p_course_id, also a COURSE_DATES row (bed_id null) when the nights go outside that course's dates (0010). */
-        post: {
-            parameters: {
-                query?: never;
-                header?: {
-                    /** @description Preference */
-                    Prefer?: components["parameters"]["preferParams"];
-                };
-                path?: never;
-                cookie?: never;
-            };
-            requestBody: {
-                content: {
-                    "application/json": {
-                        /** Format: integer[] */
-                        p_bed_ids: number[];
-                        /** Format: int32 */
-                        p_course_id?: number;
-                        /** Format: date */
-                        p_from: string;
-                        /** Format: date */
-                        p_to: string;
-                    };
-                    "application/vnd.pgrst.object+json;nulls=stripped": {
-                        /** Format: integer[] */
-                        p_bed_ids: number[];
-                        /** Format: int32 */
-                        p_course_id?: number;
-                        /** Format: date */
-                        p_from: string;
-                        /** Format: date */
-                        p_to: string;
-                    };
-                    "application/vnd.pgrst.object+json": {
-                        /** Format: integer[] */
-                        p_bed_ids: number[];
-                        /** Format: int32 */
-                        p_course_id?: number;
-                        /** Format: date */
-                        p_from: string;
-                        /** Format: date */
-                        p_to: string;
-                    };
-                    "text/csv": {
-                        /** Format: integer[] */
-                        p_bed_ids: number[];
-                        /** Format: int32 */
-                        p_course_id?: number;
-                        /** Format: date */
-                        p_from: string;
-                        /** Format: date */
-                        p_to: string;
-                    };
-                };
-            };
-            responses: {
-                /** @description OK */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content?: never;
-                };
-            };
-        };
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/rpc/fn_bed_bars": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** Bars for every bed that overlap p_from to p_to (exclusive): kind allocation, external or outage, with their full dates (end exclusive). on_outage flags a booking that falls on an out-of-action bed. */
-        get: {
-            parameters: {
-                query: {
-                    p_from: string;
-                    p_to: string;
-                };
-                header?: never;
-                path?: never;
-                cookie?: never;
-            };
-            requestBody?: never;
-            responses: {
-                /** @description OK */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content?: never;
-                };
-            };
-        };
-        put?: never;
-        /** Bars for every bed that overlap p_from to p_to (exclusive): kind allocation, external or outage, with their full dates (end exclusive). on_outage flags a booking that falls on an out-of-action bed. */
-        post: {
-            parameters: {
-                query?: never;
-                header?: {
-                    /** @description Preference */
-                    Prefer?: components["parameters"]["preferParams"];
-                };
-                path?: never;
-                cookie?: never;
-            };
-            requestBody: {
-                content: {
-                    "application/json": {
-                        /** Format: date */
-                        p_from: string;
-                        /** Format: date */
-                        p_to: string;
-                    };
-                    "application/vnd.pgrst.object+json;nulls=stripped": {
-                        /** Format: date */
-                        p_from: string;
-                        /** Format: date */
-                        p_to: string;
-                    };
-                    "application/vnd.pgrst.object+json": {
-                        /** Format: date */
-                        p_from: string;
-                        /** Format: date */
-                        p_to: string;
-                    };
-                    "text/csv": {
-                        /** Format: date */
-                        p_from: string;
-                        /** Format: date */
-                        p_to: string;
-                    };
-                };
-            };
-            responses: {
-                /** @description OK */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content?: never;
-                };
-            };
-        };
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -1193,16 +727,38 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/rpc/reset_demo_data": {
+    "/rpc/fn_weekly_overview": {
         parameters: {
             query?: never;
             header?: never;
             path?: never;
             cookie?: never;
         };
-        get?: never;
+        /** One row per week from p_from (p_weeks weeks), for beds in the given sites (all when p_site_ids is null). beds_available: beds not out of action on the week's busiest night (fewest free beds, earliest on a tie), split into allocated (course bookings), external and free. scheduled and loaded: totals for courses running on at least one night of the week. */
+        get: {
+            parameters: {
+                query: {
+                    p_from: string;
+                    p_weeks: number;
+                    p_site_ids?: string;
+                };
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
         put?: never;
-        /** Wipe and reload the current tenant's reference and sample data. Demo tenants only. */
+        /** One row per week from p_from (p_weeks weeks), for beds in the given sites (all when p_site_ids is null). beds_available: beds not out of action on the week's busiest night (fewest free beds, earliest on a tie), split into allocated (course bookings), external and free. scheduled and loaded: totals for courses running on at least one night of the week. */
         post: {
             parameters: {
                 query?: never;
@@ -1215,10 +771,562 @@ export interface paths {
             };
             requestBody: {
                 content: {
-                    "application/json": Record<string, never>;
-                    "application/vnd.pgrst.object+json;nulls=stripped": Record<string, never>;
-                    "application/vnd.pgrst.object+json": Record<string, never>;
-                    "text/csv": Record<string, never>;
+                    "application/json": {
+                        /** Format: date */
+                        p_from: string;
+                        /** Format: integer[] */
+                        p_site_ids?: number[];
+                        /** Format: int32 */
+                        p_weeks: number;
+                    };
+                    "application/vnd.pgrst.object+json;nulls=stripped": {
+                        /** Format: date */
+                        p_from: string;
+                        /** Format: integer[] */
+                        p_site_ids?: number[];
+                        /** Format: int32 */
+                        p_weeks: number;
+                    };
+                    "application/vnd.pgrst.object+json": {
+                        /** Format: date */
+                        p_from: string;
+                        /** Format: integer[] */
+                        p_site_ids?: number[];
+                        /** Format: int32 */
+                        p_weeks: number;
+                    };
+                    "text/csv": {
+                        /** Format: date */
+                        p_from: string;
+                        /** Format: integer[] */
+                        p_site_ids?: number[];
+                        /** Format: int32 */
+                        p_weeks: number;
+                    };
+                };
+            };
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/rpc/fn_cancel_course": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Cancel a course and every live allocation on it (all kept, as CANCELLED). Each cancellation is audited. Returns how many allocations were cancelled. */
+        post: {
+            parameters: {
+                query?: never;
+                header?: {
+                    /** @description Preference */
+                    Prefer?: components["parameters"]["preferParams"];
+                };
+                path?: never;
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": {
+                        /** Format: int32 */
+                        p_course_id: number;
+                    };
+                    "application/vnd.pgrst.object+json;nulls=stripped": {
+                        /** Format: int32 */
+                        p_course_id: number;
+                    };
+                    "application/vnd.pgrst.object+json": {
+                        /** Format: int32 */
+                        p_course_id: number;
+                    };
+                    "text/csv": {
+                        /** Format: int32 */
+                        p_course_id: number;
+                    };
+                };
+            };
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/rpc/fn_check_allocation": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Clashes for allocating the given beds from p_from to p_to (exclusive), before anything is saved: existing bookings and outages on those beds. blocks is true when the clash's rule is BLOCK, so saving would be refused (D30); otherwise it saves with a warning. Given p_course_id, also a COURSE_DATES row (bed_id null) when the nights go outside that course's dates (0010). */
+        get: {
+            parameters: {
+                query: {
+                    p_bed_ids: string;
+                    p_from: string;
+                    p_to: string;
+                    p_course_id?: number;
+                };
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        put?: never;
+        /** Clashes for allocating the given beds from p_from to p_to (exclusive), before anything is saved: existing bookings and outages on those beds. blocks is true when the clash's rule is BLOCK, so saving would be refused (D30); otherwise it saves with a warning. Given p_course_id, also a COURSE_DATES row (bed_id null) when the nights go outside that course's dates (0010). */
+        post: {
+            parameters: {
+                query?: never;
+                header?: {
+                    /** @description Preference */
+                    Prefer?: components["parameters"]["preferParams"];
+                };
+                path?: never;
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": {
+                        /** Format: integer[] */
+                        p_bed_ids: number[];
+                        /** Format: int32 */
+                        p_course_id?: number;
+                        /** Format: date */
+                        p_from: string;
+                        /** Format: date */
+                        p_to: string;
+                    };
+                    "application/vnd.pgrst.object+json;nulls=stripped": {
+                        /** Format: integer[] */
+                        p_bed_ids: number[];
+                        /** Format: int32 */
+                        p_course_id?: number;
+                        /** Format: date */
+                        p_from: string;
+                        /** Format: date */
+                        p_to: string;
+                    };
+                    "application/vnd.pgrst.object+json": {
+                        /** Format: integer[] */
+                        p_bed_ids: number[];
+                        /** Format: int32 */
+                        p_course_id?: number;
+                        /** Format: date */
+                        p_from: string;
+                        /** Format: date */
+                        p_to: string;
+                    };
+                    "text/csv": {
+                        /** Format: integer[] */
+                        p_bed_ids: number[];
+                        /** Format: int32 */
+                        p_course_id?: number;
+                        /** Format: date */
+                        p_from: string;
+                        /** Format: date */
+                        p_to: string;
+                    };
+                };
+            };
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/rpc/fn_set_status": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Set an allocation's status: ALLOCATED, BOOKED, CHECKED_IN, CHECKED_OUT, NO_SHOW or CANCELLED. Any change is allowed for now (transitions deferred, D31). Sets or clears the check-in and check-out times to match. Audited when the status changes. */
+        post: {
+            parameters: {
+                query?: never;
+                header?: {
+                    /** @description Preference */
+                    Prefer?: components["parameters"]["preferParams"];
+                };
+                path?: never;
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": {
+                        /** Format: int32 */
+                        p_allocation_id: number;
+                        /** Format: text */
+                        p_status: string;
+                    };
+                    "application/vnd.pgrst.object+json;nulls=stripped": {
+                        /** Format: int32 */
+                        p_allocation_id: number;
+                        /** Format: text */
+                        p_status: string;
+                    };
+                    "application/vnd.pgrst.object+json": {
+                        /** Format: int32 */
+                        p_allocation_id: number;
+                        /** Format: text */
+                        p_status: string;
+                    };
+                    "text/csv": {
+                        /** Format: int32 */
+                        p_allocation_id: number;
+                        /** Format: text */
+                        p_status: string;
+                    };
+                };
+            };
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/rpc/use_tenant": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Select a tenant for the current transaction. Normally done for you from the X-Tenant header. */
+        post: {
+            parameters: {
+                query?: never;
+                header?: {
+                    /** @description Preference */
+                    Prefer?: components["parameters"]["preferParams"];
+                };
+                path?: never;
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": {
+                        /** Format: text */
+                        p_code: string;
+                        /** Format: boolean */
+                        p_local?: boolean;
+                    };
+                    "application/vnd.pgrst.object+json;nulls=stripped": {
+                        /** Format: text */
+                        p_code: string;
+                        /** Format: boolean */
+                        p_local?: boolean;
+                    };
+                    "application/vnd.pgrst.object+json": {
+                        /** Format: text */
+                        p_code: string;
+                        /** Format: boolean */
+                        p_local?: boolean;
+                    };
+                    "text/csv": {
+                        /** Format: text */
+                        p_code: string;
+                        /** Format: boolean */
+                        p_local?: boolean;
+                    };
+                };
+            };
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/rpc/fn_book_external": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Book beds for someone outside the courses (an external booking, D38): p_ref is the booking reference, p_name who it is for, from p_from (first night) to p_to (departure day). One allocation per bed, status BOOKED, source EXTERNAL. Clashes warn unless their rule is BLOCK, which refuses the whole request (D30). Audited. Returns each new allocation with its warnings. */
+        post: {
+            parameters: {
+                query?: never;
+                header?: {
+                    /** @description Preference */
+                    Prefer?: components["parameters"]["preferParams"];
+                };
+                path?: never;
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": {
+                        /** Format: integer[] */
+                        p_bed_ids: number[];
+                        /** Format: date */
+                        p_from: string;
+                        /** Format: text */
+                        p_name: string;
+                        /** Format: text */
+                        p_ref: string;
+                        /** Format: date */
+                        p_to: string;
+                    };
+                    "application/vnd.pgrst.object+json;nulls=stripped": {
+                        /** Format: integer[] */
+                        p_bed_ids: number[];
+                        /** Format: date */
+                        p_from: string;
+                        /** Format: text */
+                        p_name: string;
+                        /** Format: text */
+                        p_ref: string;
+                        /** Format: date */
+                        p_to: string;
+                    };
+                    "application/vnd.pgrst.object+json": {
+                        /** Format: integer[] */
+                        p_bed_ids: number[];
+                        /** Format: date */
+                        p_from: string;
+                        /** Format: text */
+                        p_name: string;
+                        /** Format: text */
+                        p_ref: string;
+                        /** Format: date */
+                        p_to: string;
+                    };
+                    "text/csv": {
+                        /** Format: integer[] */
+                        p_bed_ids: number[];
+                        /** Format: date */
+                        p_from: string;
+                        /** Format: text */
+                        p_name: string;
+                        /** Format: text */
+                        p_ref: string;
+                        /** Format: date */
+                        p_to: string;
+                    };
+                };
+            };
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/rpc/fn_update_loaded": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Set a course's loaded (registered) headcount and stamp loaded_at with now. Audited. Returns the new figure and whether it is above scheduled. */
+        post: {
+            parameters: {
+                query?: never;
+                header?: {
+                    /** @description Preference */
+                    Prefer?: components["parameters"]["preferParams"];
+                };
+                path?: never;
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": {
+                        /** Format: int32 */
+                        p_course_id: number;
+                        /** Format: int32 */
+                        p_loaded: number;
+                    };
+                    "application/vnd.pgrst.object+json;nulls=stripped": {
+                        /** Format: int32 */
+                        p_course_id: number;
+                        /** Format: int32 */
+                        p_loaded: number;
+                    };
+                    "application/vnd.pgrst.object+json": {
+                        /** Format: int32 */
+                        p_course_id: number;
+                        /** Format: int32 */
+                        p_loaded: number;
+                    };
+                    "text/csv": {
+                        /** Format: int32 */
+                        p_course_id: number;
+                        /** Format: int32 */
+                        p_loaded: number;
+                    };
+                };
+            };
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/rpc/fn_bed_bars": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Bars for every bed that overlap p_from to p_to (exclusive): kind allocation, external or outage, with their full dates (end exclusive). on_outage flags a booking that falls on an out-of-action bed. */
+        get: {
+            parameters: {
+                query: {
+                    p_from: string;
+                    p_to: string;
+                };
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        put?: never;
+        /** Bars for every bed that overlap p_from to p_to (exclusive): kind allocation, external or outage, with their full dates (end exclusive). on_outage flags a booking that falls on an out-of-action bed. */
+        post: {
+            parameters: {
+                query?: never;
+                header?: {
+                    /** @description Preference */
+                    Prefer?: components["parameters"]["preferParams"];
+                };
+                path?: never;
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": {
+                        /** Format: date */
+                        p_from: string;
+                        /** Format: date */
+                        p_to: string;
+                    };
+                    "application/vnd.pgrst.object+json;nulls=stripped": {
+                        /** Format: date */
+                        p_from: string;
+                        /** Format: date */
+                        p_to: string;
+                    };
+                    "application/vnd.pgrst.object+json": {
+                        /** Format: date */
+                        p_from: string;
+                        /** Format: date */
+                        p_to: string;
+                    };
+                    "text/csv": {
+                        /** Format: date */
+                        p_from: string;
+                        /** Format: date */
+                        p_to: string;
+                    };
                 };
             };
             responses: {
@@ -1322,6 +1430,186 @@ export interface paths {
                         /** Format: date */
                         p_to: string;
                     };
+                };
+            };
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/rpc/fn_allocate_course": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Allocate a course into the given beds from p_from (first night) to p_to (departure day). One allocation per bed, status ALLOCATED, each given the course's next free individual (no upper limit, D31). Clashes warn unless their rule is BLOCK, which refuses the whole request (D30). Nights outside the course dates warn (0010). Audited. Returns each new allocation with its warnings. */
+        post: {
+            parameters: {
+                query?: never;
+                header?: {
+                    /** @description Preference */
+                    Prefer?: components["parameters"]["preferParams"];
+                };
+                path?: never;
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": {
+                        /** Format: integer[] */
+                        p_bed_ids: number[];
+                        /** Format: int32 */
+                        p_course_id: number;
+                        /** Format: date */
+                        p_from: string;
+                        /** Format: date */
+                        p_to: string;
+                    };
+                    "application/vnd.pgrst.object+json;nulls=stripped": {
+                        /** Format: integer[] */
+                        p_bed_ids: number[];
+                        /** Format: int32 */
+                        p_course_id: number;
+                        /** Format: date */
+                        p_from: string;
+                        /** Format: date */
+                        p_to: string;
+                    };
+                    "application/vnd.pgrst.object+json": {
+                        /** Format: integer[] */
+                        p_bed_ids: number[];
+                        /** Format: int32 */
+                        p_course_id: number;
+                        /** Format: date */
+                        p_from: string;
+                        /** Format: date */
+                        p_to: string;
+                    };
+                    "text/csv": {
+                        /** Format: integer[] */
+                        p_bed_ids: number[];
+                        /** Format: int32 */
+                        p_course_id: number;
+                        /** Format: date */
+                        p_from: string;
+                        /** Format: date */
+                        p_to: string;
+                    };
+                };
+            };
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/rpc/fn_cancel_allocation": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Cancel one allocation (kept, with status CANCELLED, so it stays in the audit history). Audited. */
+        post: {
+            parameters: {
+                query?: never;
+                header?: {
+                    /** @description Preference */
+                    Prefer?: components["parameters"]["preferParams"];
+                };
+                path?: never;
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": {
+                        /** Format: int32 */
+                        p_allocation_id: number;
+                    };
+                    "application/vnd.pgrst.object+json;nulls=stripped": {
+                        /** Format: int32 */
+                        p_allocation_id: number;
+                    };
+                    "application/vnd.pgrst.object+json": {
+                        /** Format: int32 */
+                        p_allocation_id: number;
+                    };
+                    "text/csv": {
+                        /** Format: int32 */
+                        p_allocation_id: number;
+                    };
+                };
+            };
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/rpc/reset_demo_data": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Wipe and reload the current tenant's reference and sample data. Demo tenants only. */
+        post: {
+            parameters: {
+                query?: never;
+                header?: {
+                    /** @description Preference */
+                    Prefer?: components["parameters"]["preferParams"];
+                };
+                path?: never;
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": Record<string, never>;
+                    "application/vnd.pgrst.object+json;nulls=stripped": Record<string, never>;
+                    "application/vnd.pgrst.object+json": Record<string, never>;
+                    "text/csv": Record<string, never>;
                 };
             };
             responses: {
@@ -1468,6 +1756,94 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/rpc/fn_add_outage": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Put a location out of action (an outage, D38): p_level is Site, Building, Block, Floor, Room or Bed and p_location_id its id (as in api.locations), from p_from to p_to (exclusive), with a reason. It applies to every bed under the location. Saved even when it lands on live bookings: each one is returned as a warning and listed in api.warnings from then on. Audited. Returns the outage id with its warnings. */
+        post: {
+            parameters: {
+                query?: never;
+                header?: {
+                    /** @description Preference */
+                    Prefer?: components["parameters"]["preferParams"];
+                };
+                path?: never;
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": {
+                        /** Format: date */
+                        p_from: string;
+                        /** Format: text */
+                        p_level: string;
+                        /** Format: int32 */
+                        p_location_id: number;
+                        /** Format: text */
+                        p_reason: string;
+                        /** Format: date */
+                        p_to: string;
+                    };
+                    "application/vnd.pgrst.object+json;nulls=stripped": {
+                        /** Format: date */
+                        p_from: string;
+                        /** Format: text */
+                        p_level: string;
+                        /** Format: int32 */
+                        p_location_id: number;
+                        /** Format: text */
+                        p_reason: string;
+                        /** Format: date */
+                        p_to: string;
+                    };
+                    "application/vnd.pgrst.object+json": {
+                        /** Format: date */
+                        p_from: string;
+                        /** Format: text */
+                        p_level: string;
+                        /** Format: int32 */
+                        p_location_id: number;
+                        /** Format: text */
+                        p_reason: string;
+                        /** Format: date */
+                        p_to: string;
+                    };
+                    "text/csv": {
+                        /** Format: date */
+                        p_from: string;
+                        /** Format: text */
+                        p_level: string;
+                        /** Format: int32 */
+                        p_location_id: number;
+                        /** Format: text */
+                        p_reason: string;
+                        /** Format: date */
+                        p_to: string;
+                    };
+                };
+            };
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/rpc/fn_week_summary": {
         parameters: {
             query?: never;
@@ -1534,62 +1910,6 @@ export interface paths {
                         p_from: string;
                         /** Format: int32 */
                         p_weeks: number;
-                    };
-                };
-            };
-            responses: {
-                /** @description OK */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content?: never;
-                };
-            };
-        };
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/rpc/fn_cancel_course": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /** Cancel a course and every live allocation on it (all kept, as CANCELLED). Each cancellation is audited. Returns how many allocations were cancelled. */
-        post: {
-            parameters: {
-                query?: never;
-                header?: {
-                    /** @description Preference */
-                    Prefer?: components["parameters"]["preferParams"];
-                };
-                path?: never;
-                cookie?: never;
-            };
-            requestBody: {
-                content: {
-                    "application/json": {
-                        /** Format: int32 */
-                        p_course_id: number;
-                    };
-                    "application/vnd.pgrst.object+json;nulls=stripped": {
-                        /** Format: int32 */
-                        p_course_id: number;
-                    };
-                    "application/vnd.pgrst.object+json": {
-                        /** Format: int32 */
-                        p_course_id: number;
-                    };
-                    "text/csv": {
-                        /** Format: int32 */
-                        p_course_id: number;
                     };
                 };
             };
@@ -1689,154 +2009,19 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/rpc/fn_update_loaded": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /** Set a course's loaded (registered) headcount and stamp loaded_at with now. Audited. Returns the new figure and whether it is above scheduled. */
-        post: {
-            parameters: {
-                query?: never;
-                header?: {
-                    /** @description Preference */
-                    Prefer?: components["parameters"]["preferParams"];
-                };
-                path?: never;
-                cookie?: never;
-            };
-            requestBody: {
-                content: {
-                    "application/json": {
-                        /** Format: int32 */
-                        p_course_id: number;
-                        /** Format: int32 */
-                        p_loaded: number;
-                    };
-                    "application/vnd.pgrst.object+json;nulls=stripped": {
-                        /** Format: int32 */
-                        p_course_id: number;
-                        /** Format: int32 */
-                        p_loaded: number;
-                    };
-                    "application/vnd.pgrst.object+json": {
-                        /** Format: int32 */
-                        p_course_id: number;
-                        /** Format: int32 */
-                        p_loaded: number;
-                    };
-                    "text/csv": {
-                        /** Format: int32 */
-                        p_course_id: number;
-                        /** Format: int32 */
-                        p_loaded: number;
-                    };
-                };
-            };
-            responses: {
-                /** @description OK */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content?: never;
-                };
-            };
-        };
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/rpc/fn_allocate_course": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /** Allocate a course into the given beds from p_from (first night) to p_to (departure day). One allocation per bed, status ALLOCATED, each given the course's next free individual (no upper limit, D31). Clashes warn unless their rule is BLOCK, which refuses the whole request (D30). Nights outside the course dates warn (0010). Audited. Returns each new allocation with its warnings. */
-        post: {
-            parameters: {
-                query?: never;
-                header?: {
-                    /** @description Preference */
-                    Prefer?: components["parameters"]["preferParams"];
-                };
-                path?: never;
-                cookie?: never;
-            };
-            requestBody: {
-                content: {
-                    "application/json": {
-                        /** Format: integer[] */
-                        p_bed_ids: number[];
-                        /** Format: int32 */
-                        p_course_id: number;
-                        /** Format: date */
-                        p_from: string;
-                        /** Format: date */
-                        p_to: string;
-                    };
-                    "application/vnd.pgrst.object+json;nulls=stripped": {
-                        /** Format: integer[] */
-                        p_bed_ids: number[];
-                        /** Format: int32 */
-                        p_course_id: number;
-                        /** Format: date */
-                        p_from: string;
-                        /** Format: date */
-                        p_to: string;
-                    };
-                    "application/vnd.pgrst.object+json": {
-                        /** Format: integer[] */
-                        p_bed_ids: number[];
-                        /** Format: int32 */
-                        p_course_id: number;
-                        /** Format: date */
-                        p_from: string;
-                        /** Format: date */
-                        p_to: string;
-                    };
-                    "text/csv": {
-                        /** Format: integer[] */
-                        p_bed_ids: number[];
-                        /** Format: int32 */
-                        p_course_id: number;
-                        /** Format: date */
-                        p_from: string;
-                        /** Format: date */
-                        p_to: string;
-                    };
-                };
-            };
-            responses: {
-                /** @description OK */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content?: never;
-                };
-            };
-        };
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
+        /** @description Tenants that can be selected with the X-Tenant header. */
+        tenants: {
+            /** Format: character varying */
+            code?: string;
+            /** Format: character varying */
+            name?: string;
+            /** Format: character */
+            is_demo?: string;
+        };
         /** @description Warnings for the warnings strip, whatever the colour basis: courses with loaded above scheduled (D14), bookings on out-of-action beds, double bookings (one row per booking involved), and course bookings with nights outside their course's dates (strict, 0010). Clash severities come from their rules (D30). site_id is the bed's site, or the course's for course-level warnings (0011). */
         warnings: {
             /** Format: text */
@@ -1866,6 +2051,23 @@ export interface components {
             checked_at?: string;
             /** Format: character varying */
             tenant?: string;
+            /** Format: int64 */
+            bed_count?: number;
+        };
+        /** @description The estate as a tree: one row per site, building, block, floor, room and bed. key is unique (e.g. "room:12"), parent_key points to the row above, sort_order orders siblings, bed_count is the number of beds at or below. */
+        locations: {
+            /** Format: text */
+            key?: string;
+            /** Format: text */
+            parent_key?: string;
+            /** Format: text */
+            level?: string;
+            /** Format: int32 */
+            id?: number;
+            /** Format: text */
+            name?: string;
+            /** Format: int32 */
+            sort_order?: number;
             /** Format: int64 */
             bed_count?: number;
         };
@@ -1904,6 +2106,27 @@ export interface components {
             /** Format: int32 */
             site_id?: number;
         };
+        /** @description The audit trail with the rows of one request rolled into one line, e.g. "booked 6 beds for FIN-03, 23/11 to 28/11" or "cancelled course INT-22 and 4 bookings". request_key matches audit.request_id (or "row-<audit_id>" for rows written outside a request); changes counts the rows. Filter by course_id, site_id, changed_by or changed_at with PostgREST (D37). */
+        audit_requests: {
+            /** Format: text */
+            request_key?: string;
+            /** Format: timestamp without time zone */
+            changed_at?: string;
+            /** Format: text */
+            changed_by?: string;
+            /** Format: int32 */
+            changes?: number;
+            /** Format: int32 */
+            course_id?: number;
+            /** Format: text */
+            course_code?: string;
+            /** Format: int32 */
+            site_id?: number;
+            /** Format: text */
+            summary?: string;
+            /** Format: boolean */
+            has_warnings?: boolean;
+        };
         /** @description The audit trail, one row per change: who (changed_by), when (changed_at), what (table_name, record_id, action) and a summary sentence without the user, e.g. "booked FIN-03 into Room 101 bed A, 23/11 to 28/11". course_id covers a course and its bookings; allocation_id is set for booking rows; site_id is the bed's site, or the course's. request_id groups the rows of one request (see audit_requests). detail is the raw JSON; warnings are those the change was saved with. Filter and order with PostgREST (D37). */
         audit: {
             /**
@@ -1941,53 +2164,6 @@ export interface components {
             /** Format: text[] */
             warnings?: string[];
         };
-        /** @description The estate as a tree: one row per site, building, block, floor, room and bed. key is unique (e.g. "room:12"), parent_key points to the row above, sort_order orders siblings, bed_count is the number of beds at or below. */
-        locations: {
-            /** Format: text */
-            key?: string;
-            /** Format: text */
-            parent_key?: string;
-            /** Format: text */
-            level?: string;
-            /** Format: int32 */
-            id?: number;
-            /** Format: text */
-            name?: string;
-            /** Format: int32 */
-            sort_order?: number;
-            /** Format: int64 */
-            bed_count?: number;
-        };
-        /** @description Tenants that can be selected with the X-Tenant header. */
-        tenants: {
-            /** Format: character varying */
-            code?: string;
-            /** Format: character varying */
-            name?: string;
-            /** Format: character */
-            is_demo?: string;
-        };
-        /** @description The audit trail with the rows of one request rolled into one line, e.g. "booked 6 beds for FIN-03, 23/11 to 28/11" or "cancelled course INT-22 and 4 bookings". request_key matches audit.request_id (or "row-<audit_id>" for rows written outside a request); changes counts the rows. Filter by course_id, site_id, changed_by or changed_at with PostgREST (D37). */
-        audit_requests: {
-            /** Format: text */
-            request_key?: string;
-            /** Format: timestamp without time zone */
-            changed_at?: string;
-            /** Format: text */
-            changed_by?: string;
-            /** Format: int32 */
-            changes?: number;
-            /** Format: int32 */
-            course_id?: number;
-            /** Format: text */
-            course_code?: string;
-            /** Format: int32 */
-            site_id?: number;
-            /** Format: text */
-            summary?: string;
-            /** Format: boolean */
-            has_warnings?: boolean;
-        };
     };
     responses: never;
     parameters: {
@@ -2013,6 +2189,9 @@ export interface components {
         offset: string;
         /** @description Limiting and Pagination */
         limit: string;
+        "rowFilter.tenants.code": string;
+        "rowFilter.tenants.name": string;
+        "rowFilter.tenants.is_demo": string;
         "rowFilter.warnings.kind": string;
         "rowFilter.warnings.severity": string;
         "rowFilter.warnings.message": string;
@@ -2026,6 +2205,13 @@ export interface components {
         "rowFilter.health.checked_at": string;
         "rowFilter.health.tenant": string;
         "rowFilter.health.bed_count": string;
+        "rowFilter.locations.key": string;
+        "rowFilter.locations.parent_key": string;
+        "rowFilter.locations.level": string;
+        "rowFilter.locations.id": string;
+        "rowFilter.locations.name": string;
+        "rowFilter.locations.sort_order": string;
+        "rowFilter.locations.bed_count": string;
         "rowFilter.course_figures.course_id": string;
         "rowFilter.course_figures.code": string;
         "rowFilter.course_figures.name": string;
@@ -2040,6 +2226,15 @@ export interface components {
         "rowFilter.course_figures.pct_scheduled": string;
         "rowFilter.course_figures.pct_loaded": string;
         "rowFilter.course_figures.site_id": string;
+        "rowFilter.audit_requests.request_key": string;
+        "rowFilter.audit_requests.changed_at": string;
+        "rowFilter.audit_requests.changed_by": string;
+        "rowFilter.audit_requests.changes": string;
+        "rowFilter.audit_requests.course_id": string;
+        "rowFilter.audit_requests.course_code": string;
+        "rowFilter.audit_requests.site_id": string;
+        "rowFilter.audit_requests.summary": string;
+        "rowFilter.audit_requests.has_warnings": string;
         "rowFilter.audit.audit_id": string;
         "rowFilter.audit.request_id": string;
         "rowFilter.audit.changed_at": string;
@@ -2055,25 +2250,6 @@ export interface components {
         "rowFilter.audit.summary": string;
         "rowFilter.audit.detail": string;
         "rowFilter.audit.warnings": string;
-        "rowFilter.locations.key": string;
-        "rowFilter.locations.parent_key": string;
-        "rowFilter.locations.level": string;
-        "rowFilter.locations.id": string;
-        "rowFilter.locations.name": string;
-        "rowFilter.locations.sort_order": string;
-        "rowFilter.locations.bed_count": string;
-        "rowFilter.tenants.code": string;
-        "rowFilter.tenants.name": string;
-        "rowFilter.tenants.is_demo": string;
-        "rowFilter.audit_requests.request_key": string;
-        "rowFilter.audit_requests.changed_at": string;
-        "rowFilter.audit_requests.changed_by": string;
-        "rowFilter.audit_requests.changes": string;
-        "rowFilter.audit_requests.course_id": string;
-        "rowFilter.audit_requests.course_code": string;
-        "rowFilter.audit_requests.site_id": string;
-        "rowFilter.audit_requests.summary": string;
-        "rowFilter.audit_requests.has_warnings": string;
     };
     requestBodies: {
         /** @description tenants */

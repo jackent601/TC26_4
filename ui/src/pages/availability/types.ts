@@ -143,6 +143,10 @@ export type Popup =
   | { kind: "bookCourse"; courseId: number }
   // Add a course (D36); from/to pre-fill its dates (weeks dragged on the Courses tab).
   | { kind: "newCourse"; from?: string; to?: string }
+  // Book beds for someone outside the courses (D38); beds and dates pre-filled from a grid selection.
+  | { kind: "newExternal"; bedKeys?: string[]; from?: string; to?: string }
+  // Put a location out of action (D38); `key` pre-selects the location.
+  | { kind: "newOutage"; key?: string; from?: string; to?: string }
   | { kind: "warning"; warning: Warning }
   // A selection of beds and nights (to = departure day, exclusive).
   | { kind: "new"; bedKeys: string[]; from: string; to: string };

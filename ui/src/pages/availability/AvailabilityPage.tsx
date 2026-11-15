@@ -105,6 +105,7 @@ export function AvailabilityPage() {
         onToday={() => setStart(iso(mondayOf(new Date())))}
         onExpandAll={() => setCollapsed(new Set())}
         onCollapseToFloors={collapseToFloors}
+        onOpen={open}
       />
 
       <WarningsStrip warnings={warnings.data ?? []} error={warnings.error} onOpen={open} />

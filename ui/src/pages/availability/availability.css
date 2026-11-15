@@ -14,7 +14,7 @@
 }
 
 /* ------------------------------ Toolbar ------------------------------ */
-.av-toolbar { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px 16px; flex: none; }
+.av-toolbar { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px 16px; flex: none; container-type: inline-size; }
 .av-toolbar .group { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
 .tb-btn {
   height: 32px; padding: 0 10px; display: inline-flex; align-items: center; gap: 6px;
@@ -28,7 +28,10 @@
 .tb-seg span { display: flex; align-items: center; padding: 0 10px; font-size: 12px; color: var(--muted); background: var(--surface-2); border-right: 1px solid var(--border-strong); }
 .tb-seg button { border: 0; border-radius: 0; padding: 0 12px; font-size: 13px; font-weight: 500; background: var(--surface); color: var(--text-2); }
 .tb-seg button[aria-pressed="true"] { background: var(--accent); color: var(--accent-text); }
-@media (max-width: 1100px) { .tb-label { display: none; } }
+/* When the toolbar is too narrow for everything on one line, the right-hand
+   buttons keep their icons and drop their text (their names stay in title and
+   the accessible name); narrower still, the groups wrap. */
+@container (max-width: 1240px) { .tb-label { display: none; } }
 
 .popover { position: relative; }
 .popover-panel {
@@ -298,3 +301,15 @@
 .filter-tree .meta { font-size: 10px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.05em; white-space: nowrap; }
 .filter-panel .quick { display: flex; gap: 6px; }
 .filter-panel .apply { display: flex; justify-content: space-between; }
+
+/* "New ▾" menu (D38): course, external booking, outage. */
+.popover-panel:has(> .new-menu) { padding: 6px; min-width: 240px; }
+.tb-btn.new-plus { font-size: 18px; font-weight: 600; line-height: 1; }
+.new-menu { display: grid; gap: 2px; }
+.new-menu button {
+  display: grid; gap: 1px; justify-items: start; text-align: left; width: 100%;
+  border: 0; border-radius: var(--radius-sm); background: transparent; padding: 8px 10px; color: var(--text);
+}
+.new-menu button:hover:not(:disabled), .new-menu button:focus-visible { background: var(--surface-2); }
+.new-menu .name { font-size: 13px; font-weight: 600; }
+.new-menu .hint { font-size: 12px; color: var(--muted); }

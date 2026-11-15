@@ -1,11 +1,11 @@
-// The availability toolbar: week navigation on the left; colour basis, tree
+// The availability toolbar: week navigation and the New menu on the left; colour basis, tree
 // expand/collapse, the legend and view settings on the right. Legend and
 // settings open as small popovers.
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { CollapseIcon, ExpandIcon, FilterIcon, ListIcon, SlidersIcon } from "../../icons";
 import { FilterPanel, filterLabel, isFiltered } from "./Filter";
 import type { LocationFilter } from "./settings";
-import type { LocationNode } from "./types";
+import type { LocationNode, Popup } from "./types";
 import { Legend } from "./LegendAndWarnings";
 import { addDaysIso, dayIndex, dayLong, dayLongYear, iso, mondayOf, parse } from "./dates";
 import { Arrow } from "./look";
@@ -26,6 +26,7 @@ interface Props {
   onToday: () => void;
   onExpandAll: () => void;
   onCollapseToFloors: () => void;
+  onOpen: (p: Popup) => void; // the New menu
 }
 
 export function Controls(p: Props) {
@@ -52,6 +53,7 @@ export function Controls(p: Props) {
           <Arrow dir="right" />
         </button>
         <button type="button" className="tb-btn" onClick={p.onToday}>Today</button>
+        <NewMenu onOpen={p.onOpen} align="left" compact />
         <Popover label="Filter locations" align="left" triggerClass={`tb-btn${isFiltered(p.filter, p.roots) ? " active" : ""}`}
                  trigger={<><FilterIcon /> <span className="filter-label">{filterLabel(p.filter, p.roots)}</span></>}>
           {(close) => <FilterPanel filter={p.filter} roots={p.roots} onFilter={p.onFilter} close={close} />}
@@ -64,10 +66,10 @@ export function Controls(p: Props) {
           {basisButton("scheduled", "Scheduled")}
           {basisButton("loaded", "Loaded")}
         </div>
-        <button type="button" className="tb-btn" onClick={p.onExpandAll} title="Expand every row">
+        <button type="button" className="tb-btn" onClick={p.onExpandAll} title="Expand every row" aria-label="Expand all">
           <ExpandIcon /> <span className="tb-label">Expand all</span>
         </button>
-        <button type="button" className="tb-btn" onClick={p.onCollapseToFloors} title="Show floors with weekly counts">
+        <button type="button" className="tb-btn" onClick={p.onCollapseToFloors} title="Show floors with weekly counts" aria-label="Collapse to floors">
           <CollapseIcon /> <span className="tb-label">Collapse to floors</span>
         </button>
         <Popover label="Legend" icon={<ListIcon />}>
@@ -133,6 +135,35 @@ export function RangePicker({ start, weeks, onApply }: { start: string; weeks: n
   );
 }
 
+// "New ▾": add a course, an external booking or an outage, each in its own popup
+// (D38). On the Overview and Availability toolbars; `compact` shows just "+"
+// (the Availability toolbar is crowded), with "New" as its accessible name.
+export function NewMenu({ onOpen, align = "right", compact = false }: {
+  onOpen: (p: Popup) => void; align?: "left" | "right"; compact?: boolean;
+}) {
+  const items: [string, string, Popup][] = [
+    ["Course", "A course that will need beds", { kind: "newCourse" }],
+    ["External booking", "Beds for someone outside the courses", { kind: "newExternal" }],
+    ["Outage", "Put a location out of action", { kind: "newOutage" }],
+  ];
+  return (
+    <Popover label="New" align={align} triggerClass={`tb-btn primary${compact ? " icon new-plus" : ""}`}
+             trigger={compact ? <span aria-hidden="true">+</span>
+                              : <><span aria-hidden="true">+</span> New <span aria-hidden="true">▾</span></>}>
+      {(close) => (
+        <div className="new-menu" role="menu">
+          {items.map(([label, hint, p]) => (
+            <button key={label} type="button" role="menuitem" onClick={() => { close(); onOpen(p); }}>
+              <span className="name">{label}</span>
+              <span className="hint">{hint}</span>
+            </button>
+          ))}
+        </div>
+      )}
+    </Popover>
+  );
+}
+
 // A button with a panel under it. Closes on a click outside or Esc. The panel's
 // content may be a function given `close`, to close it after an action.
 export function Popover({ label, icon, trigger, triggerClass = "tb-btn", align = "right", children }: {
@@ -163,7 +194,7 @@ export function Popover({ label, icon, trigger, triggerClass = "tb-btn", align =
   return (
     <div className="popover" ref={ref}>
       <button type="button" className={`${triggerClass}${open ? " on" : ""}`} aria-expanded={open}
-              aria-label={trigger ? label : undefined} title={trigger ? label : undefined} onClick={() => setOpen(!open)}>
+              aria-label={label} title={label} onClick={() => setOpen(!open)}>
         {trigger ?? <>{icon} <span className="tb-label">{label}</span></>}
       </button>
       {open && (
