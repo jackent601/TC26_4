@@ -2,7 +2,10 @@
 // expand/collapse, the legend and view settings on the right. Legend and
 // settings open as small popovers.
 import { useEffect, useRef, useState, type ReactNode } from "react";
-import { CollapseIcon, ExpandIcon, ListIcon, SlidersIcon } from "../../icons";
+import { CollapseIcon, ExpandIcon, FilterIcon, ListIcon, SlidersIcon } from "../../icons";
+import { FilterPanel, filterLabel, isFiltered } from "./Filter";
+import type { LocationFilter } from "./settings";
+import type { LocationNode } from "./types";
 import { Legend } from "./LegendAndWarnings";
 import { addDaysIso, dayIndex, dayLong, dayLongYear, iso, mondayOf, parse } from "./dates";
 import { Arrow } from "./look";
@@ -10,6 +13,9 @@ import { LIMITS, type ViewSettings } from "./settings";
 import type { Basis } from "./types";
 
 interface Props {
+  roots: LocationNode[]; // the whole estate, for the location filter
+  filter: LocationFilter;
+  onFilter: (f: LocationFilter) => void;
   rangeText: string;
   start: string; // Monday of the first week shown
   onRange: (start: string, weeks: number) => void;
@@ -46,6 +52,10 @@ export function Controls(p: Props) {
           <Arrow dir="right" />
         </button>
         <button type="button" className="tb-btn" onClick={p.onToday}>Today</button>
+        <Popover label="Filter locations" align="left" triggerClass={`tb-btn${isFiltered(p.filter, p.roots) ? " active" : ""}`}
+                 trigger={<><FilterIcon /> <span className="filter-label">{filterLabel(p.filter, p.roots)}</span></>}>
+          {(close) => <FilterPanel filter={p.filter} roots={p.roots} onFilter={p.onFilter} close={close} />}
+        </Popover>
       </div>
 
       <div className="group">

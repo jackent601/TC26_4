@@ -88,3 +88,35 @@ export function useCollapsed(tenant: string | null) {
   );
   return [keys, set] as const;
 }
+
+// Which blocks are shown (location keys as in api.locations, e.g. "block:2"):
+// null means all, so new blocks appear without anyone ticking them. Per
+// tenant, like collapsed rows.
+export interface LocationFilter {
+  blocks: string[] | null;
+}
+export const NO_FILTER: LocationFilter = { blocks: null };
+const filterKey = (tenant: string) => `accomm.availability.filter.${tenant}.v2`;
+
+export function useLocationFilter(tenant: string | null) {
+  const read = (t: string | null): LocationFilter => {
+    const v = t ? load<LocationFilter>(filterKey(t)) : null;
+    return { blocks: Array.isArray(v?.blocks) ? v.blocks.filter((k): k is string => typeof k === "string") : null };
+  };
+  const [state, setState] = useState<{ tenant: string | null; filter: LocationFilter }>(() => ({ tenant, filter: read(tenant) }));
+  // Switching tenant loads that tenant's filter.
+  let filter = state.filter;
+  if (state.tenant !== tenant) {
+    filter = read(tenant);
+    setState({ tenant, filter });
+  }
+
+  const set = useCallback(
+    (next: LocationFilter) => {
+      setState({ tenant, filter: next });
+      if (tenant) save(filterKey(tenant), next);
+    },
+    [tenant],
+  );
+  return [filter, set] as const;
+}

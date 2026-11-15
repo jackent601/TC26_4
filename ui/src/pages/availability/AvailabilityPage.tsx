@@ -9,7 +9,8 @@ import { Controls } from "./Controls";
 import { useBedBars, useCourseFigures, useLocations, useWarnings, useWeekSummary } from "./data";
 import { WarningsStrip } from "./LegendAndWarnings";
 import { addDaysIso, dayLong, dayLongYear, defaultStart, iso, mondayOf } from "./dates";
-import { useCollapsed, useViewSettings } from "./settings";
+import { useCollapsed, useLocationFilter, useViewSettings } from "./settings";
+import { pruneTree } from "./Filter";
 import { TimelineGrid, type VisibleRow } from "./TimelineGrid";
 import type { LocationNode, Popup } from "./types";
 import "./availability.css";
@@ -43,17 +44,25 @@ export function AvailabilityPage() {
     return map;
   }, [locations.data]);
 
-  // Rows in tree order, stopping below collapsed nodes.
+  // The part of the estate shown: the ticked blocks, with their sites and
+  // buildings above them (all when there's no filter).
+  const [filter, setFilter] = useLocationFilter(tenant);
+  const estate = useMemo(() => locations.data ?? [], [locations.data]);
+  const roots = useMemo(() => pruneTree(estate, filter), [estate, filter]);
+
+  // Rows in tree order, stopping below collapsed nodes. A filtered (partial)
+  // site or building can't collapse: its weekly counts from the database cover
+  // all of its blocks, not just those shown.
   const rows = useMemo(() => {
     const out: VisibleRow[] = [];
     const visit = (n: LocationNode, depth: number) => {
-      const isCollapsed = n.level !== "Bed" && collapsed.has(n.key);
+      const isCollapsed = n.level !== "Bed" && !n.partial && collapsed.has(n.key);
       out.push({ node: n, depth, collapsed: isCollapsed });
       if (!isCollapsed) n.children.forEach((c) => visit(c, depth + 1));
     };
-    (locations.data ?? []).forEach((n) => visit(n, 0));
+    roots.forEach((n) => visit(n, 0));
     return out;
-  }, [locations.data, collapsed]);
+  }, [roots, collapsed]);
 
   const toggle = useCallback(
     (key: string) => {
@@ -71,7 +80,7 @@ export function AvailabilityPage() {
       if (n.level === "Floor") floors.add(n.key);
       else n.children.forEach(visit);
     };
-    (locations.data ?? []).forEach(visit);
+    roots.forEach(visit);
     setCollapsed(floors);
   };
 
@@ -83,6 +92,9 @@ export function AvailabilityPage() {
     <div className="av-page">
       {/* The page title is in the app's title bar; the legend is a toolbar popover. */}
       <Controls
+        roots={estate}
+        filter={filter}
+        onFilter={setFilter}
         rangeText={`${dayLong(start)} – ${dayLongYear(last)}`}
         start={start}
         onRange={(s, weeks) => { setStart(s); updateSettings({ weeks }); }}
@@ -112,7 +124,9 @@ export function AvailabilityPage() {
       {!tenant || loading ? (
         <p>Loading…</p>
       ) : rows.length === 0 ? (
-        <p className="av-empty">No locations in this tenant yet.</p>
+        <p className="av-empty">
+          {estate.length === 0 ? "No locations in this tenant yet." : "No locations are ticked in the filter."}
+        </p>
       ) : (
         <TimelineGrid
           rows={rows}

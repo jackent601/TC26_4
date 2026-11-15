@@ -23,3 +23,4 @@ export const ListIcon = () => <Icon size={16}><path d="M8 6h13M8 12h13M8 18h13" 
 export const SlidersIcon = () => <Icon size={16}><path d="M4 6h10M18 6h2M4 12h4M12 12h8M4 18h12M20 18h0" /><circle cx="16" cy="6" r="2" /><circle cx="10" cy="12" r="2" /><circle cx="18" cy="18" r="2" /></Icon>;
 export const ExpandIcon = () => <Icon size={16}><path d="m7 9 5-5 5 5M7 15l5 5 5-5" /></Icon>;
 export const CollapseIcon = () => <Icon size={16}><path d="m7 4 5 5 5-5M7 20l5-5 5 5" /></Icon>;
+export const FilterIcon = () => <Icon size={16}><path d="M3 5h18l-7 8v6l-4 2v-8L3 5Z" /></Icon>;

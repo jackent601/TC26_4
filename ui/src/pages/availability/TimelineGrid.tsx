@@ -201,7 +201,9 @@ function Row({ row, index, ctx }: { row: VisibleRow; index: number; ctx: GridCon
   return (
     <div className={`av-row lvl-${node.level.toLowerCase()}`} data-idx={index}>
       <div className="av-label" style={{ paddingLeft: 8 + depth * 16 }}>
-        {isBed ? (
+        {isBed || node.partial ? (
+          // Beds don't collapse; nor does a filtered site or building (its
+          // weekly counts would cover blocks that aren't shown).
           <span className="av-spacer" />
         ) : (
           <button type="button" className="av-toggle" aria-expanded={!collapsed}
@@ -214,7 +216,7 @@ function Row({ row, index, ctx }: { row: VisibleRow; index: number; ctx: GridCon
         </button>
         {!isBed && (
           <span className="av-meta">
-            {node.level} · {node.bedCount} {node.bedCount === 1 ? "bed" : "beds"}
+            {node.level} · {node.bedCount} {node.bedCount === 1 ? "bed" : "beds"}{node.partial ? " · filtered" : ""}
           </span>
         )}
       </div>

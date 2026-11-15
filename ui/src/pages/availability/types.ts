@@ -17,6 +17,9 @@ export interface LocationNode {
   sortOrder: number;
   bedCount: number;
   children: LocationNode[];
+  // Set on a copy made by the location filter when some of this node's blocks
+  // are hidden: bedCount then counts only what's shown.
+  partial?: boolean;
 }
 
 // api.course_figures

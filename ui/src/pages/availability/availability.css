@@ -250,3 +250,19 @@
 .range-picker .apply { display: flex; justify-content: flex-end; }
 .tb-btn.primary { background: var(--accent); color: var(--accent-text); border-color: var(--accent); }
 .tb-btn.primary:hover:not(:disabled) { background: var(--accent-hover); color: var(--accent-text); }
+
+/* --------------------------- Location filter --------------------------- */
+.tb-btn.active { border-color: var(--accent); color: var(--accent); background: var(--accent-soft); }
+.filter-label { max-width: 220px; overflow: hidden; text-overflow: ellipsis; }
+.filter-panel { display: grid; gap: 10px; width: 300px; font-size: 13px; }
+.filter-panel h2 { margin: 0; font-size: 11px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: 0.06em; }
+.filter-tree, .filter-tree ul { list-style: none; margin: 0; padding: 0; }
+.filter-tree { max-height: 340px; overflow: auto; margin: 0 -6px; }
+.filter-tree label { display: flex; align-items: center; gap: 8px; height: 30px; padding-right: 6px; margin-left: 6px; border-radius: var(--radius-sm); cursor: pointer; }
+.filter-tree label:hover { background: var(--surface-2); }
+.filter-tree input { width: 15px; height: 15px; margin: 0; accent-color: var(--accent); flex: none; cursor: pointer; }
+.filter-tree .name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.filter-tree .lvl-site .name, .filter-tree .lvl-building .name { font-weight: 600; }
+.filter-tree .meta { font-size: 10px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.05em; white-space: nowrap; }
+.filter-panel .quick { display: flex; gap: 6px; }
+.filter-panel .apply { display: flex; justify-content: space-between; }
