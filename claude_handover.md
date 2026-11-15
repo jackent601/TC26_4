@@ -125,3 +125,18 @@ Mockup: `docs/pages_pocs/availability.html` (open offline) and its README. Key p
 ## About the user
 
 Jason, a software developer in the UK, on Windows with Git Bash and Docker Desktop. Wants to work step by step and check each step himself; likes concise explanations with the reasoning; prefers minimal custom images and keeping the core value visibly in the data model. Asks "why" questions about tooling (Docker targets, `--build`, script lines): answer them directly.
+
+## Overview page (0011, 15 Nov 2026, uncommitted at the time of writing)
+
+- **Database (`0011_overview.sql`, D33):**
+  - `api.course_figures` and `api.warnings` gained `site_id`. For warnings it's the bed's site, or the course's for course-level warnings.
+  - `api.fn_weekly_overview(p_from, p_weeks, p_site_ids)` returns per week: beds in service on the busiest night, split into allocated, external and free; plus scheduled and loaded totals and the number of courses running.
+  - The down section restores 0007's `course_figures` and 0010's `warnings` (both dropped and recreated, since columns can't be removed in place).
+  - Tests: `db/tests/009_overview.sql` (10 checks; 147 in all), with the weekly figures worked out by hand.
+- **UI (`ui/src/pages/overview/`):**
+  - Side bar entry "Overview".
+  - Toolbar: week arrows, the shared `RangePicker`, and a site filter (`useSiteFilter`, per tenant `accomm.overview.sites.<tenant>`; null = all).
+  - `WeeklyChart.tsx`: plain SVG themed by `--chart-*` tokens. A hover or focus target per week shows a tooltip; the legend buttons hide or show series.
+  - Tabs: Warnings (`useWarnings` now takes an optional `to` and site ids, filtered in PostgREST) and Courses (`CourseTimeline.tsx`). Both open the same popups as Availability, through `PopupView`.
+  - Course colours use the shared view settings (basis and thresholds).
+- **Checked in the browser:** the chart matches the tested figures; tooltip, legend toggles, opening a warning and a course, and the site filter (None empties both).

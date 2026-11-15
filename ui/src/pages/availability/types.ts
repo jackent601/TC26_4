@@ -32,6 +32,7 @@ export interface CourseFigure {
   status: string;
   pctScheduled: number | null;
   pctLoaded: number | null;
+  siteId: number | null;
   scheduled: number;
   loaded: number;
   loadedAt: string | null;
@@ -67,6 +68,7 @@ export interface Warning {
   bedId: number | null;
   startDate: string | null;
   endDate: string | null;
+  siteId: number | null;
 }
 
 // api.fn_check_allocation

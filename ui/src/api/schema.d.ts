@@ -184,7 +184,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Warnings for the warnings strip, whatever the colour basis: courses with loaded above scheduled (D14), bookings on out-of-action beds, double bookings (one row per booking involved), and course bookings with nights outside their course's dates (strict, 0010). Clash severities come from their rules (D30). */
+        /** Warnings for the warnings strip, whatever the colour basis: courses with loaded above scheduled (D14), bookings on out-of-action beds, double bookings (one row per booking involved), and course bookings with nights outside their course's dates (strict, 0010). Clash severities come from their rules (D30). site_id is the bed's site, or the course's for course-level warnings (0011). */
         get: {
             parameters: {
                 query?: {
@@ -196,6 +196,7 @@ export interface paths {
                     bed_id?: components["parameters"]["rowFilter.warnings.bed_id"];
                     start_date?: components["parameters"]["rowFilter.warnings.start_date"];
                     end_date?: components["parameters"]["rowFilter.warnings.end_date"];
+                    site_id?: components["parameters"]["rowFilter.warnings.site_id"];
                     /** @description Filtering Columns */
                     select?: components["parameters"]["select"];
                     /** @description Ordering */
@@ -389,7 +390,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Per course: scheduled (planned), loaded (registered, as of loaded_at) and allocated (individuals with a bed, not cancelled). pct_scheduled and pct_loaded are allocated as a percentage of each, to 1 decimal place, null when that figure is 0. Colour bands are applied by the UI from the user's thresholds (D29). */
+        /** Per course: scheduled (planned), loaded (registered, as of loaded_at) and allocated (individuals with a bed, not cancelled). pct_scheduled and pct_loaded are allocated as a percentage of each, to 1 decimal place, null when that figure is 0. Colour bands are applied by the UI from the user's thresholds (D29). site_id is the course's site (0011). */
         get: {
             parameters: {
                 query?: {
@@ -406,6 +407,7 @@ export interface paths {
                     loaded_above_scheduled?: components["parameters"]["rowFilter.course_figures.loaded_above_scheduled"];
                     pct_scheduled?: components["parameters"]["rowFilter.course_figures.pct_scheduled"];
                     pct_loaded?: components["parameters"]["rowFilter.course_figures.pct_loaded"];
+                    site_id?: components["parameters"]["rowFilter.course_figures.site_id"];
                     /** @description Filtering Columns */
                     select?: components["parameters"]["select"];
                     /** @description Ordering */
@@ -451,6 +453,100 @@ export interface paths {
         };
         put?: never;
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/rpc/fn_weekly_overview": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** One row per week from p_from (p_weeks weeks), for beds in the given sites (all when p_site_ids is null). beds_available: beds not out of action on the week's busiest night (fewest free beds, earliest on a tie), split into allocated (course bookings), external and free. scheduled and loaded: totals for courses running on at least one night of the week. */
+        get: {
+            parameters: {
+                query: {
+                    p_from: string;
+                    p_weeks: number;
+                    p_site_ids?: string;
+                };
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        put?: never;
+        /** One row per week from p_from (p_weeks weeks), for beds in the given sites (all when p_site_ids is null). beds_available: beds not out of action on the week's busiest night (fewest free beds, earliest on a tie), split into allocated (course bookings), external and free. scheduled and loaded: totals for courses running on at least one night of the week. */
+        post: {
+            parameters: {
+                query?: never;
+                header?: {
+                    /** @description Preference */
+                    Prefer?: components["parameters"]["preferParams"];
+                };
+                path?: never;
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": {
+                        /** Format: date */
+                        p_from: string;
+                        /** Format: integer[] */
+                        p_site_ids?: number[];
+                        /** Format: int32 */
+                        p_weeks: number;
+                    };
+                    "application/vnd.pgrst.object+json;nulls=stripped": {
+                        /** Format: date */
+                        p_from: string;
+                        /** Format: integer[] */
+                        p_site_ids?: number[];
+                        /** Format: int32 */
+                        p_weeks: number;
+                    };
+                    "application/vnd.pgrst.object+json": {
+                        /** Format: date */
+                        p_from: string;
+                        /** Format: integer[] */
+                        p_site_ids?: number[];
+                        /** Format: int32 */
+                        p_weeks: number;
+                    };
+                    "text/csv": {
+                        /** Format: date */
+                        p_from: string;
+                        /** Format: integer[] */
+                        p_site_ids?: number[];
+                        /** Format: int32 */
+                        p_weeks: number;
+                    };
+                };
+            };
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
         delete?: never;
         options?: never;
         head?: never;
@@ -1131,7 +1227,7 @@ export interface components {
             /** Format: character */
             is_demo?: string;
         };
-        /** @description Warnings for the warnings strip, whatever the colour basis: courses with loaded above scheduled (D14), bookings on out-of-action beds, double bookings (one row per booking involved), and course bookings with nights outside their course's dates (strict, 0010). Clash severities come from their rules (D30). */
+        /** @description Warnings for the warnings strip, whatever the colour basis: courses with loaded above scheduled (D14), bookings on out-of-action beds, double bookings (one row per booking involved), and course bookings with nights outside their course's dates (strict, 0010). Clash severities come from their rules (D30). site_id is the bed's site, or the course's for course-level warnings (0011). */
         warnings: {
             /** Format: text */
             kind?: string;
@@ -1149,6 +1245,8 @@ export interface components {
             start_date?: string;
             /** Format: date */
             end_date?: string;
+            /** Format: int32 */
+            site_id?: number;
         };
         /** @description Health check: status, time, the selected tenant and its bed count. */
         health: {
@@ -1178,7 +1276,7 @@ export interface components {
             /** Format: int64 */
             bed_count?: number;
         };
-        /** @description Per course: scheduled (planned), loaded (registered, as of loaded_at) and allocated (individuals with a bed, not cancelled). pct_scheduled and pct_loaded are allocated as a percentage of each, to 1 decimal place, null when that figure is 0. Colour bands are applied by the UI from the user's thresholds (D29). */
+        /** @description Per course: scheduled (planned), loaded (registered, as of loaded_at) and allocated (individuals with a bed, not cancelled). pct_scheduled and pct_loaded are allocated as a percentage of each, to 1 decimal place, null when that figure is 0. Colour bands are applied by the UI from the user's thresholds (D29). site_id is the course's site (0011). */
         course_figures: {
             /**
              * Format: int32
@@ -1210,6 +1308,8 @@ export interface components {
             pct_scheduled?: number;
             /** Format: numeric */
             pct_loaded?: number;
+            /** Format: int32 */
+            site_id?: number;
         };
     };
     responses: never;
@@ -1247,6 +1347,7 @@ export interface components {
         "rowFilter.warnings.bed_id": string;
         "rowFilter.warnings.start_date": string;
         "rowFilter.warnings.end_date": string;
+        "rowFilter.warnings.site_id": string;
         "rowFilter.health.status": string;
         "rowFilter.health.checked_at": string;
         "rowFilter.health.tenant": string;
@@ -1271,6 +1372,7 @@ export interface components {
         "rowFilter.course_figures.loaded_above_scheduled": string;
         "rowFilter.course_figures.pct_scheduled": string;
         "rowFilter.course_figures.pct_loaded": string;
+        "rowFilter.course_figures.site_id": string;
     };
     requestBodies: {
         /** @description tenants */

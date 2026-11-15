@@ -8,6 +8,7 @@ import { ThemeProvider } from "./theme";
 import { Layout } from "./Layout";
 import { Home } from "./pages/Home";
 import { AvailabilityPage } from "./pages/availability/AvailabilityPage";
+import { OverviewPage } from "./pages/overview/OverviewPage";
 import "./styles.css";
 
 const queryClient = new QueryClient({
@@ -19,6 +20,7 @@ const router = createBrowserRouter([
     element: <Layout />,
     children: [
       { path: "/", element: <Home /> },
+      { path: "/overview", element: <OverviewPage /> },
       { path: "/availability", element: <AvailabilityPage /> },
       { path: "*", element: <p>Page not found.</p> },
     ],

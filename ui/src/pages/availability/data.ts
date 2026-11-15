@@ -29,15 +29,25 @@ export function useClashes(tenant: string | null, bedIds: number[], from: string
 // (end dates are departure days, so end_date > start), earliest first. No upper
 // limit, so problems beyond the weeks on screen still show. Independent of the
 // colour basis (D14). The filter runs in the database (PostgREST query filter).
-export function useWarnings(tenant: string | null, start: string) {
+//
+// Optionally also before `to` (start_date < to) and within some sites: the
+// Overview uses both (0011 added site_id).
+export function useWarnings(tenant: string | null, start: string, to: string | null = null, siteIds: number[] | null = null) {
   return useQuery({
-    queryKey: ["warnings", tenant, start],
+    queryKey: ["warnings", tenant, start, to, siteIds],
     enabled: tenant !== null,
     placeholderData: keepPreviousData,
     queryFn: () =>
       unwrap(
         api.GET("/warnings", {
-          params: { query: { end_date: `gt.${start}`, order: "start_date,kind" } },
+          params: {
+            query: {
+              end_date: `gt.${start}`,
+              ...(to ? { start_date: `lt.${to}` } : {}),
+              ...(siteIds ? { site_id: `in.(${siteIds.join(",")})` } : {}),
+              order: "start_date,kind",
+            },
+          },
           headers: tenantHeaders(tenant!),
         }),
       ),
@@ -51,6 +61,7 @@ export function useWarnings(tenant: string | null, start: string) {
         bedId: r.bed_id ?? null,
         startDate: r.start_date ?? null,
         endDate: r.end_date ?? null,
+        siteId: r.site_id ?? null,
       })),
   });
 }
@@ -115,6 +126,7 @@ export function useCourseFigures(tenant: string | null) {
             status: r.status ?? "",
             pctScheduled: r.pct_scheduled ?? null,
             pctLoaded: r.pct_loaded ?? null,
+            siteId: r.site_id ?? null,
             scheduled: r.scheduled ?? 0,
             loaded: r.loaded ?? 0,
             loadedAt: r.loaded_at ?? null,

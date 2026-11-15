@@ -26,6 +26,10 @@ function api.fn_week_summary(p_from date, p_weeks integer)
   -- For each location above bed level (key as in api.locations) and each of p_weeks weeks from p_from: the busiest night (fewest free beds, earliest on a tie) and its beds by category: free, out_of_action, external, or course (one row per course_id). Categories with no beds are left out. The UI bands courses by colour from api.course_figures (D29).
   returns TABLE(key text, week_start date, busiest_night date, category text, course_id integer, beds bigint)
 
+function api.fn_weekly_overview(p_from date, p_weeks integer, p_site_ids integer[] DEFAULT NULL::integer[])
+  -- One row per week from p_from (p_weeks weeks), for beds in the given sites (all when p_site_ids is null). beds_available: beds not out of action on the week's busiest night (fewest free beds, earliest on a tie), split into allocated (course bookings), external and free. scheduled and loaded: totals for courses running on at least one night of the week.
+  returns TABLE(week_start date, busiest_night date, beds_available bigint, allocated bigint, external bigint, free bigint, scheduled bigint, loaded bigint, courses bigint)
+
 function api.reset_demo_data()
   -- Wipe and reload the current tenant's reference and sample data. Demo tenants only.
   returns TABLE(tenant text, day0 date, beds bigint, courses bigint, allocations bigint, outages bigint)
@@ -35,7 +39,7 @@ function api.use_tenant(p_code text, p_local boolean DEFAULT true)
   returns text
 
 view api.course_figures
-  -- Per course: scheduled (planned), loaded (registered, as of loaded_at) and allocated (individuals with a bed, not cancelled). pct_scheduled and pct_loaded are allocated as a percentage of each, to 1 decimal place, null when that figure is 0. Colour bands are applied by the UI from the user's thresholds (D29).
+  -- Per course: scheduled (planned), loaded (registered, as of loaded_at) and allocated (individuals with a bed, not cancelled). pct_scheduled and pct_loaded are allocated as a percentage of each, to 1 decimal place, null when that figure is 0. Colour bands are applied by the UI from the user's thresholds (D29). site_id is the course's site (0011).
   course_id integer
   code text
   name text
@@ -49,6 +53,7 @@ view api.course_figures
   loaded_above_scheduled boolean
   pct_scheduled numeric
   pct_loaded numeric
+  site_id integer
 
 view api.health
   -- Health check: status, time, the selected tenant and its bed count.
@@ -74,7 +79,7 @@ view api.tenants
   is_demo character(1)
 
 view api.warnings
-  -- Warnings for the warnings strip, whatever the colour basis: courses with loaded above scheduled (D14), bookings on out-of-action beds, double bookings (one row per booking involved), and course bookings with nights outside their course's dates (strict, 0010). Clash severities come from their rules (D30).
+  -- Warnings for the warnings strip, whatever the colour basis: courses with loaded above scheduled (D14), bookings on out-of-action beds, double bookings (one row per booking involved), and course bookings with nights outside their course's dates (strict, 0010). Clash severities come from their rules (D30). site_id is the bed's site, or the course's for course-level warnings (0011).
   kind text
   severity text
   message text
@@ -83,3 +88,4 @@ view api.warnings
   bed_id integer
   start_date date
   end_date date
+  site_id integer

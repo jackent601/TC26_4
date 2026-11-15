@@ -97,7 +97,7 @@ export function Controls(p: Props) {
 
 // Choose the weeks shown: a first and a last week (any day picks its week, which
 // runs Monday to Sunday, D9), or a quick length from the first week.
-function RangePicker({ start, weeks, onApply }: { start: string; weeks: number; onApply: (start: string, weeks: number) => void }) {
+export function RangePicker({ start, weeks, onApply }: { start: string; weeks: number; onApply: (start: string, weeks: number) => void }) {
   const [from, setFrom] = useState(start);
   const [to, setTo] = useState(addDaysIso(start, (weeks - 1) * 7));
   const fromMonday = from ? iso(mondayOf(parse(from))) : "";
@@ -135,7 +135,7 @@ function RangePicker({ start, weeks, onApply }: { start: string; weeks: number; 
 
 // A button with a panel under it. Closes on a click outside or Esc. The panel's
 // content may be a function given `close`, to close it after an action.
-function Popover({ label, icon, trigger, triggerClass = "tb-btn", align = "right", children }: {
+export function Popover({ label, icon, trigger, triggerClass = "tb-btn", align = "right", children }: {
   label: string;
   icon?: ReactNode;
   trigger?: ReactNode;

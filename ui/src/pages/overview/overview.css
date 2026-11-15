@@ -1,0 +1,82 @@
+/* Overview page. Colours from the theme tokens (src/styles.css). */
+.ov-page { display: flex; flex-direction: column; gap: 12px; height: 100%; min-height: 0; color: var(--text); }
+
+.ov-card {
+  background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius);
+  box-shadow: var(--shadow-sm); padding: 14px 16px; flex: none;
+}
+.ov-card > h2 { margin: 0 0 8px; font-size: 13px; font-weight: 650; }
+
+/* ------------------------------- Chart -------------------------------- */
+.ov-chart { display: flex; flex-direction: column; gap: 6px; }
+.ov-legend { display: flex; flex-wrap: wrap; gap: 4px 6px; }
+.ov-legend button {
+  display: inline-flex; align-items: center; gap: 6px; height: 26px; padding: 0 8px;
+  border: 1px solid transparent; border-radius: 999px; background: transparent; font-size: 12px; color: var(--text-2);
+}
+.ov-legend button:hover:not(:disabled) { background: var(--surface-2); }
+.ov-legend button[aria-pressed="false"] { color: var(--muted); opacity: 0.55; text-decoration: line-through; }
+.sw { display: inline-block; flex: none; }
+.sw.bar, .sw.stack { width: 10px; height: 10px; border-radius: 2px; }
+.sw.line { width: 16px; height: 0; border-top: 2px dashed var(--chart-available); }
+
+.ov-plot { position: relative; width: 100%; }
+.ov-plot svg { display: block; overflow: visible; }
+.ov-plot .grid { stroke: var(--border); stroke-width: 1; }
+.ov-plot .tick { fill: var(--muted); font-size: 11px; font-variant-numeric: tabular-nums; }
+.ov-plot .hover { fill: var(--accent-soft); }
+.ov-plot .target { fill: transparent; cursor: default; outline: none; }
+.ov-plot .target:focus-visible { stroke: var(--accent); stroke-width: 2; }
+
+.s-scheduled { fill: var(--chart-scheduled); background: var(--chart-scheduled); }
+.s-loaded { fill: var(--chart-loaded); background: var(--chart-loaded); }
+.s-allocated { fill: var(--chart-allocated); background: var(--chart-allocated); }
+.s-external { fill: var(--chart-external); background: var(--chart-external); }
+.s-free { fill: var(--chart-free); background: var(--chart-free); }
+.s-available-line polyline { fill: none; stroke: var(--chart-available); stroke-width: 2; stroke-dasharray: 6 4; }
+.s-available-line circle { fill: var(--surface); stroke: var(--chart-available); stroke-width: 2; }
+
+.ov-tip {
+  position: absolute; top: 0; transform: translateX(-50%); z-index: 5; pointer-events: none;
+  min-width: 200px; padding: 10px 12px; border: 1px solid var(--border); border-radius: var(--radius);
+  background: var(--surface); box-shadow: var(--shadow-lg); font-size: 12px; display: grid; gap: 4px;
+}
+.ov-tip .muted { color: var(--muted); }
+.ov-tip dl { margin: 4px 0 0; display: grid; grid-template-columns: 1fr auto; gap: 3px 16px; }
+.ov-tip dt { display: flex; align-items: center; gap: 6px; color: var(--text-2); }
+.ov-tip dd { margin: 0; text-align: right; font-weight: 600; font-variant-numeric: tabular-nums; }
+
+/* -------------------------------- Tabs -------------------------------- */
+.ov-tabs { flex: 1; min-height: 0; display: flex; flex-direction: column; padding: 0; overflow: hidden; }
+.tab-bar { display: flex; gap: 4px; padding: 8px 10px 0; border-bottom: 1px solid var(--border); flex: none; }
+.tab-bar button {
+  border: 0; border-bottom: 2px solid transparent; border-radius: 0; background: transparent;
+  padding: 8px 10px; font-size: 13px; font-weight: 600; color: var(--muted); display: inline-flex; gap: 6px; align-items: center;
+}
+.tab-bar button:hover:not(:disabled) { background: transparent; color: var(--text); }
+.tab-bar button[aria-selected="true"] { color: var(--accent); border-bottom-color: var(--accent); }
+.tab-bar .count { min-width: 20px; padding: 0 6px; border-radius: 999px; background: var(--surface-2); color: var(--text-2); font-size: 11px; line-height: 18px; text-align: center; }
+.tab-panel { flex: 1; min-height: 0; display: flex; flex-direction: column; overflow: auto; padding: 10px; }
+.tab-panel .av-scroll { box-shadow: none; }
+
+.ov-warnings { list-style: none; margin: 0; padding: 0; display: grid; }
+.ov-warnings li + li { border-top: 1px solid var(--border); }
+.ov-warnings button {
+  width: 100%; display: grid; grid-template-columns: auto 1fr auto auto; align-items: center; gap: 10px;
+  border: 0; border-radius: var(--radius-sm); background: transparent; padding: 8px 6px; text-align: left; font-size: 13px;
+}
+.ov-warnings button:hover:not(:disabled) { background: var(--surface-2); }
+.ov-warnings .when { color: var(--muted); font-variant-numeric: tabular-nums; font-size: 12px; }
+.ov-warnings .sev { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; padding: 2px 6px; border-radius: 999px; background: var(--danger-soft); color: var(--danger-text); }
+.ov-warnings .sev-info { background: var(--surface-2); color: var(--muted); }
+
+/* --------------------------- Courses timeline -------------------------- */
+.ov-course .av-row { height: 36px; }
+.ov-course .av-body { height: 35px; }
+.ov-course .av-bar { top: 7px; }
+.ov-course .av-label { width: 300px; gap: 8px; padding-left: 8px; }
+.ov-course .av-name { display: flex; align-items: baseline; gap: 6px; }
+.ov-course .code { font-weight: 650; }
+.ov-course .cname { color: var(--muted); font-size: 12px; overflow: hidden; text-overflow: ellipsis; }
+.ov-course .figs { display: flex; gap: 6px; flex: none; font-size: 11px; color: var(--text-2); font-variant-numeric: tabular-nums; }
+.ov-course .figs span { padding: 1px 5px; border-radius: 4px; background: var(--surface-2); }

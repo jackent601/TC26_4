@@ -3,17 +3,18 @@
 // tenants (its tooltip explains the data is sample data and can be reset).
 import { useState, type ReactNode } from "react";
 import { NavLink, Outlet, useLocation } from "react-router";
-import { BedIcon, GridIcon, HomeIcon, MonitorIcon, MoonIcon, PanelIcon, SunIcon } from "./icons";
+import { BedIcon, ChartIcon, GridIcon, HomeIcon, MonitorIcon, MoonIcon, PanelIcon, SunIcon } from "./icons";
 import { useTenant } from "./tenant";
 import { useTheme, type ThemeChoice } from "./theme";
 import { useUser } from "./user";
 
 const PAGES = [
   { to: "/", label: "Home", icon: <HomeIcon />, end: true },
+  { to: "/overview", label: "Overview", icon: <ChartIcon />, end: false },
   { to: "/availability", label: "Availability", icon: <GridIcon />, end: false },
 ];
 // Pages that fill the window themselves (the grid scrolls inside).
-const FILL = new Set(["/availability"]);
+const FILL = new Set(["/availability", "/overview"]);
 
 const NAV_KEY = "accomm.nav.collapsed";
 const readCollapsed = () => {
