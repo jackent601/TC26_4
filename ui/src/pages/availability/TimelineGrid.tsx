@@ -4,7 +4,7 @@
 // week cell is a button that opens a popup. Empty parts of bed rows select
 // week blocks for a new allocation (D8-D10).
 import { useEffect, useRef, useState, type CSSProperties, type PointerEvent as ReactPointerEvent } from "react";
-import { addDaysIso, dayIndex, dayLong, ddmm } from "./dates";
+import { addDaysIso, barPlace, dayLong, ddmm } from "./dates";
 import { basisOf, Chevron, courseColour, levelPrefix, OverIcon, STATE_NAMES, STATE_ORDER, WarnIcon, type State } from "./look";
 import type { ViewSettings } from "./settings";
 import type { BedBar, CourseFigure, LocationNode, Popup, WeekSummary } from "./types";
@@ -241,23 +241,20 @@ function Row({ row, index, ctx }: { row: VisibleRow; index: number; ctx: GridCon
 }
 
 function BedBars({ bars, ctx }: { bars: BedBar[]; ctx: GridContext }) {
-  // Bars carry their full dates (0008); fit them to the nights shown.
-  const place = (b: BedBar): CSSProperties => {
-    const a = Math.max(0, dayIndex(ctx.start, b.start_date));
-    const z = Math.min(ctx.nights, dayIndex(ctx.start, b.end_date));
-    return { left: a * ctx.dayW + 1, width: (z - a) * ctx.dayW - 2 };
-  };
-
+  // Bars carry their full dates (0008); fit them to the days shown, whole days
+  // (barPlace).
   return (
     <>
       {bars.map((b) => {
+        const place = barPlace(ctx.start, ctx.nights, ctx.dayW, b.start_date, b.end_date);
+        if (!place) return null;
         const dates = `${ddmm(b.start_date)} to ${ddmm(b.end_date)}`;
 
         if (b.kind === "outage") {
           const label = "Out of action" + (b.set_on_level && b.set_on_level !== "Bed" ? ` (${b.set_on_level.toLowerCase()})` : "");
           const aria = `${label}: ${b.reason ?? "no reason given"}, ${dates}`;
           return (
-            <button key={`o${b.id}`} type="button" className="av-bar st-out" style={place(b)} title={aria}
+            <button key={`o${b.id}`} type="button" className="av-bar st-out" style={place} title={aria}
                     aria-label={aria} onClick={() => ctx.onOpen({ kind: "outage", bar: b })}>
               <span>{label}</span>
             </button>
@@ -276,7 +273,7 @@ function BedBars({ bars, ctx }: { bars: BedBar[]; ctx: GridContext }) {
           (over ? ", course loaded above scheduled" : "");
         return (
           <button key={`a${b.id}`} type="button" className={`av-bar st-${state}${b.on_outage ? " on-outage" : ""}`}
-                  style={place(b)} title={aria} aria-label={aria} onClick={() => ctx.onOpen({ kind: "booking", bar: b })}>
+                  style={place} title={aria} aria-label={aria} onClick={() => ctx.onOpen({ kind: "booking", bar: b })}>
             {b.on_outage && <WarnIcon />}
             {over && <OverIcon />}
             <span>{label}</span>

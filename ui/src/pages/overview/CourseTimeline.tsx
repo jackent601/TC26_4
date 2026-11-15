@@ -4,7 +4,7 @@
 // availability grid. Click a course to open it. The first row adds a course,
 // with dates from the weeks dragged across it.
 import { useEffect, useRef, useState, type CSSProperties, type PointerEvent as ReactPointerEvent } from "react";
-import { addDaysIso, dayIndex, ddmm } from "../availability/dates";
+import { addDaysIso, barPlace, ddmm } from "../availability/dates";
 import { basisOf, courseColour, OverIcon } from "../availability/look";
 import type { ViewSettings } from "../availability/settings";
 import type { CourseFigure, Popup } from "../availability/types";
@@ -44,8 +44,7 @@ export function CourseTimeline({ courses, start, weeks, settings, onOpen }: {
       <div className="av-grid" style={{ width: LABEL + bodyWidth }}>
         <NewCourseRow start={start} weeks={weeks} dayW={dayW} bodyWidth={bodyWidth} lines={lines} onOpen={onOpen} />
         {courses.map((c) => {
-          const a = Math.max(0, dayIndex(start, c.startDate));
-          const z = Math.min(nights, dayIndex(start, c.endDate));
+          const place = barPlace(start, nights, dayW, c.startDate, c.endDate); // whole days, arrival to departure
           const band = courseColour(c, settings);
           const basis = basisOf(c, settings);
           const label = `${c.allocated}/${basis} ${settings.basis} · ${c.loaded} loaded`;
@@ -61,9 +60,8 @@ export function CourseTimeline({ courses, start, weeks, settings, onOpen }: {
                 </span>
               </div>
               <div className="av-body" style={{ width: bodyWidth, ...lines }}>
-                {z > a && (
-                  <button type="button" className={`av-bar st-${band}`} onClick={open}
-                          style={{ left: a * dayW + 1, width: (z - a) * dayW - 2 }}
+                {place && (
+                  <button type="button" className={`av-bar st-${band}`} onClick={open} style={place}
                           title={`${c.code}: ${ddmm(c.startDate)} to ${ddmm(c.endDate)}, ${label}`}
                           aria-label={`${c.code}, ${ddmm(c.startDate)} to ${ddmm(c.endDate)}, ${label}` +
                             (c.loadedAboveScheduled ? ", loaded above scheduled" : "")}>
