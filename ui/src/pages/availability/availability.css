@@ -338,3 +338,15 @@
 }
 /* Dragging sideways changes the booking's dates: the outline turns red and says so. */
 .av-move-ghost.dates { background: var(--danger-soft); border-color: var(--danger-text); color: var(--danger-text); gap: 4px; }
+
+/* Double bookings: overlapping bookings share the row in half-height lanes, the
+   shared nights get a red striped band, and bars the database reports as
+   double-booked get a red edge and the warning icon. */
+.av-clash {
+  position: absolute; top: 1px; height: 29px; z-index: 1; pointer-events: none; border-radius: 4px;
+  background: repeating-linear-gradient(135deg, var(--danger-soft) 0 5px, transparent 5px 10px);
+  border: 1.5px solid var(--danger);
+}
+.av-bar.in-lane { font-size: 10px; padding: 0 5px; border-radius: 3px; }
+.av-bar.in-lane svg { width: 10px; height: 10px; }
+.av-bar.double { outline: 2px solid var(--danger); outline-offset: 0; }

@@ -40,6 +40,7 @@ interface GridContext {
   moving: MoveDrag | null;
   onBarDown: (bar: BedBar, rowIndex: number, e: ReactPointerEvent<HTMLElement>) => void;
   justDragged: () => boolean; // a drag just ended: the click that follows isn't a click
+  doubleBooked: Set<number>; // allocation ids api.warnings reports as double-booked
 }
 
 // A booking being dragged: over which bed row, shifted by how many days.
@@ -80,9 +81,14 @@ interface Props {
   onOpen: (p: Popup) => void;
   // A booking to scroll to and highlight once drawn; a new seq does it again.
   highlight?: { allocationId: number; seq: number } | null;
+  // Bookings the database reports as double-booked (api.warnings): marked on their bars.
+  doubleBooked?: Set<number>;
 }
 
-export function TimelineGrid({ rows, start, settings, bars, summary, figures, onToggle, onOpen, highlight = null }: Props) {
+const NONE = new Set<number>();
+
+export function TimelineGrid({ rows, start, settings, bars, summary, figures, onToggle, onOpen, highlight = null,
+                               doubleBooked = NONE }: Props) {
   const nights = settings.weeks * 7;
   // Fill the available width: days widen to fit, never narrower than the
   // user's minimum day width (then the grid scrolls sideways).
@@ -261,7 +267,7 @@ export function TimelineGrid({ rows, start, settings, bars, summary, figures, on
   const ctx: GridContext = {
     start, nights, dayW, bodyWidth, lines, weekStarts, settings, bars, summary, figures, onToggle, onOpen,
     selection, onSelectStart, onSelectKey,
-    moving: moving?.active ? moving : null, onBarDown, justDragged: () => dragged.current,
+    moving: moving?.active ? moving : null, onBarDown, justDragged: () => dragged.current, doubleBooked,
   };
 
   return (
@@ -349,21 +355,70 @@ function MoveGhost({ m, ctx }: { m: MoveDrag; ctx: GridContext }) {
   return <div className="av-move-ghost" style={place}>{ref} · {ddmm(from)} – {ddmm(to)}</div>;
 }
 
+// Bookings on one bed that overlap each other (a double booking): each gets a
+// lane, so the row splits into half-height lanes and every bar shows in full;
+// `clashes` are the nights two of them share. Only overlapping bookings are
+// laid out in lanes; the rest keep the full row. Display only: whether this is
+// a warning or refused is the database's (the DOUBLE_BOOKING rule, D30).
+function laneLayout(bars: BedBar[]) {
+  const bookings = bars.filter((b) => b.kind !== "outage").sort((a, b) => a.start_date.localeCompare(b.start_date));
+  const lanes = new Map<number, { lane: number; of: number }>();
+  const clashes: { from: string; to: string }[] = [];
+  let group: BedBar[] = [];
+  let groupEnd = "";
+  const close = () => {
+    if (group.length > 1) {
+      const ends: string[] = []; // the last end date in each lane
+      for (const b of group) {
+        let lane = ends.findIndex((e) => e <= b.start_date);
+        if (lane < 0) lane = ends.push(b.end_date) - 1;
+        else ends[lane] = b.end_date;
+        lanes.set(b.id, { lane, of: 0 });
+      }
+      for (const b of group) lanes.get(b.id)!.of = ends.length;
+      for (let i = 0; i < group.length; i++) {
+        for (let j = i + 1; j < group.length; j++) {
+          const from = group[i].start_date > group[j].start_date ? group[i].start_date : group[j].start_date;
+          const to = group[i].end_date < group[j].end_date ? group[i].end_date : group[j].end_date;
+          if (from < to) clashes.push({ from, to });
+        }
+      }
+    }
+    group = [];
+  };
+  for (const b of bookings) {
+    if (group.length > 0 && b.start_date >= groupEnd) close();
+    group.push(b);
+    groupEnd = group.length === 1 || b.end_date > groupEnd ? b.end_date : groupEnd;
+  }
+  close();
+  return { lanes, clashes };
+}
+
 function BedBars({ bars, index, ctx }: { bars: BedBar[]; index: number; ctx: GridContext }) {
   // Bars carry their full dates (0008); fit them to the days shown, whole days
-  // (barPlace).
+  // (barPlace). Overlapping bookings share the row in lanes (laneLayout).
+  const { lanes, clashes } = laneLayout(bars);
   return (
     <>
+      {clashes.map((c, i) => {
+        const place = barPlace(ctx.start, ctx.nights, ctx.dayW, c.from, c.to);
+        return place && <div key={`c${i}`} className="av-clash" style={place} title={`Double booking, ${ddmm(c.from)} to ${ddmm(c.to)}`} />;
+      })}
       {bars.map((b) => {
-        const place = barPlace(ctx.start, ctx.nights, ctx.dayW, b.start_date, b.end_date);
-        if (!place) return null;
+        const fit = barPlace(ctx.start, ctx.nights, ctx.dayW, b.start_date, b.end_date);
+        if (!fit) return null;
+        // In a lane: a slice of the row's 26px, one above the other.
+        const lane = lanes.get(b.id);
+        const h = lane ? Math.floor(26 / lane.of) - 1 : 0;
+        const place: CSSProperties = lane ? { ...fit, top: 3 + lane.lane * (h + 1), height: h } : fit;
         const dates = `${ddmm(b.start_date)} to ${ddmm(b.end_date)}`;
 
         if (b.kind === "outage") {
           const label = "Out of action" + (b.set_on_level && b.set_on_level !== "Bed" ? ` (${b.set_on_level.toLowerCase()})` : "");
           const aria = `${label}: ${b.reason ?? "no reason given"}, ${dates}`;
           return (
-            <button key={`o${b.id}`} type="button" className="av-bar st-out" style={place} title={aria}
+            <button key={`o${b.id}`} type="button" className="av-bar st-out" style={fit} title={aria}
                     aria-label={aria} onClick={() => ctx.onOpen({ kind: "outage", bar: b })}>
               <span>{label}</span>
             </button>
@@ -378,16 +433,18 @@ function BedBars({ bars, index, ctx }: { bars: BedBar[]; index: number; ctx: Gri
             ? `${b.external_ref ?? ""} · ${b.external_name ?? ""}`
             // Individual numbers are internal (D31): the course and its figures only.
             : `${b.course_code}` + (course ? ` · ${course.allocated}/${basisOf(course, ctx.settings)}` : "");
+        const double = ctx.doubleBooked.has(b.id); // from api.warnings (DOUBLE_BOOKING)
         const aria = `${label}, ${dates}` + (b.on_outage ? ", clashes with an outage" : "") +
-          (over ? ", course loaded above scheduled" : "");
+          (double ? ", double-booked" : "") + (over ? ", course loaded above scheduled" : "");
         const beingMoved = ctx.moving?.bar.id === b.id;
         return (
           <button key={`a${b.id}`} type="button"
-                  className={`av-bar movable st-${state}${b.on_outage ? " on-outage" : ""}${beingMoved ? " moving" : ""}`}
+                  className={`av-bar movable st-${state}${b.on_outage ? " on-outage" : ""}${double ? " double" : ""}` +
+                    `${lane ? " in-lane" : ""}${beingMoved ? " moving" : ""}`}
                   style={place} title={`${aria} (drag to move)`} aria-label={aria} data-allocation={b.id}
                   onPointerDown={(e) => ctx.onBarDown(b, index, e)}
                   onClick={() => { if (!ctx.justDragged()) ctx.onOpen({ kind: "booking", bar: b }); }}>
-            {b.on_outage && <WarnIcon />}
+            {(b.on_outage || double) && <WarnIcon />}
             {over && <OverIcon />}
             <span>{label}</span>
           </button>

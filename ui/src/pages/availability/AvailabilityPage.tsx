@@ -28,6 +28,13 @@ export function AvailabilityPage() {
   const summary = useWeekSummary(tenant, start, settings.weeks);
   const warnings = useWarnings(tenant, start);
 
+  // Bookings the database reports as double-booked, marked on their bars.
+  const doubleBooked = useMemo(
+    () => new Set((warnings.data ?? []).filter((w) => w.kind === "DOUBLE_BOOKING" && w.allocationId !== null)
+      .map((w) => w.allocationId!)),
+    [warnings.data],
+  );
+
   // The open popup; `seq` gives each opening a fresh dialog.
   const [popup, setPopup] = useState<{ p: Popup; seq: number } | null>(null);
   const open = useCallback((p: Popup) => setPopup((cur) => ({ p, seq: (cur?.seq ?? 0) + 1 })), []);
@@ -183,6 +190,7 @@ export function AvailabilityPage() {
           onToggle={toggle}
           onOpen={open}
           highlight={focus ? { allocationId: focus.allocationId, seq: focus.seq } : null}
+          doubleBooked={doubleBooked}
         />
       )}
 

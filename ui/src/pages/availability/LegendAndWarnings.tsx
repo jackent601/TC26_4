@@ -28,7 +28,7 @@ export function Legend({ settings: s }: { settings: ViewSettings }) {
       <ul>{courses.map(row)}</ul>
       <h2>Markers</h2>
       <ul>
-        <li><WarnIcon />Booking clashes with an outage</li>
+        <li><WarnIcon />Booking clash</li>
         <li><OverIcon />Course loaded above scheduled</li>
       </ul>
     </div>
