@@ -2,7 +2,7 @@
 // loaded places as bars, a stacked bar of the busiest night's beds (allocated,
 // external, free), and beds in service as a dashed line. Hover or focus a week
 // for its figures; the legend shows or hides each series.
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type MouseEvent as ReactMouseEvent } from "react";
 import { dayLong, ddmm } from "../availability/dates";
 import type { WeekRow } from "./data";
 
@@ -30,6 +30,13 @@ export function WeeklyChart({ rows }: { rows: WeekRow[] }) {
   const ref = useRef<HTMLDivElement>(null);
   const [width, setWidth] = useState(800);
   const [hover, setHover] = useState<number | null>(null);
+  // The pointer over the plot, so the tooltip can sit just below it (null when
+  // hovering by keyboard: the tooltip then sits below the chart).
+  const [pointer, setPointer] = useState<{ x: number; y: number } | null>(null);
+  const track = (e: ReactMouseEvent) => {
+    const r = ref.current?.getBoundingClientRect();
+    if (r) setPointer({ x: e.clientX - r.left, y: e.clientY - r.top });
+  };
   const [hidden, setHidden] = useState<Set<SeriesId>>(new Set());
   useEffect(() => {
     const el = ref.current;
@@ -131,22 +138,26 @@ export function WeeklyChart({ rows }: { rows: WeekRow[] }) {
                   tabIndex={0} role="button"
                   aria-label={`Week of ${ddmm(r.week_start)}: ${r.beds_available} beds in service, ${r.allocated} allocated, ` +
                     `${r.external} external, ${r.free} free; ${r.scheduled} scheduled and ${r.loaded} loaded places`}
-                  onMouseEnter={() => setHover(i)} onMouseLeave={() => setHover(null)}
+                  onMouseEnter={(e) => { setHover(i); track(e); }} onMouseMove={track}
+                  onMouseLeave={() => { setHover(null); setPointer(null); }}
                   onFocus={() => setHover(i)} onBlur={() => setHover(null)} />
           ))}
         </svg>
 
         {h && hover !== null && (
-          <div className="ov-tip" style={{ left: Math.min(Math.max(cx(hover), 110), width - 110) }}>
+          <div className="ov-tip" style={{
+            left: Math.min(Math.max(pointer?.x ?? cx(hover), 110), width - 110),
+            top: pointer ? pointer.y + 18 : M.top + plotH + 8,
+          }}>
             <strong>Week of {ddmm(h.week_start)}</strong>
             <span className="muted">{h.busiest_night ? `Busiest night ${dayLong(h.busiest_night)}` : "No beds"}</span>
             <dl>
               <dt><span className="sw line s-available" />Beds in service</dt><dd>{h.beds_available}</dd>
+              <dt><span className="sw bar s-scheduled" />Scheduled</dt><dd>{h.scheduled}</dd>
+              <dt><span className="sw bar s-loaded" />Loaded</dt><dd>{h.loaded}</dd>
               <dt><span className="sw stack s-allocated" />Allocated</dt><dd>{h.allocated}</dd>
               <dt><span className="sw stack s-external" />External</dt><dd>{h.external}</dd>
               <dt><span className="sw stack s-free" />Free</dt><dd>{h.free}</dd>
-              <dt><span className="sw bar s-scheduled" />Scheduled</dt><dd>{h.scheduled}</dd>
-              <dt><span className="sw bar s-loaded" />Loaded</dt><dd>{h.loaded}</dd>
               <dt>Courses running</dt><dd>{h.courses}</dd>
             </dl>
           </div>
