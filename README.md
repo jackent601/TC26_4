@@ -54,11 +54,12 @@ The tool needs to:
 │   │   ├── 0017_external_bookings_outages.sql External bookings and outages (D38): fn_book_external, fn_add_outage; audit wording
 │   │   ├── 0018_check_excluding_allocation.sql fn_check_allocation can leave out one booking, to check a move before saving it
 │   │   ├── 0019_edit_external_and_outages.sql Change external bookings and outages (D39): fn_update_external, fn_update_outage, fn_remove_outage
-│   │   └── 0020_demo_problems.sql             DEMO sample data shows every kind of warning: adds a double booking and an early arrival
+│   │   ├── 0020_demo_problems.sql             DEMO sample data shows every kind of warning: adds a double booking and an early arrival
+│   │   └── 0021_capacity_warnings.sql         Warnings when a site's scheduled or loaded places plus external bookings exceed its beds in service (D40)
 │   ├── test/
 │   │   ├── Dockerfile                         Test-only image: PostgreSQL 16 + pgTAP + pg_prove + dbmate
 │   │   └── run-tests.sh                       Throwaway database, migrations, tests, rollback check
-│   ├── tests/                                 pgTAP tests (schemas and roles, tenancy, reference data, demo reset, PostgREST hook, availability read API, write API, course-dates warning, overview, candidate beds, course management, audit trail, external bookings and outages, checking a move, changing external bookings and outages)
+│   ├── tests/                                 pgTAP tests (schemas and roles, tenancy, reference data, demo reset, PostgREST hook, availability read API, write API, course-dates warning, overview, candidate beds, course management, audit trail, external bookings and outages, checking a move, changing external bookings and outages, capacity warnings)
 │   ├── api-contract.txt                       Snapshot of the API contract: the api schema's views and functions
 │   └── setup/
 │       ├── roles.sql                          Sets api_user's password from .env; tells PostgREST to reload (run by db-roles)

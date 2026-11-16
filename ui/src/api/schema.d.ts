@@ -184,7 +184,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Warnings for the warnings strip, whatever the colour basis: courses with loaded above scheduled (D14), bookings on out-of-action beds, double bookings (one row per booking involved), and course bookings with nights outside their course's dates (strict, 0010). Clash severities come from their rules (D30). site_id is the bed's site, or the course's for course-level warnings (0011). */
+        /** Warnings for the warnings strip, whatever the colour basis: courses with loaded above scheduled (D14), bookings on out-of-action beds, double bookings (one row per booking involved), course bookings with nights outside their course's dates (strict, 0010), and sites whose scheduled or loaded places plus external bookings exceed their beds in service (SCHEDULED_OVER_CAPACITY, LOADED_OVER_CAPACITY: one row per run of nights, end_date the day after the last; 0021, D40). Clash severities come from their rules (D30). site_id is the bed's site, or the course's for course-level warnings (0011), or the site's. */
         get: {
             parameters: {
                 query?: {
@@ -2239,7 +2239,7 @@ export interface components {
             /** Format: character */
             is_demo?: string;
         };
-        /** @description Warnings for the warnings strip, whatever the colour basis: courses with loaded above scheduled (D14), bookings on out-of-action beds, double bookings (one row per booking involved), and course bookings with nights outside their course's dates (strict, 0010). Clash severities come from their rules (D30). site_id is the bed's site, or the course's for course-level warnings (0011). */
+        /** @description Warnings for the warnings strip, whatever the colour basis: courses with loaded above scheduled (D14), bookings on out-of-action beds, double bookings (one row per booking involved), course bookings with nights outside their course's dates (strict, 0010), and sites whose scheduled or loaded places plus external bookings exceed their beds in service (SCHEDULED_OVER_CAPACITY, LOADED_OVER_CAPACITY: one row per run of nights, end_date the day after the last; 0021, D40). Clash severities come from their rules (D30). site_id is the bed's site, or the course's for course-level warnings (0011), or the site's. */
         warnings: {
             /** Format: text */
             kind?: string;
