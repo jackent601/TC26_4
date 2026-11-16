@@ -149,6 +149,8 @@ export type Popup =
   // `bedKeys` (a grid selection) offers the places that hold those beds.
   | { kind: "newOutage"; key?: string; bedKeys?: string[]; from?: string; to?: string }
   | { kind: "warning"; warning: Warning }
+  // A booking dragged to another bed and/or dates, to confirm (fn_move_allocation).
+  | { kind: "move"; bar: BedBar; bedKey: string; from: string; to: string }
   // A selection of beds and nights (to = departure day, exclusive).
   | { kind: "new"; bedKeys: string[]; from: string; to: string };
 

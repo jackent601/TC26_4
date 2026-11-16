@@ -1,7 +1,8 @@
 // The availability grid: tree on the left, one column per night, bars on bed
 // rows and busiest-night counts on collapsed rows (D28). Display only: what
 // counts as a clash or a warning comes from the API. Every bar, row name and
-// week cell is a button that opens a popup. Empty parts of bed rows select
+// week cell is a button that opens a popup; booking bars can also be dragged to
+// another bed or dates (confirmed in a popup). Empty parts of bed rows select
 // week blocks for a new allocation (D8-D10).
 import { useEffect, useRef, useState, type CSSProperties, type PointerEvent as ReactPointerEvent } from "react";
 import { addDaysIso, barPlace, dayLong, ddmm } from "./dates";
@@ -35,6 +36,18 @@ interface GridContext {
   selection: Selection | null;
   onSelectStart: (rowIndex: number, e: ReactPointerEvent<HTMLElement>) => void;
   onSelectKey: (rowIndex: number) => void;
+  // Dragging a booking to another bed and/or dates.
+  moving: MoveDrag | null;
+  onBarDown: (bar: BedBar, rowIndex: number, e: ReactPointerEvent<HTMLElement>) => void;
+  justDragged: () => boolean; // a drag just ended: the click that follows isn't a click
+}
+
+// A booking being dragged: over which bed row, shifted by how many days.
+interface MoveDrag {
+  bar: BedBar;
+  row: number;
+  days: number;
+  active: boolean; // past the few pixels that tell a drag from a click
 }
 
 // A drag from one cell (row, week) to another. Rows are indexes into the
@@ -169,9 +182,65 @@ export function TimelineGrid({ rows, start, settings, bars, summary, figures, on
     };
   }
 
+  // ------------------------- Dragging a booking -------------------------
+  // Grab a booking bar and drop it on another bed row and/or other days; it
+  // keeps its length. Dropping opens a popup to confirm the move, which the
+  // database then checks and saves (fn_move_allocation). A press that moves
+  // less than a few pixels is a click and opens the booking as before.
+  const [moving, setMoving] = useState<MoveDrag | null>(null);
+  const movingRef = useRef<MoveDrag | null>(null);
+  const moveStopRef = useRef<(() => void) | null>(null);
+  const dragged = useRef(false);
+  useEffect(() => () => moveStopRef.current?.(), []);
+
+  const onBarDown = (bar: BedBar, rowIndex: number, e: ReactPointerEvent<HTMLElement>) => {
+    if (e.button !== 0) return;
+    const x0 = e.clientX, y0 = e.clientY;
+    movingRef.current = { bar, row: rowIndex, days: 0, active: false };
+
+    const move = (ev: PointerEvent) => {
+      const cur = movingRef.current;
+      if (!cur) return;
+      if (!cur.active && Math.hypot(ev.clientX - x0, ev.clientY - y0) < 5) return;
+      // The bed row under the pointer; elsewhere (a group row, outside the grid) keeps the last one.
+      const el = document.elementFromPoint(ev.clientX, ev.clientY)?.closest<HTMLElement>(".av-row[data-idx]");
+      const i = el ? Number(el.dataset.idx) : cur.row;
+      const row = rows[i]?.node.level === "Bed" ? i : cur.row;
+      const days = Math.round((ev.clientX - x0) / dayW);
+      if (!cur.active || row !== cur.row || days !== cur.days) {
+        movingRef.current = { ...cur, row, days, active: true };
+        setMoving(movingRef.current);
+      }
+    };
+    const stop = () => {
+      window.removeEventListener("pointermove", move);
+      window.removeEventListener("pointerup", up);
+      moveStopRef.current = null;
+    };
+    const up = () => {
+      const cur = movingRef.current;
+      stop();
+      movingRef.current = null;
+      setMoving(null);
+      if (!cur?.active) return;
+      dragged.current = true;
+      setTimeout(() => { dragged.current = false; }, 0);
+      const target = rows[cur.row].node;
+      if (target.id === cur.bar.bed_id && cur.days === 0) return; // dropped where it was
+      onOpen({
+        kind: "move", bar: cur.bar, bedKey: target.key,
+        from: addDaysIso(cur.bar.start_date, cur.days), to: addDaysIso(cur.bar.end_date, cur.days),
+      });
+    };
+    window.addEventListener("pointermove", move);
+    window.addEventListener("pointerup", up);
+    moveStopRef.current = stop;
+  };
+
   const ctx: GridContext = {
     start, nights, dayW, bodyWidth, lines, weekStarts, settings, bars, summary, figures, onToggle, onOpen,
     selection, onSelectStart, onSelectKey,
+    moving: moving?.active ? moving : null, onBarDown, justDragged: () => dragged.current,
   };
 
   return (
@@ -228,7 +297,8 @@ function Row({ row, index, ctx }: { row: VisibleRow; index: number; ctx: GridCon
                   onPointerDown={(e) => ctx.onSelectStart(index, e)}
                   onClick={(e) => { if (e.detail === 0) ctx.onSelectKey(index); }} />
         )}
-        {isBed && <BedBars bars={ctx.bars.get(node.id) ?? []} ctx={ctx} />}
+        {isBed && <BedBars bars={ctx.bars.get(node.id) ?? []} index={index} ctx={ctx} />}
+        {isBed && ctx.moving && ctx.moving.row === index && <MoveGhost m={ctx.moving} ctx={ctx} />}
         {inSelection && (
           <div className="av-sel" style={{ left: sel!.firstWeek * 7 * ctx.dayW, width: sel!.weeks * 7 * ctx.dayW }}>
             {firstSelectedBed && sel!.label}
@@ -240,7 +310,17 @@ function Row({ row, index, ctx }: { row: VisibleRow; index: number; ctx: GridCon
   );
 }
 
-function BedBars({ bars, ctx }: { bars: BedBar[]; ctx: GridContext }) {
+// Where a dragged booking would land, with its new dates.
+function MoveGhost({ m, ctx }: { m: MoveDrag; ctx: GridContext }) {
+  const from = addDaysIso(m.bar.start_date, m.days);
+  const to = addDaysIso(m.bar.end_date, m.days);
+  const place = barPlace(ctx.start, ctx.nights, ctx.dayW, from, to);
+  if (!place) return null;
+  const ref = m.bar.kind === "external" ? m.bar.external_ref : m.bar.course_code;
+  return <div className="av-move-ghost" style={place}>{ref} · {ddmm(from)} – {ddmm(to)}</div>;
+}
+
+function BedBars({ bars, index, ctx }: { bars: BedBar[]; index: number; ctx: GridContext }) {
   // Bars carry their full dates (0008); fit them to the days shown, whole days
   // (barPlace).
   return (
@@ -271,9 +351,13 @@ function BedBars({ bars, ctx }: { bars: BedBar[]; ctx: GridContext }) {
             : `${b.course_code}` + (course ? ` · ${course.allocated}/${basisOf(course, ctx.settings)}` : "");
         const aria = `${label}, ${dates}` + (b.on_outage ? ", clashes with an outage" : "") +
           (over ? ", course loaded above scheduled" : "");
+        const beingMoved = ctx.moving?.bar.id === b.id;
         return (
-          <button key={`a${b.id}`} type="button" className={`av-bar st-${state}${b.on_outage ? " on-outage" : ""}`}
-                  style={place} title={aria} aria-label={aria} onClick={() => ctx.onOpen({ kind: "booking", bar: b })}>
+          <button key={`a${b.id}`} type="button"
+                  className={`av-bar movable st-${state}${b.on_outage ? " on-outage" : ""}${beingMoved ? " moving" : ""}`}
+                  style={place} title={`${aria} (drag to move)`} aria-label={aria}
+                  onPointerDown={(e) => ctx.onBarDown(b, index, e)}
+                  onClick={() => { if (!ctx.justDragged()) ctx.onOpen({ kind: "booking", bar: b }); }}>
             {b.on_outage && <WarnIcon />}
             {over && <OverIcon />}
             <span>{label}</span>

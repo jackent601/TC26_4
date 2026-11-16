@@ -884,7 +884,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Clashes for allocating the given beds from p_from to p_to (exclusive), before anything is saved: existing bookings and outages on those beds. blocks is true when the clash's rule is BLOCK, so saving would be refused (D30); otherwise it saves with a warning. Given p_course_id, also a COURSE_DATES row (bed_id null) when the nights go outside that course's dates (0010). */
+        /** Clashes for allocating the given beds from p_from to p_to (exclusive), before anything is saved: existing bookings and outages on those beds. blocks is true when the clash's rule is BLOCK, so saving would be refused (D30); otherwise it saves with a warning. Given p_course_id, also a COURSE_DATES row (bed_id null) when the nights go outside that course's dates (0010). Given p_exclude_allocation, that booking is left out, so a move can be checked before it is made (0018: dragging a booking on the availability grid). */
         get: {
             parameters: {
                 query: {
@@ -892,6 +892,7 @@ export interface paths {
                     p_from: string;
                     p_to: string;
                     p_course_id?: number;
+                    p_exclude_allocation?: number;
                 };
                 header?: never;
                 path?: never;
@@ -909,7 +910,7 @@ export interface paths {
             };
         };
         put?: never;
-        /** Clashes for allocating the given beds from p_from to p_to (exclusive), before anything is saved: existing bookings and outages on those beds. blocks is true when the clash's rule is BLOCK, so saving would be refused (D30); otherwise it saves with a warning. Given p_course_id, also a COURSE_DATES row (bed_id null) when the nights go outside that course's dates (0010). */
+        /** Clashes for allocating the given beds from p_from to p_to (exclusive), before anything is saved: existing bookings and outages on those beds. blocks is true when the clash's rule is BLOCK, so saving would be refused (D30); otherwise it saves with a warning. Given p_course_id, also a COURSE_DATES row (bed_id null) when the nights go outside that course's dates (0010). Given p_exclude_allocation, that booking is left out, so a move can be checked before it is made (0018: dragging a booking on the availability grid). */
         post: {
             parameters: {
                 query?: never;
@@ -927,6 +928,8 @@ export interface paths {
                         p_bed_ids: number[];
                         /** Format: int32 */
                         p_course_id?: number;
+                        /** Format: int32 */
+                        p_exclude_allocation?: number;
                         /** Format: date */
                         p_from: string;
                         /** Format: date */
@@ -937,6 +940,8 @@ export interface paths {
                         p_bed_ids: number[];
                         /** Format: int32 */
                         p_course_id?: number;
+                        /** Format: int32 */
+                        p_exclude_allocation?: number;
                         /** Format: date */
                         p_from: string;
                         /** Format: date */
@@ -947,6 +952,8 @@ export interface paths {
                         p_bed_ids: number[];
                         /** Format: int32 */
                         p_course_id?: number;
+                        /** Format: int32 */
+                        p_exclude_allocation?: number;
                         /** Format: date */
                         p_from: string;
                         /** Format: date */
@@ -957,6 +964,8 @@ export interface paths {
                         p_bed_ids: number[];
                         /** Format: int32 */
                         p_course_id?: number;
+                        /** Format: int32 */
+                        p_exclude_allocation?: number;
                         /** Format: date */
                         p_from: string;
                         /** Format: date */

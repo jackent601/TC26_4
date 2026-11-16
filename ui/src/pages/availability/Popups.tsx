@@ -46,6 +46,7 @@ export function PopupView({ popup, data, onOpen, onNotice, onClose }: Props) {
     case "warning": return <WarningPopup warning={popup.warning} data={data} onOpen={onOpen} onNotice={onNotice} onClose={onClose} />;
     case "newExternal": return <NewExternalPopup bedKeys={popup.bedKeys} from={popup.from} to={popup.to} data={data} onOpen={onOpen} onClose={onClose} />;
     case "newOutage": return <NewOutagePopup nodeKey={popup.key} bedKeys={popup.bedKeys} from={popup.from} to={popup.to} data={data} onOpen={onOpen} onClose={onClose} />;
+    case "move": return <MovePopup bar={popup.bar} bedKey={popup.bedKey} from={popup.from} to={popup.to} data={data} onClose={onClose} />;
     case "new": return <NewAllocationPopup bedKeys={popup.bedKeys} from={popup.from} to={popup.to} data={data} onOpen={onOpen} onClose={onClose} />;
   }
 }
@@ -1219,6 +1220,70 @@ function NewOutagePopup({ nodeKey, bedKeys, from, to, data, onOpen, onClose }: {
         </>
       )}
       {add.error && <p className="clash bad">Not saved: {add.error.message}</p>}
+    </Dialog>
+  );
+}
+
+// A booking dragged on the grid: confirm where it goes. The dates can still be
+// adjusted; the clash check leaves the booking itself out (0018), and the
+// database checks again when it saves (fn_move_allocation).
+function MovePopup({ bar, bedKey, from, to, data, onClose }: {
+  bar: BedBar; bedKey: string; from: string; to: string; data: PopupData; onClose: () => void;
+}) {
+  const target = data.nodes.get(bedKey);
+  const current = data.nodes.get(`bed:${bar.bed_id}`);
+  const [first, setFirst] = useState(from);
+  const [departure, setDeparture] = useState(to);
+  const valid = first !== "" && departure !== "" && departure > first;
+  const ref = (bar.kind === "external" ? bar.external_ref : bar.course_code) ?? "Booking";
+  const unchanged = target?.id === bar.bed_id && first === bar.start_date && departure === bar.end_date;
+
+  const clashes = useClashes(data.tenant, target ? [target.id] : [], first, departure, valid && target !== undefined,
+                             bar.course_id, bar.id);
+  const outside = (clashes.data ?? []).find((c) => c.kind === "COURSE_DATES");
+  const list = (clashes.data ?? []).filter((c) => c.kind !== "COURSE_DATES");
+  const blocked = list.some((c) => c.blocks);
+  const move = useMoveAllocation(data.tenant);
+  const canMove = valid && target !== undefined && !unchanged && !clashes.isPending && !clashes.error && !blocked && !move.isPending;
+
+  if (move.data && target) {
+    return <SavedResult kind="Moved" title={`${ref}: moved`} saved={`${bedName(data.nodes, target)}, ${stay(first, departure)}`}
+                        warnings={move.data.warnings} onClose={onClose} />;
+  }
+
+  return (
+    <Dialog kind="Move booking" title={bar.kind === "external" ? `${ref} · ${bar.external_name ?? ""}` : ref} onClose={onClose}
+            actions={
+              <button type="button" className="btn primary" disabled={!canMove}
+                      onClick={() => target && move.mutate({ id: bar.id, bedId: target.id, from: first, to: departure })}>
+                {move.isPending ? "Moving…" : "Move"}
+              </button>
+            }>
+      <Facts rows={[
+        ["From", `${current ? bedName(data.nodes, current) : `Bed ${bar.bed_id}`}, ${stay(bar.start_date, bar.end_date)}`],
+        ["To", target ? bedName(data.nodes, target) : "Unknown bed"],
+      ]} />
+      <div className="dates">
+        <label>First night<input type="date" value={first} disabled={move.isPending} onChange={(e) => setFirst(e.target.value)} /></label>
+        <label>Departure<input type="date" value={departure} disabled={move.isPending} onChange={(e) => setDeparture(e.target.value)} /></label>
+      </div>
+      {!valid ? <p className="clash bad">Departure must be after the first night.</p> :
+        unchanged ? <p className="summary">That's where it is now.</p> : <p className="summary">{stay(first, departure)}</p>}
+      {valid && !unchanged && (clashes.isPending ? <p className="summary">Checking for clashes…</p> :
+        clashes.error ? <p className="clash bad">Could not check clashes: {clashes.error.message}</p> :
+        list.length === 0 ? <p className="clash ok">No clashes there for these nights.</p> : (
+          <div className="clash bad">
+            <strong>{blocked ? "Not allowed: " : ""}{list.length} {list.length === 1 ? "clash" : "clashes"}</strong>{" "}
+            {blocked ? "(a clash rule is set to block)" : "(allowed with a warning)"}
+            <ul className="av-list">{list.map((c, i) => <li key={i}>{clashText(c)}</li>)}</ul>
+          </div>
+        ))}
+      {valid && !unchanged && outside && (
+        <p className="clash bad">
+          <WarnIcon /> These nights go outside {outside.ref}'s dates ({ddmm(outside.start_date)}–{ddmm(outside.end_date)}). Allowed with a warning.
+        </p>
+      )}
+      {move.error && <p className="clash bad">Not moved: {move.error.message}</p>}
     </Dialog>
   );
 }
