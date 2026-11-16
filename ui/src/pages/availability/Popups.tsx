@@ -44,7 +44,7 @@ export function PopupView({ popup, data, onOpen, onNotice, onClose }: Props) {
     case "bookCourse": return <BookCoursePopup courseId={popup.courseId} data={data} onClose={onClose} />;
     case "newCourse": return <NewCoursePopup from={popup.from} to={popup.to} data={data} onOpen={onOpen} onClose={onClose} />;
     case "warning": return <WarningPopup warning={popup.warning} data={data} onOpen={onOpen} onNotice={onNotice} onClose={onClose} />;
-    case "newExternal": return <NewExternalPopup bedKeys={popup.bedKeys} from={popup.from} to={popup.to} data={data} onClose={onClose} />;
+    case "newExternal": return <NewExternalPopup bedKeys={popup.bedKeys} from={popup.from} to={popup.to} data={data} onOpen={onOpen} onClose={onClose} />;
     case "newOutage": return <NewOutagePopup nodeKey={popup.key} from={popup.from} to={popup.to} data={data} onClose={onClose} />;
     case "new": return <NewAllocationPopup bedKeys={popup.bedKeys} from={popup.from} to={popup.to} data={data} onOpen={onOpen} onClose={onClose} />;
   }
@@ -928,12 +928,16 @@ const clashText = (c: Clash) =>
   ` ${ddmm(c.start_date)}–${ddmm(c.end_date)}` + (c.blocks ? " · not allowed" : "");
 
 // Book beds for someone outside the courses (fn_book_external): a reference, a
-// name, the dates, and beds ticked on one site, each with what it clashes with.
-function NewExternalPopup({ bedKeys, from, to, data, onClose }: {
-  bedKeys?: string[]; from?: string; to?: string; data: PopupData; onClose: () => void;
+// name and the dates. From the New menu the beds are ticked on one site, each
+// with what it clashes with; from a grid selection the beds are the ones
+// selected, listed with their clashes like the course booking, with a switch
+// back to it.
+function NewExternalPopup({ bedKeys, from, to, data, onOpen, onClose }: {
+  bedKeys?: string[]; from?: string; to?: string; data: PopupData; onOpen: (p: Popup) => void; onClose: () => void;
 }) {
   const sites = sitesOf(data.nodes).sort((a, b) => a.sortOrder - b.sortOrder);
   const given = (bedKeys ?? []).map((k) => data.nodes.get(k)).filter((n): n is LocationNode => n !== undefined);
+  const fixed = given.length > 0; // beds come from a grid selection
   const [ref, setRef] = useState("");
   const [name, setName] = useState("");
   const [first, setFirst] = useState(from ?? nextMonday());
@@ -944,7 +948,7 @@ function NewExternalPopup({ bedKeys, from, to, data, onClose }: {
   const valid = first !== "" && departure !== "" && departure > first;
 
   const site = sites.find((s) => s.id === siteId);
-  const beds = site ? bedsUnder(site) : [];
+  const beds = fixed ? given : site ? bedsUnder(site) : [];
   const clashes = useClashes(data.tenant, beds.map((b) => b.id), first, departure, valid);
   const clashesOn = new Map<number, Clash[]>();
   for (const c of clashes.data ?? []) if (c.bed_id !== null) clashesOn.set(c.bed_id, [...(clashesOn.get(c.bed_id) ?? []), c]);
@@ -966,7 +970,7 @@ function NewExternalPopup({ bedKeys, from, to, data, onClose }: {
     else next.add(id);
     setChosen(next);
   };
-  const bedIds = beds.filter((b) => chosen.has(b.id)).map((b) => b.id); // this site, estate order
+  const bedIds = fixed ? given.map((b) => b.id) : beds.filter((b) => chosen.has(b.id)).map((b) => b.id); // this site, estate order
   const blocked = bedIds.some((id) => (clashesOn.get(id) ?? []).some((c) => c.blocks));
   const book = useBookExternal(data.tenant);
   const canBook = valid && ref.trim() !== "" && name.trim() !== "" && bedIds.length > 0 &&
@@ -977,14 +981,14 @@ function NewExternalPopup({ bedKeys, from, to, data, onClose }: {
                         saved={`${name.trim()}, ${stay(first, departure)}`} warnings={book.data.flatMap((a) => a.warnings)} onClose={onClose} />;
   }
 
-  return (
-    <Dialog kind="New external booking" title="Book beds for someone outside the courses" onClose={onClose} wide
-            actions={
-              <button type="button" className="btn primary" disabled={!canBook}
-                      onClick={() => book.mutate({ ref: ref.trim(), name: name.trim(), bedIds, from: first, to: departure })}>
-                {book.isPending ? "Booking…" : `Book ${bedIds.length} ${bedIds.length === 1 ? "bed" : "beds"}`}
-              </button>
-            }>
+  const bookButton = (
+    <button type="button" className="btn primary" disabled={!canBook}
+            onClick={() => book.mutate({ ref: ref.trim(), name: name.trim(), bedIds, from: first, to: departure })}>
+      {book.isPending ? "Booking…" : `Book ${bedIds.length} ${bedIds.length === 1 ? "bed" : "beds"}`}
+    </button>
+  );
+  const fields = (
+    <>
       <div className="av-form">
         <label className="av-field">Reference<input type="text" maxLength={50} value={ref} placeholder="e.g. BK-4600"
                                                      disabled={book.isPending} onChange={(e) => setRef(e.target.value)} /></label>
@@ -994,6 +998,44 @@ function NewExternalPopup({ bedKeys, from, to, data, onClose }: {
         <label className="av-field">Departure<input type="date" value={departure} disabled={book.isPending} onChange={(e) => setDeparture(e.target.value)} /></label>
       </div>
       {valid ? <p className="summary">{stay(first, departure)}</p> : <p className="clash bad">Departure must be after the first night.</p>}
+    </>
+  );
+
+  // From a grid selection: the selected beds, their clashes, and the details.
+  if (fixed) {
+    const list = clashes.data ?? [];
+    const byId = new Map(given.map((b) => [b.id, b]));
+    return (
+      <Dialog kind="New allocation" title={`${given.length} ${given.length === 1 ? "bed" : "beds"}`} onClose={onClose} actions={bookButton}>
+        <div className="av-modes" role="group" aria-label="Kind of booking">
+          <button type="button" aria-pressed="false"
+                  onClick={() => onOpen({ kind: "new", bedKeys: given.map((b) => b.key), from: first, to: departure })}>Course booking</button>
+          <button type="button" aria-pressed="true">External booking</button>
+        </div>
+        <Facts rows={[["Beds", given.map((b) => bedName(data.nodes, b)).join(", ")]]} />
+        {fields}
+        {valid && (clashes.isPending ? <p className="summary">Checking for clashes…</p> :
+          clashes.error ? <p className="clash bad">Could not check clashes: {clashes.error.message}</p> :
+          list.length === 0 ? <p className="clash ok">No clashes on these beds for these nights.</p> : (
+            <div className="clash bad">
+              <strong>{blocked ? "Not allowed: " : ""}{list.length} {list.length === 1 ? "clash" : "clashes"}</strong>{" "}
+              {blocked ? "(a clash rule is set to block)" : "(allowed with a warning)"}
+              <ul className="av-list">
+                {list.map((c, i) => {
+                  const bed = c.bed_id !== null ? byId.get(c.bed_id) : undefined;
+                  return <li key={i}>{bed ? bedName(data.nodes, bed) : `Bed ${c.bed_id}`}: {clashText(c)}</li>;
+                })}
+              </ul>
+            </div>
+          ))}
+        {book.error && <p className="clash bad">Not saved: {book.error.message}</p>}
+      </Dialog>
+    );
+  }
+
+  return (
+    <Dialog kind="New external booking" title="Book beds for someone outside the courses" onClose={onClose} wide actions={bookButton}>
+      {fields}
 
       {sites.length > 1 && (
         <label className="av-field">Site
