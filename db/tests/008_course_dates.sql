@@ -14,8 +14,11 @@ select course_id as tec, to_char(start_date, 'DD/MM') as tec_from, to_char(end_d
 select b.bed_id as r103a from core.beds b join core.rooms r using (room_id)
  where r.tenant_id = core.current_tenant_id() and r.code = '103' and b.code = 'a' \gset
 
-select is((select count(*)::int from api.warnings where kind = 'OUTSIDE_COURSE_DATES'), 0,
-          'the sample bookings all match their course dates');
+select to_char(start_date, 'DD/MM') as int_from, to_char(end_date, 'DD/MM') as int_to
+  from core.courses where tenant_id = core.current_tenant_id() and code = 'INT-22' \gset
+select results_eq($$ select message from api.warnings where kind = 'OUTSIDE_COURSE_DATES' $$,
+                  format($$ values ('INT-22 booking in Room 102 bed B is outside the course dates (%s to %s)') $$, :'int_from', :'int_to'),
+                  'the sample has one booking outside its course dates: INT-22 arriving the night before (0020)');
 
 -- Before saving: the check, given the course.
 select results_eq(format($$ select bed_id, kind, ref, blocks from api.fn_check_allocation(array[%s], %L, %L, %s) $$,
@@ -39,14 +42,14 @@ select is((select message from api.warnings where kind = 'OUTSIDE_COURSE_DATES' 
 -- Moving inside the dates clears it; an early first night brings it back.
 select is((select cardinality(warnings) from api.fn_move_allocation(:a, null, :'w0'::date + 14, :'w0'::date + 26)), 0,
           'moving within the course dates returns no warning');
-select is((select count(*)::int from api.warnings where kind = 'OUTSIDE_COURSE_DATES'), 0,
+select is((select count(*)::int from api.warnings where kind = 'OUTSIDE_COURSE_DATES' and allocation_id = :a), 0,
           'and the warning is gone');
 select is((select warnings from api.fn_move_allocation(:a, null, :'w0'::date + 13, :'w0'::date + 26)),
           array[format('Outside the course dates: TEC-07 runs %s to %s', :'tec_from', :'tec_to')],
           'arriving the night before the course warns (strict, no allowance)');
 
 select api.fn_cancel_allocation(:a);
-select is((select count(*)::int from api.warnings where kind = 'OUTSIDE_COURSE_DATES'), 0,
+select is((select count(*)::int from api.warnings where kind = 'OUTSIDE_COURSE_DATES' and allocation_id = :a), 0,
           'a cancelled booking gives no warning');
 
 select * from finish();

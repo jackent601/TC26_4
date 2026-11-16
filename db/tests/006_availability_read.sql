@@ -60,8 +60,8 @@ select results_eq($$ select code, pct_scheduled, pct_loaded from api.course_figu
 ------------------------------- fn_bed_bars --------------------------------
 select results_eq(format($$ select kind, count(*)::int from api.fn_bed_bars(%L, %L) group by kind order by kind $$,
                          :'w0', (:'w0'::date + 35)),
-                  $$ values ('allocation', 22), ('external', 4), ('outage', 6) $$,
-                  'five weeks: 22 allocations, 4 external bookings, 6 outage bars');
+                  $$ values ('allocation', 22), ('external', 5), ('outage', 6) $$,
+                  'five weeks: 22 allocations, 5 external bookings, 6 outage bars');
 select results_eq(format($$ select external_ref from api.fn_bed_bars(%L, %L) where on_outage $$,
                          :'w0', (:'w0'::date + 35)),
                   $$ values ('BK-4530') $$, 'only BK-4530 is on an outage');
@@ -110,10 +110,15 @@ select throws_ok(format($$ select * from api.fn_week_summary(%L, 0) $$, :'w0'),
                  'P0001', 'p_weeks must be between 1 and 52', 'fn_week_summary rejects 0 weeks');
 
 --------------------------------- warnings ---------------------------------
-select results_eq($$ select kind, message from api.warnings order by kind $$,
-                  $$ values ('LOADED_ABOVE_SCHEDULED', 'TEC-07: 12 loaded vs 10 scheduled'),
-                            ('OUT_OF_ACTION', 'BK-4530 is in an out-of-action bed (Room B101 bed A)') $$,
-                  'warnings on the sample data');
+-- One of each kind (0020 added the double booking and the early arrival).
+select to_char(:'w0'::date + 21, 'DD/MM') as d21, to_char(:'w0'::date + 27, 'DD/MM') as d27 \gset
+select results_eq($$ select kind, message from api.warnings order by kind collate "C", message collate "C" $$,
+                  format($$ values ('DOUBLE_BOOKING', 'BK-4561 is double-booked (Room 302 bed B)'),
+                                   ('DOUBLE_BOOKING', 'TEC-07 is double-booked (Room 302 bed B)'),
+                                   ('LOADED_ABOVE_SCHEDULED', 'TEC-07: 12 loaded vs 10 scheduled'),
+                                   ('OUTSIDE_COURSE_DATES', 'INT-22 booking in Room 102 bed B is outside the course dates (%s to %s)'),
+                                   ('OUT_OF_ACTION', 'BK-4530 is in an out-of-action bed (Room B101 bed A)') $$, :'d21', :'d27'),
+                  'warnings on the sample data: one of each kind');
 
 ---------------------------- fn_check_allocation ---------------------------
 select results_eq(format($$ select kind, ref from api.fn_check_allocation(array[%s, %s], %L, %L)
@@ -137,14 +142,14 @@ select (select count(*) from api.locations) || '/' || (select count(*) from api.
     || (select count(*) from api.fn_check_allocation(array[:b101a], :'w0'::date + 21, :'w0'::date + 28))
     as as_api_user \gset
 reset role;
-select is(:'as_api_user'::text, '44/5/2/32/105/2'::text,
+select is(:'as_api_user'::text, '44/5/5/33/105/2'::text,
           'api_user can read every endpoint (locations/figures/warnings/bars/summary/clashes)');
 
 ------------------------------- double booking -----------------------------
 insert into core.allocations (course_id, individual_no, bed_id, start_date, end_date)
 select course_id, 9, :r101a, :'w0'::date + 22, :'w0'::date + 24 from core.courses
  where tenant_id = core.current_tenant_id() and code = 'TEC-07';
-select results_eq($$ select message from api.warnings where kind = 'DOUBLE_BOOKING' order by message $$,
+select results_eq($$ select message from api.warnings where kind = 'DOUBLE_BOOKING' and message like '%Room 101%' order by message $$,
                   $$ values ('INT-22 is double-booked (Room 101 bed A)'),
                             ('TEC-07 is double-booked (Room 101 bed A)') $$,
                   'a double booking warns on both bookings');

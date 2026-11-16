@@ -53,7 +53,8 @@ The tool needs to:
 │   │   ├── 0016_demo_courses_mon_sun.sql      DEMO sample courses run Monday to Sunday, like a week block; reloads an untouched DEMO
 │   │   ├── 0017_external_bookings_outages.sql External bookings and outages (D38): fn_book_external, fn_add_outage; audit wording
 │   │   ├── 0018_check_excluding_allocation.sql fn_check_allocation can leave out one booking, to check a move before saving it
-│   │   └── 0019_edit_external_and_outages.sql Change external bookings and outages (D39): fn_update_external, fn_update_outage, fn_remove_outage
+│   │   ├── 0019_edit_external_and_outages.sql Change external bookings and outages (D39): fn_update_external, fn_update_outage, fn_remove_outage
+│   │   └── 0020_demo_problems.sql             DEMO sample data shows every kind of warning: adds a double booking and an early arrival
 │   ├── test/
 │   │   ├── Dockerfile                         Test-only image: PostgreSQL 16 + pgTAP + pg_prove + dbmate
 │   │   └── run-tests.sh                       Throwaway database, migrations, tests, rollback check

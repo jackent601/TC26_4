@@ -10,10 +10,10 @@ select throws_ok($$ select api.use_tenant('LIVE'); select * from api.reset_demo_
 
 select api.use_tenant('DEMO');
 select results_eq($$ select beds, courses, allocations, outages from api.reset_demo_data() $$,
-                  $$ values (23::bigint, 5::bigint, 26::bigint, 2::bigint) $$,
+                  $$ values (23::bigint, 5::bigint, 27::bigint, 2::bigint) $$,
                   'reset loads the sample data');
 select results_eq($$ select beds, courses, allocations, outages from api.reset_demo_data() $$,
-                  $$ values (23::bigint, 5::bigint, 26::bigint, 2::bigint) $$,
+                  $$ values (23::bigint, 5::bigint, 27::bigint, 2::bigint) $$,
                   'reset can be repeated');
 
 select is((select count(*)::int from core.attribute_types a join core.tenants t using (tenant_id)
@@ -35,7 +35,7 @@ set local role api_user;
 select api.use_tenant('DEMO');
 select allocations as api_allocs from api.reset_demo_data() \gset
 reset role;
-select is(:api_allocs::int, 26, 'api_user can reset the demo tenant');
+select is(:api_allocs::int, 27, 'api_user can reset the demo tenant');
 
 select * from finish();
 rollback;
