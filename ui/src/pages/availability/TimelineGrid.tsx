@@ -78,9 +78,11 @@ interface Props {
   figures: Map<number, CourseFigure>;
   onToggle: (key: string) => void;
   onOpen: (p: Popup) => void;
+  // A booking to scroll to and highlight once drawn; a new seq does it again.
+  highlight?: { allocationId: number; seq: number } | null;
 }
 
-export function TimelineGrid({ rows, start, settings, bars, summary, figures, onToggle, onOpen }: Props) {
+export function TimelineGrid({ rows, start, settings, bars, summary, figures, onToggle, onOpen, highlight = null }: Props) {
   const nights = settings.weeks * 7;
   // Fill the available width: days widen to fit, never narrower than the
   // user's minimum day width (then the grid scrolls sideways).
@@ -181,6 +183,25 @@ export function TimelineGrid({ rows, start, settings, bars, summary, figures, on
         `${ddmm(addDaysIso(start, wa * 7))} – ${ddmm(addDaysIso(start, wb * 7 + 6))}`,
     };
   }
+
+  // ------------------------ Highlighting a booking ------------------------
+  // When asked (e.g. arriving from a warning on the Overview), scroll the
+  // booking's bar into view and play a glow that fades. Waits until the bar is
+  // drawn: bars and rows load after the page opens.
+  const highlighted = useRef<number | null>(null);
+  useEffect(() => {
+    if (!highlight || highlighted.current === highlight.seq) return;
+    const el = scrollRef.current?.querySelector<HTMLElement>(`.av-bar[data-allocation="${highlight.allocationId}"]`);
+    if (!el) return;
+    highlighted.current = highlight.seq;
+    el.scrollIntoView({ block: "center", inline: "center", behavior: "smooth" });
+    el.classList.remove("flash");
+    void el.offsetWidth; // restart the animation
+    el.classList.add("flash");
+    // Off when the animation ends, or after its length if no animationend comes (a background tab).
+    el.addEventListener("animationend", () => el.classList.remove("flash"), { once: true });
+    setTimeout(() => el.classList.remove("flash"), 3000);
+  }, [highlight, bars, rows, dayW]);
 
   // ------------------------- Dragging a booking -------------------------
   // Grab a booking bar and drop it on another bed row and/or other days; it
@@ -355,7 +376,7 @@ function BedBars({ bars, index, ctx }: { bars: BedBar[]; index: number; ctx: Gri
         return (
           <button key={`a${b.id}`} type="button"
                   className={`av-bar movable st-${state}${b.on_outage ? " on-outage" : ""}${beingMoved ? " moving" : ""}`}
-                  style={place} title={`${aria} (drag to move)`} aria-label={aria}
+                  style={place} title={`${aria} (drag to move)`} aria-label={aria} data-allocation={b.id}
                   onPointerDown={(e) => ctx.onBarDown(b, index, e)}
                   onClick={() => { if (!ctx.justDragged()) ctx.onOpen({ kind: "booking", bar: b }); }}>
             {b.on_outage && <WarnIcon />}

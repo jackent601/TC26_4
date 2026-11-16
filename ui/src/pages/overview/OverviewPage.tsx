@@ -2,6 +2,7 @@
 // then the warnings and a courses timeline. Everything comes from the API
 // (0011); clicking a warning or course opens the same popups as Availability.
 import { useCallback, useMemo, useState } from "react";
+import { useNavigate } from "react-router";
 import { FilterIcon } from "../../icons";
 import { useTenant } from "../../tenant";
 import { NewMenu, Popover, RangePicker } from "../availability/Controls";
@@ -11,15 +12,22 @@ import { addDaysIso, dayLong, dayLongYear, ddmm, defaultStart, iso, mondayOf } f
 import { Arrow, OverIcon, WarnIcon } from "../availability/look";
 import { PopupView, type Notice } from "../availability/Popups";
 import { useViewSettings } from "../availability/settings";
-import type { LocationNode, Popup } from "../availability/types";
+import type { LocationNode, Popup, Warning } from "../availability/types";
+import type { FocusBooking } from "../availability/AvailabilityPage";
 import { CourseTimeline } from "./CourseTimeline";
 import { useSiteFilter, useWeeklyOverview } from "./data";
 import { WeeklyChart } from "./WeeklyChart";
 import "../availability/availability.css";
 import "./overview.css";
 
+// Warnings about one booking (outside its course's dates, in an out-of-action
+// bed, double booked) open the booking on the availability grid instead of a
+// popup; course-level warnings (loaded above scheduled) open the course.
+const showOnGrid = (w: Warning) => w.allocationId !== null && w.bedId !== null && w.startDate !== null;
+
 export function OverviewPage() {
   const { code: tenant } = useTenant();
+  const navigate = useNavigate();
   const [settings] = useViewSettings(); // colour basis and thresholds, shared with Availability
   const [start, setStart] = useState(defaultStart);
   const [weeks, setWeeks] = useState(8);
@@ -184,8 +192,17 @@ export function OverviewPage() {
                 {list.map((w, i) => (
                   <li key={`${w.kind}-${w.allocationId}-${w.courseId}-${i}`}>
                     <button type="button"
-                            onClick={() => open(w.allocationId === null && w.courseId !== null
-                              ? { kind: "course", courseId: w.courseId } : { kind: "warning", warning: w })}>
+                            title={showOnGrid(w) ? "Show this booking on the availability grid" : undefined}
+                            onClick={() => {
+                              // A booking: go to it on the grid, highlighted.
+                              if (showOnGrid(w)) {
+                                const focus: FocusBooking = { allocationId: w.allocationId!, bedId: w.bedId!, startDate: w.startDate! };
+                                navigate("/availability", { state: { focus } });
+                              } else {
+                                open(w.allocationId === null && w.courseId !== null
+                                  ? { kind: "course", courseId: w.courseId } : { kind: "warning", warning: w });
+                              }
+                            }}>
                       {w.kind === "LOADED_ABOVE_SCHEDULED" ? <OverIcon /> : <WarnIcon />}
                       <span className="msg">{w.message}</span>
                       <span className="when">{w.startDate && w.endDate ? `${ddmm(w.startDate)}–${ddmm(w.endDate)}` : ""}</span>

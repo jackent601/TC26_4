@@ -1,19 +1,28 @@
 // Availability page: header controls, legend, warnings strip, the grid, its
 // popups (phase 2) and course booking through them (phase 3).
 // Spec: claude_availability_page_overview.md; mockup: docs/pages_pocs/availability.html.
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useLocation, useNavigate } from "react-router";
 import { PopupView, type Notice } from "./Popups";
 import { WarnIcon } from "./look";
 import { useTenant } from "../../tenant";
 import { Controls } from "./Controls";
 import { useBedBars, useCourseFigures, useLocations, useWarnings, useWeekSummary } from "./data";
 import { WarningsStrip } from "./LegendAndWarnings";
-import { addDaysIso, dayLong, dayLongYear, defaultStart, iso, mondayOf } from "./dates";
+import { addDaysIso, dayLong, dayLongYear, defaultStart, iso, mondayOf, parse } from "./dates";
 import { useCollapsed, useLocationFilter, useViewSettings } from "./settings";
 import { pruneTree } from "./Filter";
 import { TimelineGrid, type VisibleRow } from "./TimelineGrid";
 import type { LocationNode, Popup } from "./types";
 import "./availability.css";
+
+// A booking to bring into view when the page opens, e.g. from a warning on the
+// Overview: passed as router state { focus }.
+export interface FocusBooking {
+  allocationId: number;
+  bedId: number;
+  startDate: string;
+}
 
 export function AvailabilityPage() {
   const { code: tenant } = useTenant();
@@ -73,6 +82,42 @@ export function AvailabilityPage() {
     },
     [collapsed, setCollapsed],
   );
+
+  // ---------------------- Arriving to show a booking ----------------------
+  // Start the week before the booking, make its bed's row visible (expand the
+  // rows above it; add its block to the filter if it's filtered out), then the
+  // grid scrolls to the bar and highlights it.
+  const location = useLocation();
+  const navigate = useNavigate();
+  const [focus, setFocus] = useState<(FocusBooking & { seq: number }) | null>(null);
+  useEffect(() => {
+    const f = (location.state as { focus?: FocusBooking } | null)?.focus;
+    if (!f) return;
+    setFocus({ ...f, seq: Date.now() });
+    setStart(addDaysIso(iso(mondayOf(parse(f.startDate))), -7));
+    navigate(location.pathname, { replace: true, state: null }); // not again on refresh or back
+  }, [location.state, location.pathname, navigate]);
+
+  const revealed = useRef<number | null>(null); // once per arrival, so rows can be collapsed again afterwards
+  useEffect(() => {
+    if (!focus || nodes.size === 0 || revealed.current === focus.seq) return;
+    revealed.current = focus.seq;
+    const above: LocationNode[] = [];
+    for (let n = nodes.get(`bed:${focus.bedId}`); n?.parentKey; ) {
+      n = nodes.get(n.parentKey);
+      if (n) above.push(n);
+    }
+    const shut = above.filter((n) => collapsed.has(n.key));
+    if (shut.length > 0) {
+      const next = new Set(collapsed);
+      shut.forEach((n) => next.delete(n.key));
+      setCollapsed(next);
+    }
+    const block = above.find((n) => n.level === "Block");
+    if (block && filter.blocks !== null && !filter.blocks.includes(block.key)) {
+      setFilter({ blocks: [...filter.blocks, block.key] });
+    }
+  }, [focus, nodes, collapsed, setCollapsed, filter, setFilter]);
 
   const collapseToFloors = () => {
     const floors = new Set<string>();
@@ -138,6 +183,7 @@ export function AvailabilityPage() {
           figures={figures.data ?? new Map()}
           onToggle={toggle}
           onOpen={open}
+          highlight={focus ? { allocationId: focus.allocationId, seq: focus.seq } : null}
         />
       )}
 

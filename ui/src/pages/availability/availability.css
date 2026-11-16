@@ -322,3 +322,17 @@
   display: flex; align-items: center; padding-left: 8px;
   font-size: 11px; font-weight: 650; color: var(--sel-text); white-space: nowrap; overflow: visible;
 }
+
+/* A booking brought into view (e.g. from a warning on the Overview): a glow that fades. */
+.av-bar.flash { z-index: 5; animation: av-flash 2.8s ease-out; }
+@keyframes av-flash {
+  0%, 35% { box-shadow: 0 0 0 3px var(--accent), 0 0 16px 6px var(--accent); }
+  100% { box-shadow: 0 0 0 0 transparent, 0 0 0 0 transparent; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .av-bar.flash { animation: av-flash-still 2.8s step-end; outline-offset: 1px; }
+}
+@keyframes av-flash-still {
+  0% { outline: 3px solid var(--accent); }
+  100% { outline: 0 solid transparent; }
+}
