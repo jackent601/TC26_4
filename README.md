@@ -32,6 +32,8 @@ The tool needs to:
 │   ├── erd.png                                The same ER diagram as an image
 │   ├── erd.svg                                The same ER diagram as a scalable image
 │   ├── data_model_slide.svg                   One-page summary of the data model for slides (16:9, key columns only)
+│   ├── architecture_slide.svg                 One-page architecture for slides (16:9): thin UI and API, the database as the product
+│   ├── architecture_slide.png                 The same, as an image (rendered from the SVG)
 │   └── pages_pocs/                            Clickable page mockups (open the .html files in a browser)
 ├── db/
 │   ├── migrations/                            dbmate migrations, applied in order

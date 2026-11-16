@@ -1,0 +1,178 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1920 1080" width="1920" height="1080" font-family="Helvetica Neue, Helvetica, Arial, sans-serif">
+<!-- Accommodation allocation PoC: architecture for a slide (16:9). The UI and API are thin; the data
+     model and SQL functions in PostgreSQL are the product (D22, D26, D27). Keep in line with compose.yaml. -->
+<style>
+  .title { font-size: 44px; font-weight: 700; fill: #111827; }
+  .sub { font-size: 22px; fill: #4b5563; }
+  .layer { font-size: 30px; font-weight: 700; }
+  .what { font-size: 19px; fill: #374151; }
+  .tag { font-size: 15px; font-weight: 700; letter-spacing: 0.6px; }
+  .flow { font-size: 16px; fill: #4b5563; }
+  .ptitle { font-size: 22px; font-weight: 700; }
+  .item { font-size: 18px; fill: #1f2937; }
+  .detail { font-size: 14px; fill: #6b7280; }
+  .note { font-size: 17px; fill: #374151; }
+  .arrow { stroke: #4b5563; stroke-width: 2.5; fill: none; }
+</style>
+<defs>
+  <marker id="head" markerUnits="userSpaceOnUse" markerWidth="14" markerHeight="14" refX="12" refY="7" orient="auto-start-reverse">
+    <path d="M0,0 L14,7 L0,14 z" fill="#4b5563"/>
+  </marker>
+  <marker id="headDash" markerUnits="userSpaceOnUse" markerWidth="12" markerHeight="12" refX="10" refY="6" orient="auto-start-reverse">
+    <path d="M0,0 L12,6 L0,12 z" fill="#9ca3af"/>
+  </marker>
+</defs>
+
+<rect x="0" y="0" width="1920" height="1080" fill="#ffffff"/>
+
+<!-- ============================== Title ============================== -->
+<text class="title" x="60" y="84">The data model is the product</text>
+<text class="sub" x="60" y="124">A thin UI and an API with no code of its own, in front of the database where every rule lives.</text>
+
+<!-- ============================ UI layer ============================= -->
+<rect x="60" y="164" width="1240" height="104" rx="14" fill="#eaf2fb" stroke="#2f6db5" stroke-width="1.5"/>
+<!-- icon: browser window -->
+<g transform="translate(88,188)" fill="none" stroke="#2f6db5" stroke-width="3">
+  <rect x="0" y="0" width="64" height="52" rx="6"/>
+  <line x1="0" y1="14" x2="64" y2="14"/>
+  <circle cx="9" cy="7" r="1.8" fill="#2f6db5" stroke="none"/>
+  <circle cx="16" cy="7" r="1.8" fill="#2f6db5" stroke="none"/>
+  <circle cx="23" cy="7" r="1.8" fill="#2f6db5" stroke="none"/>
+  <line x1="10" y1="26" x2="40" y2="26"/>
+  <line x1="10" y1="36" x2="54" y2="36"/>
+</g>
+<text class="layer" x="176" y="206" fill="#2f6db5">UI</text>
+<text class="what" x="176" y="240">React + TypeScript, served by Caddy · shows what the API returns and sends what the user asks for</text>
+<rect x="1170" y="196" width="104" height="34" rx="17" fill="#2f6db5"/>
+<text class="tag" x="1222" y="219" fill="#ffffff" text-anchor="middle">THIN</text>
+
+<!-- arrow UI <-> API -->
+<line class="arrow" x1="680" y1="272" x2="680" y2="302" marker-start="url(#head)" marker-end="url(#head)"/>
+<text class="flow" x="700" y="293">JSON over HTTPS, X-Tenant header</text>
+
+<!-- ============================ API layer ============================ -->
+<rect x="60" y="306" width="1240" height="94" rx="14" fill="#f3eefb" stroke="#6b4fa8" stroke-width="1.5"/>
+<!-- icon: two-way exchange -->
+<g transform="translate(88,324)" fill="none" stroke="#6b4fa8" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+  <rect x="0" y="0" width="64" height="56" rx="10"/>
+  <path d="M14,20 H50 M42,12 L50,20 L42,28"/>
+  <path d="M50,38 H14 M22,30 L14,38 L22,46"/>
+</g>
+<text class="layer" x="176" y="344" fill="#6b4fa8">API</text>
+<text class="what" x="176" y="378">Official PostgREST image, no application code · every api view is GET /view, every function POST /rpc/function</text>
+<rect x="1170" y="334" width="104" height="34" rx="17" fill="#6b4fa8"/>
+<text class="tag" x="1222" y="357" fill="#ffffff" text-anchor="middle">NO CODE</text>
+
+<!-- arrow API <-> DB -->
+<line class="arrow" x1="680" y1="404" x2="680" y2="434" marker-start="url(#head)" marker-end="url(#head)"/>
+<text class="flow" x="700" y="425">SQL as api_user, which may use the api schema only</text>
+
+<!-- ============================ Database ============================= -->
+<rect x="60" y="438" width="1240" height="592" rx="16" fill="#eaf6ea" stroke="#2e8b57" stroke-width="2.5"/>
+<!-- icon: database cylinder -->
+<g transform="translate(88,462)" fill="#ffffff" stroke="#2e8b57" stroke-width="3">
+  <path d="M0,10 V54 A32,10 0 0 0 64,54 V10"/>
+  <ellipse cx="32" cy="10" rx="32" ry="10"/>
+  <path d="M0,25 A32,10 0 0 0 64,25" fill="none"/>
+  <path d="M0,40 A32,10 0 0 0 64,40" fill="none"/>
+</g>
+<text class="layer" x="176" y="486" fill="#2e8b57">Database: the product</text>
+<text class="what" x="176" y="520">PostgreSQL 16 · validation, rules, warnings, availability, suggestions and audit, all in SQL</text>
+<rect x="1124" y="470" width="150" height="34" rx="17" fill="#2e8b57"/>
+<text class="tag" x="1199" y="493" fill="#ffffff" text-anchor="middle">THE PRODUCT</text>
+
+<!-- api schema: the contract -->
+<rect x="90" y="550" width="575" height="390" rx="12" fill="#ffffff" stroke="#2e8b57" stroke-width="1.5"/>
+<text class="ptitle" x="114" y="586" fill="#2e8b57">api schema: the contract</text>
+<text class="detail" x="114" y="610">Views and functions; the only thing the API can see</text>
+<g>
+  <text class="item" x="114" y="652">Availability</text>
+  <text class="detail" x="300" y="652">bars, weekly counts, overview figures</text>
+  <text class="item" x="114" y="694">Checks and rules</text>
+  <text class="detail" x="300" y="694">clashes before saving; warn or block</text>
+  <text class="item" x="114" y="736">Warnings</text>
+  <text class="detail" x="300" y="736">clashes, course dates, capacity</text>
+  <text class="item" x="114" y="778">Changes</text>
+  <text class="detail" x="300" y="778">book, move, cancel; courses; outages</text>
+  <text class="item" x="114" y="820">Suggestions</text>
+  <text class="detail" x="300" y="820">candidate beds for a course, ranked</text>
+  <text class="item" x="114" y="862">History</text>
+  <text class="detail" x="300" y="862">every change, as a sentence</text>
+</g>
+<text class="detail" x="114" y="914">Each change is checked, audited and returns its warnings</text>
+
+<!-- core schema: the data model -->
+<rect x="695" y="550" width="575" height="390" rx="12" fill="#ffffff" stroke="#2e8b57" stroke-width="1.5"/>
+<text class="ptitle" x="719" y="586" fill="#2e8b57">core schema: the data model</text>
+<text class="detail" x="719" y="610">Tables; reached only through the api schema</text>
+<g>
+  <rect x="719" y="630" width="250" height="56" rx="8" fill="#eaf2fb" stroke="#2f6db5"/>
+  <text class="item" x="735" y="654">Estate</text>
+  <text class="detail" x="735" y="675">site › building › … › bed</text>
+  <rect x="991" y="630" width="250" height="56" rx="8" fill="#eaf6ea" stroke="#2e8b57"/>
+  <text class="item" x="1007" y="654">Courses</text>
+  <text class="detail" x="1007" y="675">places scheduled and loaded</text>
+  <rect x="719" y="700" width="522" height="56" rx="8" fill="#fcf1e6" stroke="#b45309"/>
+  <text class="item" x="735" y="724">Allocations</text>
+  <text class="detail" x="735" y="745">a bed for a range of nights: course or external booking</text>
+  <rect x="719" y="770" width="250" height="56" rx="8" fill="#f3eefb" stroke="#6b4fa8"/>
+  <text class="item" x="735" y="794">Attributes and rules</text>
+  <text class="detail" x="735" y="815">outages; warn or block</text>
+  <rect x="991" y="770" width="250" height="56" rx="8" fill="#f0f0f0" stroke="#555555"/>
+  <text class="item" x="1007" y="794">Audit log</text>
+  <text class="detail" x="1007" y="815">who changed what, when</text>
+  <rect x="719" y="840" width="522" height="56" rx="8" fill="#fdf2f8" stroke="#9d174d"/>
+  <text class="item" x="735" y="864">Tenants</text>
+  <text class="detail" x="735" y="885">every row has one; row-level security keeps them apart</text>
+</g>
+<text class="detail" x="719" y="914">See the data model slide</text>
+
+<text class="note" x="90" y="984">Tested in the database itself (pgTAP): rules, warnings, tenant isolation and audit, on every migration.</text>
+<text class="note" x="90" y="1012">Multi-tenant: LIVE and a resettable DEMO, chosen per request.</text>
+
+<!-- =========================== Right column =========================== -->
+<!-- separate apps -->
+<rect x="1360" y="164" width="500" height="380" rx="14" fill="#ffffff" stroke="#9ca3af" stroke-width="1.8" stroke-dasharray="8 6"/>
+<g transform="translate(1388,190)" fill="none" stroke="#6b7280" stroke-width="3" stroke-linecap="round">
+  <rect x="0" y="0" width="22" height="22" rx="4"/>
+  <rect x="30" y="0" width="22" height="22" rx="4"/>
+  <rect x="0" y="30" width="22" height="22" rx="4"/>
+  <rect x="30" y="30" width="22" height="22" rx="4"/>
+</g>
+<text class="layer" x="1456" y="226" fill="#4b5563">Separate apps</text>
+<text class="detail" x="1456" y="248">later, each its own service</text>
+<text class="item" x="1388" y="300">Optimiser</text>
+<text class="detail" x="1388" y="322">suggests allocations (e.g. OR-Tools)</text>
+<text class="item" x="1388" y="364">Notifier</text>
+<text class="detail" x="1388" y="386">arrival and allocation messages</text>
+<text class="item" x="1388" y="428">Import</text>
+<text class="detail" x="1388" y="450">courses and bookings from other systems</text>
+<text class="note" x="1388" y="506">Read api views, write through api</text>
+<text class="note" x="1388" y="528">functions: the same rules and audit.</text>
+<!-- they talk to the API like the UI does -->
+<path d="M1360,354 H1308" fill="none" stroke="#9ca3af" stroke-width="2.2" stroke-dasharray="7 5" marker-end="url(#headDash)"/>
+
+<!-- principles -->
+<rect x="1360" y="580" width="500" height="450" rx="14" fill="#f9fafb" stroke="#d1d5db" stroke-width="1.5"/>
+<text class="ptitle" x="1388" y="620" fill="#111827">Principles</text>
+<g>
+  <rect x="1388" y="646" width="56" height="30" rx="6" fill="#2e8b57"/>
+  <text class="tag" x="1416" y="667" fill="#ffffff" text-anchor="middle">D22</text>
+  <text class="item" x="1458" y="667">The data model and SQL</text>
+  <text class="item" x="1458" y="691">functions are the product.</text>
+
+  <rect x="1388" y="728" width="56" height="30" rx="6" fill="#2f6db5"/>
+  <text class="tag" x="1416" y="749" fill="#ffffff" text-anchor="middle">D26</text>
+  <text class="item" x="1458" y="749">Managing allocations needs</text>
+  <text class="item" x="1458" y="773">nothing else; the UI never</text>
+  <text class="item" x="1458" y="797">decides what is allowed.</text>
+
+  <rect x="1388" y="834" width="56" height="30" rx="6" fill="#6b4fa8"/>
+  <text class="tag" x="1416" y="855" fill="#ffffff" text-anchor="middle">D27</text>
+  <text class="item" x="1458" y="855">The API has no code: what</text>
+  <text class="item" x="1458" y="879">can't be SQL is a separate app.</text>
+</g>
+<text class="detail" x="1388" y="936">Official images throughout; only the UI</text>
+<text class="detail" x="1388" y="956">is built (plus a test-only database).</text>
+<text class="detail" x="1388" y="996">Details: docs/decisions.md</text>
+</svg>
