@@ -13,16 +13,8 @@ import { addDaysIso, dayLong, dayLongYear, defaultStart, iso, mondayOf, parse } 
 import { useCollapsed, useLocationFilter, useViewSettings } from "./settings";
 import { pruneTree } from "./Filter";
 import { TimelineGrid, type VisibleRow } from "./TimelineGrid";
-import type { LocationNode, Popup } from "./types";
+import type { FocusBooking, LocationNode, Popup } from "./types";
 import "./availability.css";
-
-// A booking to bring into view when the page opens, e.g. from a warning on the
-// Overview: passed as router state { focus }.
-export interface FocusBooking {
-  allocationId: number;
-  bedId: number;
-  startDate: string;
-}
 
 export function AvailabilityPage() {
   const { code: tenant } = useTenant();
@@ -83,20 +75,27 @@ export function AvailabilityPage() {
     [collapsed, setCollapsed],
   );
 
-  // ---------------------- Arriving to show a booking ----------------------
-  // Start the week before the booking, make its bed's row visible (expand the
-  // rows above it; add its block to the filter if it's filtered out), then the
-  // grid scrolls to the bar and highlights it.
+  // ------------------------- Showing a booking -------------------------
+  // From a warning (here in the strip, or on the Overview via router state):
+  // if the booking's first night isn't in the weeks shown, start the week
+  // before it; make its bed's row visible (expand the rows above it; add its
+  // block to the filter if it's filtered out); then the grid scrolls to the
+  // bar and highlights it.
+  const [focus, setFocus] = useState<(FocusBooking & { seq: number }) | null>(null);
+  const showBooking = useCallback((f: FocusBooking) => {
+    setFocus({ ...f, seq: Date.now() });
+    const end = addDaysIso(start, settings.weeks * 7);
+    if (f.startDate < start || f.startDate >= end) setStart(addDaysIso(iso(mondayOf(parse(f.startDate))), -7));
+  }, [start, settings.weeks]);
+
   const location = useLocation();
   const navigate = useNavigate();
-  const [focus, setFocus] = useState<(FocusBooking & { seq: number }) | null>(null);
   useEffect(() => {
     const f = (location.state as { focus?: FocusBooking } | null)?.focus;
     if (!f) return;
-    setFocus({ ...f, seq: Date.now() });
-    setStart(addDaysIso(iso(mondayOf(parse(f.startDate))), -7));
+    showBooking(f);
     navigate(location.pathname, { replace: true, state: null }); // not again on refresh or back
-  }, [location.state, location.pathname, navigate]);
+  }, [location.state, location.pathname, navigate, showBooking]);
 
   const revealed = useRef<number | null>(null); // once per arrival, so rows can be collapsed again afterwards
   useEffect(() => {
@@ -153,7 +152,7 @@ export function AvailabilityPage() {
         onOpen={open}
       />
 
-      <WarningsStrip warnings={warnings.data ?? []} error={warnings.error} onOpen={open} />
+      <WarningsStrip warnings={warnings.data ?? []} error={warnings.error} onOpen={open} onShowBooking={showBooking} />
       {notice && (
         <div className={`av-notice${notice.warnings.length ? " warn" : ""}`} role="status">
           <div>

@@ -338,6 +338,14 @@ function MoveGhost({ m, ctx }: { m: MoveDrag; ctx: GridContext }) {
   const place = barPlace(ctx.start, ctx.nights, ctx.dayW, from, to);
   if (!place) return null;
   const ref = m.bar.kind === "external" ? m.bar.external_ref : m.bar.course_code;
+  // Moving sideways changes the dates: say so, in red.
+  if (m.days !== 0) {
+    return (
+      <div className="av-move-ghost dates" style={place} role="alert">
+        <WarnIcon /> {ref}: dates change to {ddmm(from)} – {ddmm(to)} (was {ddmm(m.bar.start_date)} – {ddmm(m.bar.end_date)})
+      </div>
+    );
+  }
   return <div className="av-move-ghost" style={place}>{ref} · {ddmm(from)} – {ddmm(to)}</div>;
 }
 

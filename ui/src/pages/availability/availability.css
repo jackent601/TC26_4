@@ -336,3 +336,5 @@
   0% { outline: 3px solid var(--accent); }
   100% { outline: 0 solid transparent; }
 }
+/* Dragging sideways changes the booking's dates: the outline turns red and says so. */
+.av-move-ghost.dates { background: var(--danger-soft); border-color: var(--danger-text); color: var(--danger-text); gap: 4px; }

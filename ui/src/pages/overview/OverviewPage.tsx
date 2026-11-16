@@ -12,18 +12,12 @@ import { addDaysIso, dayLong, dayLongYear, ddmm, defaultStart, iso, mondayOf } f
 import { Arrow, OverIcon, WarnIcon } from "../availability/look";
 import { PopupView, type Notice } from "../availability/Popups";
 import { useViewSettings } from "../availability/settings";
-import type { LocationNode, Popup, Warning } from "../availability/types";
-import type { FocusBooking } from "../availability/AvailabilityPage";
+import { bookingOf, type LocationNode, type Popup } from "../availability/types";
 import { CourseTimeline } from "./CourseTimeline";
 import { useSiteFilter, useWeeklyOverview } from "./data";
 import { WeeklyChart } from "./WeeklyChart";
 import "../availability/availability.css";
 import "./overview.css";
-
-// Warnings about one booking (outside its course's dates, in an out-of-action
-// bed, double booked) open the booking on the availability grid instead of a
-// popup; course-level warnings (loaded above scheduled) open the course.
-const showOnGrid = (w: Warning) => w.allocationId !== null && w.bedId !== null && w.startDate !== null;
 
 export function OverviewPage() {
   const { code: tenant } = useTenant();
@@ -192,11 +186,11 @@ export function OverviewPage() {
                 {list.map((w, i) => (
                   <li key={`${w.kind}-${w.allocationId}-${w.courseId}-${i}`}>
                     <button type="button"
-                            title={showOnGrid(w) ? "Show this booking on the availability grid" : undefined}
+                            title={bookingOf(w) ? "Show this booking on the availability grid" : undefined}
                             onClick={() => {
-                              // A booking: go to it on the grid, highlighted.
-                              if (showOnGrid(w)) {
-                                const focus: FocusBooking = { allocationId: w.allocationId!, bedId: w.bedId!, startDate: w.startDate! };
+                              // A booking (bookingOf): go to it on the grid, highlighted; course-level: the course.
+                              const focus = bookingOf(w);
+                              if (focus) {
                                 navigate("/availability", { state: { focus } });
                               } else {
                                 open(w.allocationId === null && w.courseId !== null

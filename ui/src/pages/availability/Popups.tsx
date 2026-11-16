@@ -1269,6 +1269,11 @@ function MovePopup({ bar, bedKey, from, to, data, onClose }: {
       </div>
       {!valid ? <p className="clash bad">Departure must be after the first night.</p> :
         unchanged ? <p className="summary">That's where it is now.</p> : <p className="summary">{stay(first, departure)}</p>}
+      {valid && (first !== bar.start_date || departure !== bar.end_date) && (
+        <p className="clash bad" role="alert">
+          <WarnIcon /> <strong>The dates change</strong>: was {stay(bar.start_date, bar.end_date)}, now {stay(first, departure)}.
+        </p>
+      )}
       {valid && !unchanged && (clashes.isPending ? <p className="summary">Checking for clashes…</p> :
         clashes.error ? <p className="clash bad">Could not check clashes: {clashes.error.message}</p> :
         list.length === 0 ? <p className="clash ok">No clashes there for these nights.</p> : (

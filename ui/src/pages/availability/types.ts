@@ -71,6 +71,22 @@ export interface Warning {
   siteId: number | null;
 }
 
+// A booking to bring into view on the availability grid and highlight: from a
+// warning on the Overview (router state { focus }) or in the warnings strip.
+export interface FocusBooking {
+  allocationId: number;
+  bedId: number;
+  startDate: string;
+}
+
+// The booking a warning is about (outside course dates, out-of-action bed,
+// double booking), or null for course-level warnings (loaded above scheduled).
+export function bookingOf(w: Warning): FocusBooking | null {
+  return w.allocationId !== null && w.bedId !== null && w.startDate !== null
+    ? { allocationId: w.allocationId, bedId: w.bedId, startDate: w.startDate }
+    : null;
+}
+
 // api.fn_check_allocation
 export interface Clash {
   bed_id: number | null; // null for COURSE_DATES
