@@ -55,8 +55,9 @@ case "$cmd" in
     fi
     # Caddy reads the password from stdin when it isn't a terminal, so it never
     # appears on a command line.
-    hash=$(printf '%s\n' "$password" | docker run --rm -i "$CADDY_IMAGE" caddy hash-password 2>/dev/null | tail -1)
-    [[ "$hash" == \$2* ]] || fail "could not hash the password"
+    out=$(printf '%s\n' "$password" | docker run --rm -i "$CADDY_IMAGE" caddy hash-password 2>&1)
+    hash=$(printf '%s\n' "$out" | tail -1)
+    [[ "$hash" == \$2* ]] || { printf '%s\n' "$out" >&2; fail "could not hash the password (Docker's output above)"; }
     mkdir -p "$(dirname "$USERS_FILE")"
     { without_user "$name"; echo "$name $hash"; } > "$USERS_FILE.tmp" && mv "$USERS_FILE.tmp" "$USERS_FILE" \
       || fail "could not write $USERS_FILE"

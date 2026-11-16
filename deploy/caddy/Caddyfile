@@ -9,7 +9,8 @@
 }
 
 {$SITE_ADDRESS} {
-	encode zstd gzip
+	# gzip only: zstd came through undecoded on some networks (garbled page).
+	encode gzip
 
 	header {
 		X-Content-Type-Options nosniff
