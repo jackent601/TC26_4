@@ -147,7 +147,7 @@ export function NewMenu({ onOpen, align = "right", compact = false }: {
     ["Outage", "Put a location out of action", { kind: "newOutage" }],
   ];
   return (
-    <Popover label="New" align={align} triggerClass={`tb-btn primary${compact ? " icon new-plus" : ""}`}
+    <Popover label="New" align={align} triggerClass={`tb-btn primary${compact ? " icon" : ""}`}
              trigger={compact ? <span aria-hidden="true">+</span>
                               : <><span aria-hidden="true">+</span> New <span aria-hidden="true">▾</span></>}>
       {(close) => (

@@ -304,7 +304,6 @@
 
 /* "New ▾" menu (D38): course, external booking, outage. */
 .popover-panel:has(> .new-menu) { padding: 6px; min-width: 240px; }
-.tb-btn.new-plus { font-size: 18px; font-weight: 600; line-height: 1; }
 .new-menu { display: grid; gap: 2px; }
 .new-menu button {
   display: grid; gap: 1px; justify-items: start; text-align: left; width: 100%;
