@@ -106,6 +106,31 @@ export function useAddOutage(tenant: string | null) {
   }, tenant);
 }
 
+// ------------- Changing external bookings and outages (0019, D39) -------------
+
+export function useUpdateExternal(tenant: string | null) {
+  return useWrite(async (t, a: { id: number; ref: string; name: string }) => {
+    await unwrap(api.POST("/rpc/fn_update_external", {
+      body: { p_allocation_id: a.id, p_ref: a.ref, p_name: a.name }, headers: tenantHeaders(t),
+    }));
+  }, tenant);
+}
+
+export function useUpdateOutage(tenant: string | null) {
+  return useWrite(async (t, a: { id: number; from: string; to: string; reason: string }) => {
+    const rows = await unwrap(api.POST("/rpc/fn_update_outage", {
+      body: { p_outage_id: a.id, p_from: a.from, p_to: a.to, p_reason: a.reason }, headers: tenantHeaders(t),
+    }));
+    return (rows as unknown as OutageAdded[])[0];
+  }, tenant);
+}
+
+export function useRemoveOutage(tenant: string | null) {
+  return useWrite(async (t, id: number) => {
+    await unwrap(api.POST("/rpc/fn_remove_outage", { body: { p_outage_id: id }, headers: tenantHeaders(t) }));
+  }, tenant);
+}
+
 // ------------------------- Courses (0014, D36) --------------------------
 
 export interface CourseCreated {

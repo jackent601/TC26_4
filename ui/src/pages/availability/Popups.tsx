@@ -12,7 +12,7 @@ import type { ViewSettings } from "./settings";
 import { weekCounts } from "./TimelineGrid";
 import type { BedBar, CandidateBed, Clash, CourseFigure, Level, LocationNode, Popup, Warning, WeekSummary } from "./types";
 import {
-  COURSE_STATUSES, STATUSES, useAddOutage, useAllocateCourse, useBookExternal, useCancelAllocation, useCancelCourse, useCreateCourse, useMoveAllocation,
+  COURSE_STATUSES, STATUSES, useAddOutage, useAllocateCourse, useBookExternal, useRemoveOutage, useUpdateExternal, useUpdateOutage, useCancelAllocation, useCancelCourse, useCreateCourse, useMoveAllocation,
   useSetStatus, useUpdateCourse, useUpdateLoaded, type Allocated, type CourseChange, type CourseInput,
 } from "./writes";
 
@@ -38,7 +38,7 @@ export function PopupView({ popup, data, onOpen, onNotice, onClose }: Props) {
   switch (popup.kind) {
     case "location": return <LocationPopup nodeKey={popup.key} data={data} onClose={onClose} />;
     case "booking": return <BookingPopup bar={popup.bar} data={data} onOpen={onOpen} onNotice={onNotice} onClose={onClose} />;
-    case "outage": return <OutagePopup bar={popup.bar} data={data} onClose={onClose} />;
+    case "outage": return <OutagePopup bar={popup.bar} data={data} onNotice={onNotice} onClose={onClose} />;
     case "week": return <WeekPopup nodeKey={popup.key} weekStart={popup.weekStart} data={data} onOpen={onOpen} onClose={onClose} />;
     case "course": return <CoursePopup courseId={popup.courseId} data={data} onOpen={onOpen} onNotice={onNotice} onClose={onClose} />;
     case "bookCourse": return <BookCoursePopup courseId={popup.courseId} data={data} onClose={onClose} />;
@@ -258,6 +258,8 @@ function BookingPopup({ bar, data, onOpen, onNotice, onClose }: {
           ["Status", titleCase(bar.status ?? "")],
           ["Warnings", <WarningList list={warnings} />],
         ]} />
+        <ExternalDetails bar={bar} data={data} onNotice={onNotice} onClose={onClose} />
+        <BookingChanges bar={bar} data={data} onNotice={onNotice} onClose={onClose} />
         <HistoryList tenant={data.tenant} allocationId={bar.id} />
       </Dialog>
     );
@@ -285,8 +287,39 @@ function BookingPopup({ bar, data, onOpen, onNotice, onClose }: {
   );
 }
 
-// Change a course allocation: status, move (bed and/or dates), cancel. The
-// database checks and audits each (0009); results go to the page's notice.
+// An external booking's reference and who it's for (fn_update_external, 0019).
+function ExternalDetails({ bar, data, onNotice, onClose }: {
+  bar: BedBar; data: PopupData; onNotice: (n: Notice) => void; onClose: () => void;
+}) {
+  const [ref, setRef] = useState(bar.external_ref ?? "");
+  const [name, setName] = useState(bar.external_name ?? "");
+  const update = useUpdateExternal(data.tenant);
+  const changed = ref.trim() !== (bar.external_ref ?? "") || name.trim() !== (bar.external_name ?? "");
+  return (
+    <div className="av-changes">
+      <h3>Details</h3>
+      <div className="av-form">
+        <label className="av-field">Reference<input type="text" maxLength={50} value={ref} disabled={update.isPending}
+                                                     onChange={(e) => setRef(e.target.value)} /></label>
+        <label className="av-field">For<input type="text" maxLength={200} value={name} disabled={update.isPending}
+                                               onChange={(e) => setName(e.target.value)} /></label>
+      </div>
+      <div className="row end">
+        <button type="button" className="btn" disabled={!changed || ref.trim() === "" || name.trim() === "" || update.isPending}
+                onClick={() => update.mutate({ id: bar.id, ref: ref.trim(), name: name.trim() }, {
+                  onSuccess: () => { onNotice({ text: `${ref.trim()}: details saved.`, warnings: [] }); onClose(); },
+                })}>
+          {update.isPending ? "Saving…" : "Save details"}
+        </button>
+      </div>
+      {update.error && <p className="clash bad">Not saved: {update.error.message}</p>}
+    </div>
+  );
+}
+
+// Change a booking (course or external): status, move (bed and/or dates),
+// cancel. The database checks and audits each (0009); results go to the
+// page's notice.
 function BookingChanges({ bar, data, onNotice, onClose }: {
   bar: BedBar; data: PopupData; onNotice: (n: Notice) => void; onClose: () => void;
 }) {
@@ -304,7 +337,7 @@ function BookingChanges({ bar, data, onNotice, onClose }: {
   const bed = data.nodes.get(bedKey);
   const moved = bedKey !== `bed:${bar.bed_id}` || first !== bar.start_date || departure !== bar.end_date;
   const datesOk = first !== "" && departure !== "" && departure > first;
-  const label = bar.course_code ?? "Allocation";
+  const label = (bar.kind === "external" ? bar.external_ref : bar.course_code) ?? "Booking";
 
   const done = (n: Notice) => {
     onNotice(n);
@@ -350,11 +383,11 @@ function BookingChanges({ bar, data, onNotice, onClose }: {
         </button>
         <button type="button" className="btn danger" disabled={busy}
                 onClick={() => {
-                  if (window.confirm(`Cancel this ${label} allocation? It stays in the history as cancelled.`)) {
-                    cancel.mutate(bar.id, { onSuccess: () => done({ text: `${label}: allocation cancelled.`, warnings: [] }) });
+                  if (window.confirm(`Cancel this ${label} booking? It stays in the history as cancelled.`)) {
+                    cancel.mutate(bar.id, { onSuccess: () => done({ text: `${label}: booking cancelled.`, warnings: [] }) });
                   }
                 }}>
-          Cancel allocation
+          Cancel booking
         </button>
       </div>
       {!datesOk && <p className="clash bad">Departure must be after the first night.</p>}
@@ -369,7 +402,7 @@ export interface Notice {
   warnings: string[];
 }
 
-function OutagePopup({ bar, data, onClose }: { bar: BedBar; data: PopupData; onClose: () => void }) {
+function OutagePopup({ bar, data, onNotice, onClose }: { bar: BedBar; data: PopupData; onNotice: (n: Notice) => void; onClose: () => void }) {
   const level = bar.set_on_level ?? "Bed";
   const at = ancestorAt(data.nodes, `bed:${bar.bed_id}`, level);
   const bedIds = at ? bedsUnder(at).map((b) => b.id) : [bar.bed_id];
@@ -391,8 +424,56 @@ function OutagePopup({ bar, data, onClose }: { bar: BedBar; data: PopupData; onC
             </ul>
           )],
       ]} />
-      <Later what="Editing or ending an outage" />
+      <OutageChanges bar={bar} data={data} onNotice={onNotice} onClose={onClose} />
     </Dialog>
+  );
+}
+
+// Change an outage's dates or reason (fn_update_outage), or remove it
+// (fn_remove_outage). Results, with any bookings it now lands on, go to the
+// page's notice.
+function OutageChanges({ bar, data, onNotice, onClose }: {
+  bar: BedBar; data: PopupData; onNotice: (n: Notice) => void; onClose: () => void;
+}) {
+  const [first, setFirst] = useState(bar.start_date);
+  const [back, setBack] = useState(bar.end_date);
+  const [reason, setReason] = useState(bar.reason ?? "");
+  const update = useUpdateOutage(data.tenant);
+  const remove = useRemoveOutage(data.tenant);
+  const busy = update.isPending || remove.isPending;
+  const error = update.error ?? remove.error;
+  const datesOk = first !== "" && back !== "" && back > first;
+  const changed = first !== bar.start_date || back !== bar.end_date || reason.trim() !== (bar.reason ?? "");
+  const label = reason.trim() || bar.reason || "Outage";
+
+  return (
+    <div className="av-changes">
+      <h3>Change</h3>
+      <div className="dates">
+        <label>Out of action from<input type="date" value={first} disabled={busy} onChange={(e) => setFirst(e.target.value)} /></label>
+        <label>Back in service on<input type="date" value={back} disabled={busy} onChange={(e) => setBack(e.target.value)} /></label>
+      </div>
+      <label className="av-field">Reason<input type="text" maxLength={1000} value={reason} disabled={busy}
+                                                onChange={(e) => setReason(e.target.value)} /></label>
+      <div className="row end">
+        <button type="button" className="btn" disabled={busy || !changed || !datesOk || reason.trim() === ""}
+                onClick={() => update.mutate({ id: bar.id, from: first, to: back, reason: reason.trim() }, {
+                  onSuccess: (r) => { onNotice({ text: `${label}: outage changed, ${stay(first, back)}.`, warnings: r.warnings }); onClose(); },
+                })}>
+          {update.isPending ? "Saving…" : "Save changes"}
+        </button>
+        <button type="button" className="btn danger" disabled={busy}
+                onClick={() => {
+                  if (window.confirm(`Remove this outage (${bar.reason ?? "no reason given"})? Every bed it covers is back in service for these dates. The history keeps a record of it.`)) {
+                    remove.mutate(bar.id, { onSuccess: () => { onNotice({ text: `${bar.reason ?? "Outage"}: outage removed.`, warnings: [] }); onClose(); } });
+                  }
+                }}>
+          Remove outage
+        </button>
+      </div>
+      {!datesOk && <p className="clash bad">"Back in service" must be after the first day out of action.</p>}
+      {error && <p className="clash bad">Not saved: {error.message}</p>}
+    </div>
   );
 }
 

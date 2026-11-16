@@ -727,6 +727,86 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/rpc/fn_update_outage": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Change an outage's dates (p_from, p_to exclusive) and/or reason; null keeps a value (D39). Saved even when it lands on live bookings, which come back as warnings and show in api.warnings. Audited. Returns the outage id with its warnings. */
+        post: {
+            parameters: {
+                query?: never;
+                header?: {
+                    /** @description Preference */
+                    Prefer?: components["parameters"]["preferParams"];
+                };
+                path?: never;
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": {
+                        /** Format: date */
+                        p_from?: string;
+                        /** Format: int32 */
+                        p_outage_id: number;
+                        /** Format: text */
+                        p_reason?: string;
+                        /** Format: date */
+                        p_to?: string;
+                    };
+                    "application/vnd.pgrst.object+json;nulls=stripped": {
+                        /** Format: date */
+                        p_from?: string;
+                        /** Format: int32 */
+                        p_outage_id: number;
+                        /** Format: text */
+                        p_reason?: string;
+                        /** Format: date */
+                        p_to?: string;
+                    };
+                    "application/vnd.pgrst.object+json": {
+                        /** Format: date */
+                        p_from?: string;
+                        /** Format: int32 */
+                        p_outage_id: number;
+                        /** Format: text */
+                        p_reason?: string;
+                        /** Format: date */
+                        p_to?: string;
+                    };
+                    "text/csv": {
+                        /** Format: date */
+                        p_from?: string;
+                        /** Format: int32 */
+                        p_outage_id: number;
+                        /** Format: text */
+                        p_reason?: string;
+                        /** Format: date */
+                        p_to?: string;
+                    };
+                };
+            };
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/rpc/fn_weekly_overview": {
         parameters: {
             query?: never;
@@ -858,6 +938,62 @@ export interface paths {
                     "text/csv": {
                         /** Format: int32 */
                         p_course_id: number;
+                    };
+                };
+            };
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/rpc/fn_remove_outage": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Remove an outage (D39): the location is back in service for those dates. The row is deleted; the audit log keeps where it was, its dates and reason. To end an outage early instead, change its end date with fn_update_outage. */
+        post: {
+            parameters: {
+                query?: never;
+                header?: {
+                    /** @description Preference */
+                    Prefer?: components["parameters"]["preferParams"];
+                };
+                path?: never;
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": {
+                        /** Format: int32 */
+                        p_outage_id: number;
+                    };
+                    "application/vnd.pgrst.object+json;nulls=stripped": {
+                        /** Format: int32 */
+                        p_outage_id: number;
+                    };
+                    "application/vnd.pgrst.object+json": {
+                        /** Format: int32 */
+                        p_outage_id: number;
+                    };
+                    "text/csv": {
+                        /** Format: int32 */
+                        p_outage_id: number;
                     };
                 };
             };
@@ -1834,6 +1970,78 @@ export interface paths {
                         p_reason: string;
                         /** Format: date */
                         p_to: string;
+                    };
+                };
+            };
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/rpc/fn_update_external": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Change an external booking's reference (p_ref) and/or who it is for (p_name); null keeps a value (D39). For one allocation (one bed). Its bed, dates, status and cancelling go through fn_move_allocation, fn_set_status and fn_cancel_allocation, as for course bookings. Audited. */
+        post: {
+            parameters: {
+                query?: never;
+                header?: {
+                    /** @description Preference */
+                    Prefer?: components["parameters"]["preferParams"];
+                };
+                path?: never;
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": {
+                        /** Format: int32 */
+                        p_allocation_id: number;
+                        /** Format: text */
+                        p_name?: string;
+                        /** Format: text */
+                        p_ref?: string;
+                    };
+                    "application/vnd.pgrst.object+json;nulls=stripped": {
+                        /** Format: int32 */
+                        p_allocation_id: number;
+                        /** Format: text */
+                        p_name?: string;
+                        /** Format: text */
+                        p_ref?: string;
+                    };
+                    "application/vnd.pgrst.object+json": {
+                        /** Format: int32 */
+                        p_allocation_id: number;
+                        /** Format: text */
+                        p_name?: string;
+                        /** Format: text */
+                        p_ref?: string;
+                    };
+                    "text/csv": {
+                        /** Format: int32 */
+                        p_allocation_id: number;
+                        /** Format: text */
+                        p_name?: string;
+                        /** Format: text */
+                        p_ref?: string;
                     };
                 };
             };

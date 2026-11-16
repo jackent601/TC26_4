@@ -38,6 +38,10 @@ function api.fn_move_allocation(p_allocation_id integer, p_bed_id integer DEFAUL
   -- Move an allocation to another bed and/or other dates (any argument left null stays as it is). Clashes warn unless their rule is BLOCK (D30); nights outside the course dates warn (0010). Audited. Returns the allocation with its warnings.
   returns TABLE(allocation_id integer, bed_id integer, start_date date, end_date date, warnings text[])
 
+function api.fn_remove_outage(p_outage_id integer)
+  -- Remove an outage (D39): the location is back in service for those dates. The row is deleted; the audit log keeps where it was, its dates and reason. To end an outage early instead, change its end date with fn_update_outage.
+  returns TABLE(outage_id integer)
+
 function api.fn_set_status(p_allocation_id integer, p_status text)
   -- Set an allocation's status: ALLOCATED, BOOKED, CHECKED_IN, CHECKED_OUT, NO_SHOW or CANCELLED. Any change is allowed for now (transitions deferred, D31). Sets or clears the check-in and check-out times to match. Audited when the status changes.
   returns TABLE(allocation_id integer, status text, checked_in_at timestamp without time zone, checked_out_at timestamp without time zone)
@@ -46,9 +50,17 @@ function api.fn_update_course(p_course_id integer, p_code text DEFAULT NULL::tex
   -- Change a course: code, name, start_date, end_date, scheduled, site (p_clear_site removes it), status (REQUESTED or CONFIRMED; a cancelled course can be reinstated this way, its bookings stay cancelled) and notes (empty clears them). Anything left null stays as it is. Audited. Returns warnings for live bookings the change leaves outside the course dates or on another site.
   returns TABLE(course_id integer, warnings text[])
 
+function api.fn_update_external(p_allocation_id integer, p_ref text DEFAULT NULL::text, p_name text DEFAULT NULL::text)
+  -- Change an external booking's reference (p_ref) and/or who it is for (p_name); null keeps a value (D39). For one allocation (one bed). Its bed, dates, status and cancelling go through fn_move_allocation, fn_set_status and fn_cancel_allocation, as for course bookings. Audited.
+  returns TABLE(allocation_id integer, external_ref text, external_name text)
+
 function api.fn_update_loaded(p_course_id integer, p_loaded integer)
   -- Set a course's loaded (registered) headcount and stamp loaded_at with now. Audited. Returns the new figure and whether it is above scheduled.
   returns TABLE(course_id integer, loaded integer, loaded_at timestamp without time zone, loaded_above_scheduled boolean)
+
+function api.fn_update_outage(p_outage_id integer, p_from date DEFAULT NULL::date, p_to date DEFAULT NULL::date, p_reason text DEFAULT NULL::text)
+  -- Change an outage's dates (p_from, p_to exclusive) and/or reason; null keeps a value (D39). Saved even when it lands on live bookings, which come back as warnings and show in api.warnings. Audited. Returns the outage id with its warnings.
+  returns TABLE(outage_id integer, warnings text[])
 
 function api.fn_week_summary(p_from date, p_weeks integer)
   -- For each location above bed level (key as in api.locations) and each of p_weeks weeks from p_from: the busiest night (fewest free beds, earliest on a tie) and its beds by category: free, out_of_action, external, or course (one row per course_id). Categories with no beds are left out. The UI bands courses by colour from api.course_figures (D29).
