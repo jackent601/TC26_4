@@ -1,0 +1,99 @@
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 1920 1080" width="1920" height="1080" font-family="Helvetica Neue, Helvetica, Arial, sans-serif">
+<!-- Accommodation allocation PoC: the Overview page and the API calls behind it, for a slide (16:9).
+     Screenshot: docs/screens/overview.png (1440x900 at 2x, DEMO, light theme; docs/screens/capture.js).
+     Region boxes: slide = 40 + 0.875 * page x, 150 + 0.875 * page y. Calls as in ui/src/pages/*/data.ts. -->
+<style>
+  .title { font-size: 44px; font-weight: 700; fill: #111827; }
+  .sub { font-size: 22px; fill: #4b5563; }
+  .ctitle { font-size: 22px; font-weight: 700; fill: #111827; }
+  .name { font-size: 19px; font-weight: 700; fill: #111827; }
+  .code { font-size: 15px; font-family: SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace; fill: #2e8b57; }
+  .det { font-size: 15px; fill: #4b5563; }
+  .num { font-size: 17px; font-weight: 700; fill: #ffffff; }
+  .region { fill: rgba(79, 70, 229, 0.06); stroke: #4f46e5; stroke-width: 2.5; }
+  .foot { font-size: 18px; fill: #374151; }
+</style>
+<defs>
+  <filter id="shadow" x="-5%" y="-5%" width="110%" height="110%">
+    <feDropShadow dx="0" dy="4" stdDeviation="8" flood-color="#111827" flood-opacity="0.18"/>
+  </filter>
+  <clipPath id="screenClip"><rect x="40" y="150" width="1260" height="787.5" rx="12"/></clipPath>
+</defs>
+
+<rect x="0" y="0" width="1920" height="1080" fill="#ffffff"/>
+
+<text class="title" x="40" y="84">Overview page: what the database serves</text>
+<text class="sub" x="40" y="124">Each area of the page is one API call; the UI only lays out what comes back.</text>
+
+<!-- ============================ Screenshot ============================ -->
+<rect x="40" y="150" width="1260" height="787.5" rx="12" fill="#ffffff" filter="url(#shadow)"/>
+<image x="40" y="150" width="1260" height="787.5" href="screens/overview.png" xlink:href="screens/overview.png" clip-path="url(#screenClip)" preserveAspectRatio="xMidYMid slice"/>
+<rect x="40" y="150" width="1260" height="787.5" rx="12" fill="none" stroke="#d1d5db" stroke-width="1.5"/>
+
+<!-- Regions (page px -> slide px) -->
+<rect class="region" x="47" y="740" width="188" height="34" rx="6"/>           <!-- 1 tenant switch -->
+<rect class="region" x="664" y="214" width="90" height="33" rx="6"/>           <!-- 2 site filter -->
+<rect class="region" x="591" y="214" width="74" height="33" rx="6"/>           <!-- 3 New -->
+<rect class="region" x="276" y="289" width="990" height="260" rx="8"/>         <!-- 4 chart -->
+<rect class="region" x="263" y="610" width="1016" height="170" rx="8"/>        <!-- 5 warnings list -->
+<rect class="region" x="375" y="572" width="180" height="38" rx="6"/>          <!-- 6 courses / history tabs -->
+
+<g>
+  <circle cx="47" cy="740" r="17" fill="#4f46e5"/><text class="num" x="47" y="746" text-anchor="middle">1</text>
+  <circle cx="754" cy="214" r="17" fill="#4f46e5"/><text class="num" x="754" y="220" text-anchor="middle">2</text>
+  <circle cx="591" cy="214" r="17" fill="#4f46e5"/><text class="num" x="591" y="220" text-anchor="middle">3</text>
+  <circle cx="276" cy="420" r="17" fill="#4f46e5"/><text class="num" x="276" y="426" text-anchor="middle">4</text>
+  <circle cx="263" cy="610" r="17" fill="#4f46e5"/><text class="num" x="263" y="616" text-anchor="middle">5</text>
+  <circle cx="555" cy="572" r="17" fill="#4f46e5"/><text class="num" x="555" y="578" text-anchor="middle">6</text>
+</g>
+
+<!-- ============================ Call list ============================= -->
+<text class="ctitle" x="1340" y="168">API calls behind the page</text>
+<text class="det" x="1340" y="192">every request carries X-Tenant; nothing is computed in the browser</text>
+
+<g transform="translate(1340,226)">
+  <circle cx="16" cy="12" r="15" fill="#4f46e5"/><text class="num" x="16" y="18" text-anchor="middle">1</text>
+  <text class="name" x="44" y="19">Tenant switch</text>
+  <text class="code" x="44" y="46">GET /tenants</text>
+  <text class="det" x="44" y="70">the choice goes on every call as X-Tenant: DEMO;</text>
+  <text class="det" x="44" y="90">row-level security does the rest</text>
+</g>
+<g transform="translate(1340,336)">
+  <circle cx="16" cy="12" r="15" fill="#4f46e5"/><text class="num" x="16" y="18" text-anchor="middle">2</text>
+  <text class="name" x="44" y="19">Site filter</text>
+  <text class="code" x="44" y="46">GET /locations</text>
+  <text class="det" x="44" y="70">the estate tree, from which the sites are listed</text>
+</g>
+<g transform="translate(1340,426)">
+  <circle cx="16" cy="12" r="15" fill="#4f46e5"/><text class="num" x="16" y="18" text-anchor="middle">3</text>
+  <text class="name" x="44" y="19">New: course, external booking, outage</text>
+  <text class="code" x="44" y="46">POST /rpc/fn_create_course</text>
+  <text class="code" x="44" y="68">POST /rpc/fn_book_external</text>
+  <text class="code" x="44" y="90">POST /rpc/fn_add_outage</text>
+  <text class="det" x="44" y="114">checked and audited; they return any warnings</text>
+</g>
+<g transform="translate(1340,566)">
+  <circle cx="16" cy="12" r="15" fill="#4f46e5"/><text class="num" x="16" y="18" text-anchor="middle">4</text>
+  <text class="name" x="44" y="19">Weekly chart</text>
+  <text class="code" x="44" y="46">POST /rpc/fn_weekly_overview</text>
+  <text class="code" x="44" y="68">  {p_from, p_weeks, p_site_ids}</text>
+  <text class="det" x="44" y="92">per week: beds in service, allocated, external and</text>
+  <text class="det" x="44" y="112">free on the busiest night; scheduled, loaded places</text>
+</g>
+<g transform="translate(1340,706)">
+  <circle cx="16" cy="12" r="15" fill="#4f46e5"/><text class="num" x="16" y="18" text-anchor="middle">5</text>
+  <text class="name" x="44" y="19">Warnings</text>
+  <text class="code" x="44" y="46">GET /warnings?end_date=gt.…&amp;site_id=in.(…)</text>
+  <text class="det" x="44" y="70">every rule's warnings, worded by the database</text>
+</g>
+<g transform="translate(1340,796)">
+  <circle cx="16" cy="12" r="15" fill="#4f46e5"/><text class="num" x="16" y="18" text-anchor="middle">6</text>
+  <text class="name" x="44" y="19">Courses and History tabs</text>
+  <text class="code" x="44" y="46">GET /course_figures</text>
+  <text class="code" x="44" y="68">GET /audit_requests?site_id=in.(…)</text>
+  <text class="det" x="44" y="92">courses with their figures; changes as sentences</text>
+</g>
+
+<text class="foot" x="40" y="990">Views are GET /view_name with filters in the query string; functions are POST /rpc/function_name with their</text>
+<text class="foot" x="40" y="1018">arguments as JSON. PostgREST serves the api schema as it is: no endpoint is written by hand.</text>
+</svg>

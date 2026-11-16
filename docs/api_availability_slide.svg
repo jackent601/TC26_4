@@ -1,0 +1,103 @@
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 1920 1080" width="1920" height="1080" font-family="Helvetica Neue, Helvetica, Arial, sans-serif">
+<!-- Accommodation allocation PoC: the Availability page and the API calls behind it, for a slide (16:9).
+     Screenshot: docs/screens/availability.png (1440x900 at 2x, DEMO, light theme, Floor 2, Floor 3 and
+     Block B collapsed; docs/screens/capture.js). Region boxes: slide = 40 + 0.875 * page x, 150 + 0.875 * page y. -->
+<style>
+  .title { font-size: 44px; font-weight: 700; fill: #111827; }
+  .sub { font-size: 22px; fill: #4b5563; }
+  .ctitle { font-size: 22px; font-weight: 700; fill: #111827; }
+  .name { font-size: 19px; font-weight: 700; fill: #111827; }
+  .code { font-size: 15px; font-family: SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace; fill: #2e8b57; }
+  .det { font-size: 15px; fill: #4b5563; }
+  .num { font-size: 17px; font-weight: 700; fill: #ffffff; }
+  .region { fill: rgba(79, 70, 229, 0.06); stroke: #4f46e5; stroke-width: 2.5; }
+  .sel { fill: rgba(79, 70, 229, 0.14); stroke: #4f46e5; stroke-width: 2.5; stroke-dasharray: 7 5; }
+  .seltext { font-size: 13px; font-weight: 700; fill: #3730a3; }
+  .foot { font-size: 18px; fill: #374151; }
+</style>
+<defs>
+  <filter id="shadow" x="-5%" y="-5%" width="110%" height="110%">
+    <feDropShadow dx="0" dy="4" stdDeviation="8" flood-color="#111827" flood-opacity="0.18"/>
+  </filter>
+  <clipPath id="screenClip"><rect x="40" y="150" width="1260" height="787.5" rx="12"/></clipPath>
+</defs>
+
+<rect x="0" y="0" width="1920" height="1080" fill="#ffffff"/>
+
+<text class="title" x="40" y="84">Availability page: what the database serves</text>
+<text class="sub" x="40" y="124">The grid is drawn from four reads; every change goes through a function that checks, audits and warns.</text>
+
+<!-- ============================ Screenshot ============================ -->
+<rect x="40" y="150" width="1260" height="787.5" rx="12" fill="#ffffff" filter="url(#shadow)"/>
+<image x="40" y="150" width="1260" height="787.5" href="screens/availability.png" xlink:href="screens/availability.png" clip-path="url(#screenClip)" preserveAspectRatio="xMidYMid slice"/>
+<rect x="40" y="150" width="1260" height="787.5" rx="12" fill="none" stroke="#d1d5db" stroke-width="1.5"/>
+
+<!-- Regions (page px -> slide px) -->
+<rect class="region" x="591" y="214" width="32" height="32" rx="6"/>           <!-- 1 New -->
+<rect class="region" x="262" y="253" width="1019" height="87" rx="8"/>         <!-- 2 warnings strip -->
+<rect class="region" x="263" y="348" width="229" height="507" rx="8"/>         <!-- 3 location tree -->
+<rect class="region" x="491" y="491" width="132" height="24" rx="5"/>          <!-- 4 a bed bar -->
+<rect class="region" x="491" y="768" width="774" height="84" rx="6"/>          <!-- 5 collapsed rows -->
+<!-- 6 an illustrative selection, as the grid draws one while dragging -->
+<rect class="sel" x="749" y="659" width="257" height="23" rx="5"/>
+<text class="seltext" x="758" y="675">1 bed · 2 weeks · 16/11 – 29/11</text>
+
+<g>
+  <circle cx="623" cy="214" r="17" fill="#4f46e5"/><text class="num" x="623" y="220" text-anchor="middle">1</text>
+  <circle cx="262" cy="253" r="17" fill="#4f46e5"/><text class="num" x="262" y="259" text-anchor="middle">2</text>
+  <circle cx="263" cy="600" r="17" fill="#4f46e5"/><text class="num" x="263" y="606" text-anchor="middle">3</text>
+  <circle cx="556" cy="475" r="15" fill="#4f46e5"/><text class="num" x="556" y="481" text-anchor="middle">4</text>
+  <circle cx="1265" cy="810" r="17" fill="#4f46e5"/><text class="num" x="1265" y="816" text-anchor="middle">5</text>
+  <circle cx="1006" cy="659" r="17" fill="#4f46e5"/><text class="num" x="1006" y="665" text-anchor="middle">6</text>
+</g>
+
+<!-- ============================ Call list ============================= -->
+<text class="ctitle" x="1340" y="168">API calls behind the page</text>
+<text class="det" x="1340" y="192">every request carries X-Tenant; nothing is decided in the browser</text>
+
+<g transform="translate(1340,226)">
+  <circle cx="16" cy="12" r="15" fill="#4f46e5"/><text class="num" x="16" y="18" text-anchor="middle">1</text>
+  <text class="name" x="44" y="19">New: course, external booking, outage</text>
+  <text class="code" x="44" y="46">POST /rpc/fn_create_course · fn_book_external</text>
+  <text class="code" x="44" y="68">     · fn_add_outage</text>
+</g>
+<g transform="translate(1340,318)">
+  <circle cx="16" cy="12" r="15" fill="#4f46e5"/><text class="num" x="16" y="18" text-anchor="middle">2</text>
+  <text class="name" x="44" y="19">Warnings strip</text>
+  <text class="code" x="44" y="46">GET /warnings?end_date=gt.{first night}</text>
+  <text class="det" x="44" y="70">clashes, course dates, capacity, loaded &gt; scheduled</text>
+</g>
+<g transform="translate(1340,408)">
+  <circle cx="16" cy="12" r="15" fill="#4f46e5"/><text class="num" x="16" y="18" text-anchor="middle">3</text>
+  <text class="name" x="44" y="19">Location tree</text>
+  <text class="code" x="44" y="46">GET /locations</text>
+  <text class="det" x="44" y="70">site › building › block › floor › room › bed, bed counts</text>
+</g>
+<g transform="translate(1340,498)">
+  <circle cx="16" cy="12" r="15" fill="#4f46e5"/><text class="num" x="16" y="18" text-anchor="middle">4</text>
+  <text class="name" x="44" y="19">Bars on each bed</text>
+  <text class="code" x="44" y="46">POST /rpc/fn_bed_bars {p_from, p_to}</text>
+  <text class="code" x="44" y="68">GET /course_figures</text>
+  <text class="det" x="44" y="92">bookings, external bookings and outages, with clash</text>
+  <text class="det" x="44" y="112">flags; colour from course figures and your thresholds</text>
+</g>
+<g transform="translate(1340,638)">
+  <circle cx="16" cy="12" r="15" fill="#4f46e5"/><text class="num" x="16" y="18" text-anchor="middle">5</text>
+  <text class="name" x="44" y="19">Collapsed rows: weekly counts</text>
+  <text class="code" x="44" y="46">POST /rpc/fn_week_summary {p_from, p_weeks}</text>
+  <text class="det" x="44" y="70">beds by state on each week's busiest night</text>
+</g>
+<g transform="translate(1340,728)">
+  <circle cx="16" cy="12" r="15" fill="#4f46e5"/><text class="num" x="16" y="18" text-anchor="middle">6</text>
+  <text class="name" x="44" y="19">Select weeks, or drag a booking</text>
+  <text class="code" x="44" y="46">POST /rpc/fn_check_allocation</text>
+  <text class="det" x="44" y="70">clashes shown before anything is saved; then</text>
+  <text class="code" x="44" y="96">fn_allocate_course · fn_book_external</text>
+  <text class="code" x="44" y="118">fn_add_outage · fn_move_allocation</text>
+  <text class="det" x="44" y="142">each checked against the rules, audited, and</text>
+  <text class="det" x="44" y="162">returning its warnings</text>
+</g>
+
+<text class="foot" x="40" y="990">Popups read the same data, plus GET /audit for a booking's history; status, move and cancel are</text>
+<text class="foot" x="40" y="1018">fn_set_status, fn_move_allocation and fn_cancel_allocation. Refetch after every change keeps the grid true.</text>
+</svg>

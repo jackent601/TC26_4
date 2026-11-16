@@ -34,6 +34,9 @@ The tool needs to:
 │   ├── data_model_slide.svg                   One-page summary of the data model for slides (16:9, key columns only)
 │   ├── architecture_slide.svg                 One-page architecture for slides (16:9): thin UI and API, the database as the product
 │   ├── architecture_slide.png                 The same, as an image (rendered from the SVG)
+│   ├── api_overview_slide.svg/.png            Slide: the Overview page with the API call behind each area
+│   ├── api_availability_slide.svg/.png        Slide: the Availability page with the API call behind each area
+│   ├── screens/                               Page screenshots for the slides (DEMO, light theme) and capture.js, which takes them
 │   └── pages_pocs/                            Clickable page mockups (open the .html files in a browser)
 ├── db/
 │   ├── migrations/                            dbmate migrations, applied in order
