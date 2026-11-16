@@ -4,3 +4,6 @@ __pycache__/
 .pytest_cache/
 *.egg-info/
 .venv/
+
+# Production login accounts (scripts/users.sh)
+deploy/caddy/users.caddy

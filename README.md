@@ -80,6 +80,8 @@ The tool needs to:
 ├── ui/                                        React + TypeScript app (Vite); Dockerfile (node builds, caddy:2-alpine serves), Caddyfile
 ├── compose.yaml                               Docker Compose services (db, migrate, db-roles, api, ui, db-test)
 ├── compose.override.yaml                      Local dev extras, loaded automatically (database and API ports, API docs page, ui-dev)
+├── compose.prod.yaml                          Production on one server: HTTPS and login on 80/443 (docs/deploy.md)
+├── deploy/caddy/                              Production Caddyfile; users.caddy (login accounts, not in git)
 └── .env.example                               Settings to copy into .env
 ```
 
@@ -131,6 +133,8 @@ scripts/ui-npm.sh run gen:api            # regenerate ui/src/api/schema.d.ts aft
 scripts/ui-npm.sh install <package>      # add a dependency
 scripts/ui-npm.sh run build              # type-check and build, as the Dockerfile does
 ```
+
+**Deploying.** To put it on the internet behind a login (one AWS Lightsail server, about $12 a month), follow [docs/deploy.md](docs/deploy.md): `scripts/deploy.sh` starts it, `scripts/users.sh` manages the logins (D41).
 
 For local development the database is also published on `localhost:5432` (set `POSTGRES_PORT` in `.env` to change it). Connect any client (DBeaver, pgAdmin, VS Code, psql) with host `localhost`, the port, database `accomm`, user `accomm_owner` and the password from `.env`. It listens on localhost only. To run without the dev extras: `docker compose -f compose.yaml up`.
 

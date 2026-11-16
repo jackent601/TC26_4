@@ -1,0 +1,46 @@
+# Production Caddyfile (decision D41): the same site as ui/Caddyfile, plus
+# HTTPS for SITE_ADDRESS (certificate from Let's Encrypt, automatic) and a
+# username/password login in front of everything. compose.prod.yaml mounts this
+# folder over /etc/caddy, replacing the Caddyfile baked into the ui image.
+# Keep the handle blocks in step with ui/Caddyfile.
+{
+	# No admin API: config changes by restarting the container.
+	admin off
+}
+
+{$SITE_ADDRESS} {
+	encode zstd gzip
+
+	header {
+		X-Content-Type-Options nosniff
+		Referrer-Policy same-origin
+		X-Frame-Options DENY
+		Strict-Transport-Security "max-age=31536000"
+		-Server
+	}
+
+	# Every request needs a username and password. Accounts (username and
+	# bcrypt hash) are in users.caddy, kept out of git; manage them with
+	# scripts/users.sh.
+	basic_auth {
+		import /etc/caddy/users.caddy
+	}
+
+	# /api/health -> http://api:3000/health
+	handle_path /api/* {
+		reverse_proxy api:3000 {
+			# The audit log records the logged-in user, whatever the browser sent.
+			header_up X-User {http.auth.user.id}
+		}
+	}
+
+	handle {
+		root * /srv
+		@assets path /assets/*
+		header @assets Cache-Control "public, max-age=31536000, immutable"
+		@notAssets not path /assets/*
+		header @notAssets Cache-Control "no-cache"
+		try_files {path} /index.html
+		file_server
+	}
+}

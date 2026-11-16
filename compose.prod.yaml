@@ -1,0 +1,29 @@
+# Production on a single internet-facing server (decision D41; docs/deploy.md).
+# Use instead of compose.override.yaml by putting this in the server's .env:
+#   COMPOSE_FILE=compose.yaml:compose.prod.yaml
+# Only the ui service (Caddy) is reachable: it serves HTTPS on 80/443 for
+# SITE_ADDRESS and asks for a username and password before anything else.
+# The database and API have no published ports.
+services:
+  ui:
+    environment:
+      SITE_ADDRESS: ${SITE_ADDRESS:?Set SITE_ADDRESS in .env}
+    ports:
+      # compose.yaml also publishes 8080; Caddy doesn't listen there in
+      # production and the server's firewall keeps it closed.
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./deploy/caddy:/etc/caddy:ro
+      # Certificates, kept across restarts and rebuilds.
+      - caddy-data:/data
+      - caddy-config:/config
+    restart: unless-stopped
+  api:
+    restart: unless-stopped
+  db:
+    restart: unless-stopped
+
+volumes:
+  caddy-data:
+  caddy-config:

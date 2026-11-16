@@ -115,6 +115,8 @@ The official PostgREST image serves the database's `api` schema; there is no app
 .
 ├── compose.yaml               The four services
 ├── compose.override.yaml      Dev extras, loaded automatically: db port on localhost; later bind mounts, auto-reload
+├── compose.prod.yaml          Production on one server: Caddy with HTTPS and login on 80/443 (D41, docs/deploy.md)
+├── deploy/caddy/              Production Caddyfile; users.caddy (logins, not in git)
 ├── .env.example               Ports, passwords, settings
 ├── db/
 │   ├── migrations/            dbmate migrations (0001_schema.sql, 0002_api.sql, ...)

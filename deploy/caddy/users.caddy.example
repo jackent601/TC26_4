@@ -1,0 +1,3 @@
+# One account per line: username, then the bcrypt hash of the password.
+# Don't edit by hand; use scripts/users.sh set <username>.
+alice $2a$14$examplehashexamplehashexamplehashexamplehashexamplehash12
