@@ -45,7 +45,7 @@ export function PopupView({ popup, data, onOpen, onNotice, onClose }: Props) {
     case "newCourse": return <NewCoursePopup from={popup.from} to={popup.to} data={data} onOpen={onOpen} onClose={onClose} />;
     case "warning": return <WarningPopup warning={popup.warning} data={data} onOpen={onOpen} onNotice={onNotice} onClose={onClose} />;
     case "newExternal": return <NewExternalPopup bedKeys={popup.bedKeys} from={popup.from} to={popup.to} data={data} onOpen={onOpen} onClose={onClose} />;
-    case "newOutage": return <NewOutagePopup nodeKey={popup.key} from={popup.from} to={popup.to} data={data} onClose={onClose} />;
+    case "newOutage": return <NewOutagePopup nodeKey={popup.key} bedKeys={popup.bedKeys} from={popup.from} to={popup.to} data={data} onOpen={onOpen} onClose={onClose} />;
     case "new": return <NewAllocationPopup bedKeys={popup.bedKeys} from={popup.from} to={popup.to} data={data} onOpen={onOpen} onClose={onClose} />;
   }
 }
@@ -698,11 +698,7 @@ function NewAllocationPopup({ bedKeys, from, to, data, onOpen, onClose }: {
                 {allocate.isPending ? "Allocating…" : "Allocate"}
               </button>
             }>
-      <div className="av-modes" role="group" aria-label="Kind of booking">
-        <button type="button" aria-pressed="true">Course booking</button>
-        <button type="button" aria-pressed="false"
-                onClick={() => onOpen({ kind: "newExternal", bedKeys, from: first, to: departure })}>External booking</button>
-      </div>
+      <SelectionModes current="new" bedKeys={bedKeys} from={first} to={departure} onOpen={onOpen} />
 
       <Facts rows={[["Beds", beds.map((b) => bedName(data.nodes, b)).join(", ")]]} />
 
@@ -919,6 +915,26 @@ function SavedResult({ kind, title, saved, warnings, onClose }: {
   );
 }
 
+// What to do with a grid selection: book a course, book it externally or put it
+// out of action. Each is its own popup; switching keeps the beds and dates.
+function SelectionModes({ current, bedKeys, from, to, onOpen }: {
+  current: "new" | "newExternal" | "newOutage"; bedKeys: string[]; from: string; to: string; onOpen: (p: Popup) => void;
+}) {
+  const modes: [typeof current, string, Popup][] = [
+    ["new", "Course booking", { kind: "new", bedKeys, from, to }],
+    ["newExternal", "External booking", { kind: "newExternal", bedKeys, from, to }],
+    ["newOutage", "Outage", { kind: "newOutage", bedKeys, from, to }],
+  ];
+  return (
+    <div className="av-modes" role="group" aria-label="What to add">
+      {modes.map(([kind, label, p]) => (
+        <button key={kind} type="button" aria-pressed={kind === current}
+                onClick={() => { if (kind !== current) onOpen(p); }}>{label}</button>
+      ))}
+    </div>
+  );
+}
+
 // Defaults for a new booking or outage: next week's block, Monday to Sunday (D9).
 const nextMonday = () => addDaysIso(iso(mondayOf(new Date())), 7);
 
@@ -1007,11 +1023,7 @@ function NewExternalPopup({ bedKeys, from, to, data, onOpen, onClose }: {
     const byId = new Map(given.map((b) => [b.id, b]));
     return (
       <Dialog kind="New allocation" title={`${given.length} ${given.length === 1 ? "bed" : "beds"}`} onClose={onClose} actions={bookButton}>
-        <div className="av-modes" role="group" aria-label="Kind of booking">
-          <button type="button" aria-pressed="false"
-                  onClick={() => onOpen({ kind: "new", bedKeys: given.map((b) => b.key), from: first, to: departure })}>Course booking</button>
-          <button type="button" aria-pressed="true">External booking</button>
-        </div>
+        <SelectionModes current="newExternal" bedKeys={given.map((b) => b.key)} from={first} to={departure} onOpen={onOpen} />
         <Facts rows={[["Beds", given.map((b) => bedName(data.nodes, b)).join(", ")]]} />
         {fields}
         {valid && (clashes.isPending ? <p className="summary">Checking for clashes…</p> :
@@ -1082,8 +1094,9 @@ function NewExternalPopup({ bedKeys, from, to, data, onOpen, onClose }: {
 // Put a site, building, block, floor, room or bed out of action
 // (fn_add_outage). Shows the beds it covers and the bookings it would land on;
 // saving is allowed, with those bookings as warnings (D38).
-function NewOutagePopup({ nodeKey, from, to, data, onClose }: {
-  nodeKey?: string; from?: string; to?: string; data: PopupData; onClose: () => void;
+function NewOutagePopup({ nodeKey, bedKeys, from, to, data, onOpen, onClose }: {
+  nodeKey?: string; bedKeys?: string[]; from?: string; to?: string; data: PopupData;
+  onOpen: (p: Popup) => void; onClose: () => void;
 }) {
   // Every location, in tree order, indented by depth.
   const options: { node: LocationNode; depth: number }[] = [];
@@ -1095,7 +1108,22 @@ function NewOutagePopup({ nodeKey, from, to, data, onClose }: {
   };
   walk([...data.nodes.values()].filter((n) => n.parentKey === null), 0);
 
-  const [key, setKey] = useState(nodeKey ?? "");
+  // From a grid selection: an outage is set on one place, so offer the places
+  // that hold every selected bed, smallest first (the bed, its room, floor,
+  // block, building, site). Default: the smallest that holds exactly those beds.
+  const given = (bedKeys ?? []).map((k) => data.nodes.get(k)).filter((n): n is LocationNode => n !== undefined);
+  const fixed = given.length > 0;
+  const holders: LocationNode[] = [];
+  if (fixed) {
+    const ids = new Set(given.map((b) => b.id));
+    for (let n: LocationNode | undefined = given[0]; n; n = n.parentKey ? data.nodes.get(n.parentKey) : undefined) {
+      const under = new Set(bedsUnder(n).map((b) => b.id));
+      if ([...ids].every((id) => under.has(id))) holders.push(n);
+    }
+  }
+  const exact = holders.find((n) => bedsUnder(n).length === given.length);
+
+  const [key, setKey] = useState(nodeKey ?? (exact ?? holders[0])?.key ?? "");
   const [first, setFirst] = useState(from ?? nextMonday());
   const [back, setBack] = useState(to ?? addDaysIso(nextMonday(), 7));
   const [reason, setReason] = useState("");
@@ -1115,15 +1143,37 @@ function NewOutagePopup({ nodeKey, from, to, data, onClose }: {
                         saved={`${dayLong(first)} until ${dayLong(back)}, ${reason.trim()}`} warnings={add.data.warnings} onClose={onClose} />;
   }
 
+  const levelName = (n: LocationNode) => (n.level === "Bed" ? bedName(data.nodes, n) : n.name) +
+    (n.level === "Site" || n.level === "Building" ? ` (${n.level.toLowerCase()})` : "");
+
   return (
-    <Dialog kind="New outage" title="Put a location out of action" onClose={onClose} wide
+    <Dialog kind="New outage" title={fixed ? `${given.length} ${given.length === 1 ? "bed" : "beds"}` : "Put a location out of action"}
+            onClose={onClose} wide={!fixed}
             actions={
               <button type="button" className="btn primary" disabled={!canSave}
                       onClick={() => node && add.mutate({ level: node.level, locationId: node.id, from: first, to: back, reason: reason.trim() })}>
                 {add.isPending ? "Saving…" : "Add outage"}
               </button>
             }>
-      <label className="av-field">Location
+      {fixed && (
+        <>
+          <SelectionModes current="newOutage" bedKeys={given.map((b) => b.key)} from={first} to={back} onOpen={onOpen} />
+          <Facts rows={[["Beds", given.map((b) => bedName(data.nodes, b)).join(", ")]]} />
+          <label className="av-field">Out of action
+            <select value={key} disabled={add.isPending} onChange={(e) => setKey(e.target.value)}>
+              {holders.map((n) => {
+                const count = bedsUnder(n).length;
+                return (
+                  <option key={n.key} value={n.key}>
+                    {levelName(n)} · {count} {count === 1 ? "bed" : "beds"}{count > given.length ? ` (${count - given.length} more than selected)` : ""}
+                  </option>
+                );
+              })}
+            </select>
+          </label>
+        </>
+      )}
+      {!fixed && <label className="av-field">Location
         <select value={key} disabled={add.isPending} onChange={(e) => setKey(e.target.value)}>
           <option value="">Choose a site, building, block, floor, room or bed</option>
           {options.map(({ node: n, depth }) => (
@@ -1132,7 +1182,7 @@ function NewOutagePopup({ nodeKey, from, to, data, onClose }: {
             </option>
           ))}
         </select>
-      </label>
+      </label>}
       <div className="av-form">
         <label className="av-field">Out of action from<input type="date" value={first} disabled={add.isPending} onChange={(e) => setFirst(e.target.value)} /></label>
         <label className="av-field">Back in service on<input type="date" value={back} disabled={add.isPending} onChange={(e) => setBack(e.target.value)} /></label>
